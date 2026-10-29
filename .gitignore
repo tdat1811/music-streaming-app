@@ -1,0 +1,51 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# Dependencies (Thư mục nặng nhất cần bỏ qua)
+node_modules/
+package-lock.json.bak
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# SubProjects / File nén tài nguyên ban đầu (tránh đẩy file zip nặng lên Git)
+SubProjects/
+*.zip
+*.rar
+*.tar.gz
+*.pdf
+
+# Native & Build
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+/ios/
+/android/
+
+# Metro & Bundler
+.metro-health-check*
+
+# Debug & Logs
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local Environment
+.env
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
