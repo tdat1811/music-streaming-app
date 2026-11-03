@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from "expo-audio";
 import { PLAYLIST_DETAILS_TRACKS, Song } from "../data/musicData";
 
-// Định nghĩa khuôn mẫu Context
+
+const parseDuration = (d?: string): number => {
+  if (!d) return 0;
+  const secs = d.split(":").map(Number).reduce((acc, p) => acc * 60 + p, 0);
+  return secs * 1000;
+};
+
 interface AudioPlayerContextType {
   currentTrack: Song | null;
   isPlaying: boolean;
@@ -18,80 +25,118 @@ interface AudioPlayerContextType {
 const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(undefined);
 
 export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentTrack, setCurrentTrack] = useState<Song | null>(PLAYLIST_DETAILS_TRACKS[0]);
+  const initialTrack = PLAYLIST_DETAILS_TRACKS[0] ?? null;
+
+  const [currentTrack, setCurrentTrack] = useState<Song | null>(initialTrack);
   const [playlist, setPlaylist] = useState<Song[]>(PLAYLIST_DETAILS_TRACKS);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  
-  // Thời gian bài hát (mặc định 3 phút 36 giây = 216000 ms)
-  const [positionMillis, setPositionMillis] = useState<number>(6000);
-  const [durationMillis, setDurationMillis] = useState<number>(216000);
+  const [positionMillis, setPositionMillis] = useState<number>(0);
+  const [durationMillis, setDurationMillis] = useState<number>(parseDuration(initialTrack?.duration));
 
-  // Bộ hẹn giờ giả lập nhịp phát nhạc an toàn cho Expo Go
-  const timerRef = useRef<any>(null);
+  const playerRef = useRef<AudioPlayer | null>(null);
+  const subRef = useRef<{ remove: () => void } | null>(null);
 
-  // Hiệu ứng tự động đếm giây khi isPlaying = true
+  // Ref để listener luôn đọc được giá trị mới nhất (tránh stale closure)
+  const currentTrackRef = useRef<Song | null>(currentTrack);
+  const playlistRef = useRef<Song[]>(playlist);
+  useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
+  useEffect(() => { playlistRef.current = playlist; }, [playlist]);
+
+  // Cho phép phát nhạc cả khi iPhone bật chế độ im lặng
   useEffect(() => {
-    if (isPlaying) {
-      timerRef.current = setInterval(() => {
-        setPositionMillis((prev) => {
-          if (prev >= durationMillis) {
-            playNext(); // Hết bài tự chuyển bài tiếp theo
-            return 0;
-          }
-          return prev + 1000; // Mỗi giây tăng 1000ms
-        });
-      }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    }
-
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      subRef.current?.remove();
+      playerRef.current?.remove();
     };
-  }, [isPlaying, durationMillis, currentTrack]);
+  }, []);
 
-  // Hàm phát bài hát
-  const playSong = async (song: Song, newPlaylist?: Song[]) => {
-    setCurrentTrack(song);
-    setPositionMillis(0); // Reset về 0 giây
-    setIsPlaying(true);
+  const releasePlayer = () => {
+    subRef.current?.remove();
+    subRef.current = null;
+    playerRef.current?.remove();
+    playerRef.current = null;
+  };
 
+    const playSong = async (song: Song, newPlaylist?: Song[]) => {
     if (newPlaylist && newPlaylist.length > 0) {
       setPlaylist(newPlaylist);
+      playlistRef.current = newPlaylist;
+    }
+    setCurrentTrack(song);
+    currentTrackRef.current = song;
+    setPositionMillis(0);
+    setDurationMillis(parseDuration(song.duration));
+
+    releasePlayer();
+    const audioUri = song.audioUrl || "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+
+    try {
+      const player = createAudioPlayer({ uri: audioUri });
+      playerRef.current = player;
+
+      subRef.current = player.addListener("playbackStatusUpdate", (status) => {
+        setPositionMillis(Math.floor(status.currentTime * 1000));
+        if (status.duration > 0) {
+          setDurationMillis(Math.floor(status.duration * 1000));
+        }
+        setIsPlaying(status.playing);
+        if (status.didJustFinish) {
+          playNext();
+        }
+      });
+
+      player.play();
+      setIsPlaying(true);
+    } catch (err) {
+      console.log("Audio player fallback:", err);
+      // Nếu thiết bị không chạy được native audio thì vẫn bật cờ isPlaying để giao diện đếm giờ
+      setIsPlaying(true);
     }
   };
 
-  // Hàm Play / Pause
-  const togglePlayPause = async () => {
-    setIsPlaying((prev) => !prev);
+    const togglePlayPause = async () => {
+    const player = playerRef.current;
+    if (!player) {
+      if (currentTrackRef.current) {
+        await playSong(currentTrackRef.current);
+      }
+      return;
+    }
+
+    if (isPlaying) {
+      player.pause();
+      setIsPlaying(false);
+    } else {
+      player.play();
+      setIsPlaying(true);
+    }
   };
 
-  // Hàm chuyển bài tiếp theo
   const playNext = async () => {
-    if (!currentTrack || playlist.length === 0) return;
-    const currentIndex = playlist.findIndex((s) => s.id === currentTrack.id);
-    const nextIndex = (currentIndex + 1) % playlist.length;
-    await playSong(playlist[nextIndex], playlist);
+    const track = currentTrackRef.current;
+    const list = playlistRef.current;
+    if (!track || list.length === 0) return;
+    const idx = list.findIndex((s) => s.id === track.id);
+    const next = list[(idx + 1) % list.length];
+    await playSong(next, list);
   };
 
-  // Hàm lùi bài trước
   const playPrevious = async () => {
-    if (!currentTrack || playlist.length === 0) return;
-    const currentIndex = playlist.findIndex((s) => s.id === currentTrack.id);
-    const prevIndex = currentIndex === 0 ? playlist.length - 1 : currentIndex - 1;
-    await playSong(playlist[prevIndex], playlist);
+    const track = currentTrackRef.current;
+    const list = playlistRef.current;
+    if (!track || list.length === 0) return;
+    const idx = list.findIndex((s) => s.id === track.id);
+    const prev = list[idx <= 0 ? list.length - 1 : idx - 1];
+    await playSong(prev, list);
   };
 
-  // Hàm tua bài hát
+  // expo-audio tính bằng GIÂY, UI của mình dùng millis
   const seekTo = async (posMillis: number) => {
     setPositionMillis(posMillis);
+    await playerRef.current?.seekTo(posMillis / 1000);
   };
 
-  // Hàm thả tim bài hát
   const toggleLikeCurrentTrack = () => {
     if (!currentTrack) return;
     const updated = { ...currentTrack, isLiked: !currentTrack.isLiked };
