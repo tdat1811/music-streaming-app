@@ -8,6 +8,7 @@ export interface Song {
   duration?: string;
   coverImage: any;
   isLiked?: boolean;
+  audioUrl?:string;
 }
 
 export interface Album {
