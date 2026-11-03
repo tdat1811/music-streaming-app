@@ -10,7 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { IMAGES } from '../../src/constants/images';
-
+import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
 interface PlayAudioScreenProps {
   onMinimize?: () => void;
   onOpenComments?: () => void;
@@ -24,7 +24,7 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
   trackTitle = 'FLOWER',
   artistName = 'Jessica Gonzalez',
 }) => {
-  const [isPlaying, setIsPlaying] = useState(true);
+  const {currentTrack, isPlaying, positionMillis, durationMillis, playSong, togglePlayPause, playPrevious, playNext, seekTo} = useAudioPlayer();
   const [isLiked, setIsLiked] = useState(false);
 
   // 36 bars for waveform
@@ -33,7 +33,20 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
     32, 26, 40, 50, 46, 32, 20, 28, 36, 42, 38, 28,
     22, 32, 40, 36, 26, 18, 24, 30, 22, 16, 12, 8,
   ];
-  const progressIndex = 7; // Current playback progress point
+  const progressIndex = 0; 
+
+  const formatTime = (millims : number) => {
+    if(!millims || millims < 0) return '0:00';
+    const totalSecounds = Math.floor(millims / 1000);
+    const minutes = Math.floor(totalSecounds / 60);
+    const seconds = totalSecounds % 60;
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  }
+
+  const progressPercent = durationMillis > 0 ? positionMillis / durationMillis : 0;
+  const currentWaveformIndex = Math.floor(progressPercent * 36);
+
+
 
   return (
     <View style={styles.container}>
@@ -66,17 +79,25 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
           <View style={styles.playerSection}>
             {/* Track Info */}
             <View style={styles.trackInfo}>
-              <Text style={styles.trackTitle}>{trackTitle}</Text>
-              <Text style={styles.artistName}>{artistName}</Text>
+              <Text style={styles.trackTitle}>{currentTrack ? currentTrack.title : "No track"}</Text>
+              <Text style={styles.artistName}>{currentTrack ? currentTrack.artist : "Unknown Artist"}</Text>
             </View>
 
             {/* Audio Waveform */}
             <View style={styles.waveformContainer}>
               {waveformHeights.map((h, i) => {
-                const isPlayed = i <= progressIndex;
+                const isPlayed = i <= currentWaveformIndex;
                 return (
+                  <TouchableOpacity
+                  key = {i}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    const seekTarget = (i / 36) * durationMillis;
+                    seekTo(seekTarget);
+                  }}
+                  >
+                  
                   <View
-                    key={i}
                     style={[
                       styles.waveformBar,
                       {
@@ -87,14 +108,15 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
                       },
                     ]}
                   />
+                  </TouchableOpacity>
                 );
               })}
             </View>
 
             {/* Timestamp Row */}
             <View style={styles.timeRow}>
-              <Text style={styles.timeText}>0:06</Text>
-              <Text style={styles.timeText}>3:08</Text>
+              <Text style={styles.timeText}>{formatTime(positionMillis)}</Text>
+              <Text style={styles.timeText}>{formatTime(durationMillis)}</Text>
             </View>
 
             {/* Playback Controls */}
@@ -103,13 +125,13 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
                 <Ionicons name="shuffle" size={22} color="#FFFFFF" />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.controlBtn}>
+              <TouchableOpacity style={styles.controlBtn} onPress={playPrevious}>
                 <Ionicons name="play-skip-back" size={26} color="#FFFFFF" />
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.playPauseBtn}
-                onPress={() => setIsPlaying(!isPlaying)}
+                onPress={togglePlayPause}
                 activeOpacity={0.85}
               >
                 <Ionicons
@@ -120,7 +142,7 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.controlBtn}>
+              <TouchableOpacity style={styles.controlBtn} onPress={playNext}>
                 <Ionicons name="play-skip-forward" size={26} color="#FFFFFF" />
               </TouchableOpacity>
 
