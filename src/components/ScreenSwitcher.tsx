@@ -7,6 +7,8 @@ import {
   FlatList,
   StyleSheet,
   SafeAreaView,
+  PanResponder,
+  Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
@@ -54,17 +56,49 @@ export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({
   const [modalVisible, setModalVisible] = useState(false);
 
   const currentItem = SCREEN_LIST.find((s) => s.id === currentScreen);
+  const pan = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+
+   const panResponder = React.useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 2 || Math.abs(gestureState.dy) > 2;
+      },
+      onPanResponderGrant: () => {
+        pan.setOffset({
+          x: (pan.x as any)._value,
+          y: (pan.y as any)._value,
+        });
+        pan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
+        useNativeDriver: false,
+      }),
+      onPanResponderRelease: () => {
+        pan.flattenOffset();
+      },
+    })
+  ).current;
 
   return (
     <>
-      <TouchableOpacity
-        style={styles.floatingButton}
-        onPress={() => setModalVisible(true)}
-        activeOpacity={0.8}
+    <Animated.View
+        style={[
+          styles.floatingContainer,
+          {
+            transform: [{ translateX: pan.x }, { translateY: pan.y }],
+          },
+        ]}
+        {...panResponder.panHandlers}
       >
-        <Ionicons name="grid-outline" size={16} color="#FFFFFF" />
-        <Text style={styles.floatingButtonText}>Screens (13)</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.floatingButton}
+          onPress={() => setModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="grid-outline" size={16} color="#FFFFFF" />
+          <Text style={styles.floatingButtonText}>Screens (13)</Text>
+        </TouchableOpacity>
+  </Animated.View>
 
       <Modal
         visible={modalVisible}
@@ -134,6 +168,13 @@ export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({
 };
 
 const styles = StyleSheet.create({
+  floatingContainer: {
+    position: 'absolute',
+    bottom: 130, 
+    right: 14,
+    zIndex: 99999, 
+    elevation: 99999,
+  },
   floatingButton: {
     position: 'absolute',
     bottom: 74,
