@@ -58,18 +58,22 @@ export interface CommentItem {
   replies?: CommentItem[];
 }
 
-export const SUGGESTIONS = [
+export const SUGGESTIONS: Song[] = [
   {
     id: 's1',
     title: 'Reflection',
     artist: 'Christina Aguilera',
+    duration: '03:36',
     coverImage: IMAGES.suggestion1,
+    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', // Link test bài 2
   },
   {
     id: 's2',
     title: 'In The Stars',
     artist: 'Benson Boone',
+    duration: '03:15',
     coverImage: IMAGES.suggestion2,
+    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', // Link test bài 3
   },
 ];
 

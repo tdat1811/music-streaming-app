@@ -19,7 +19,7 @@ import {
   POPULAR_ARTISTS,
 } from '../../src/data/musicData';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
-
+import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
 interface HomeScreenProps {
   onNavigateToSearch?: () => void;
   onNavigateToPlaylist?: (playlistId?: string) => void;
@@ -35,6 +35,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToPlay,
   onTabPress,
 }) => {
+  const {playSong} = useAudioPlayer();
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
@@ -97,7 +98,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <TouchableOpacity
               key={item.id}
               style={styles.suggestionCard}
-              onPress={() => onNavigateToPlay && onNavigateToPlay(item.id)}
+              onPress={() => {
+                playSong(item, SUGGESTIONS);
+                if(onNavigateToPlay){
+                  onNavigateToPlay(item.id);
+                }
+              }}
               activeOpacity={0.85}
             >
               <Image source={item.coverImage} style={styles.suggestionImage} />

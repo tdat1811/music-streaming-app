@@ -16,7 +16,7 @@ import { PLAYLIST_DETAILS_TRACKS } from '../../src/data/musicData';
 import { SongItem } from '../../src/components/SongItem';
 import { MiniPlayer } from '../../src/components/MiniPlayer';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
-
+import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
 interface PlaylistDetailsScreenProps {
   onBack?: () => void;
   onNavigateToPlay?: (trackId?: string) => void;
@@ -28,6 +28,7 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
   onNavigateToPlay,
   onTabPress,
 }) => {
+  const {playSong} = useAudioPlayer();
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
@@ -60,6 +61,7 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
                 source={IMAGES.playlistDetailsCover}
                 style={styles.coverImage}
               />
+
               <View style={styles.bannerInfo}>
                 <Text style={styles.playlistTitle}>Top 50 - Canada</Text>
                 <View style={styles.metaRow}>
@@ -74,7 +76,7 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
 
             {/* Actions Bar */}
             <View style={styles.actionsBar}>
-              <View style={styles.leftActions}>
+              <View style={styles.leftActions}> 
                 <TouchableOpacity style={styles.actionBtn}>
                   <Ionicons name="heart-outline" size={24} color="#111216" />
                 </TouchableOpacity>
@@ -88,8 +90,13 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
               </View>
 
               <View style={styles.rightActions}>
-                <TouchableOpacity style={styles.shuffleBtn}>
-                  <Ionicons name="shuffle" size={22} color="#111216" />
+                <TouchableOpacity style={styles.shuffleBtn} onPress={() => {
+                  playSong(PLAYLIST_DETAILS_TRACKS[0],PLAYLIST_DETAILS_TRACKS)
+                  if(onNavigateToPlay){
+                    onNavigateToPlay(PLAYLIST_DETAILS_TRACKS[0].id);
+                  } 
+                }}>
+                  <Ionicons name="shuffle" size={22} color="#111216"  />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.playButton}
@@ -106,7 +113,13 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
           <SongItem
             song={item}
             rightAction="dots"
-            onPress={() => onNavigateToPlay && onNavigateToPlay(item.id)}
+            onPress={() => { 
+              playSong(item, PLAYLIST_DETAILS_TRACKS);
+              if(onNavigateToPlay){
+                onNavigateToPlay(item.id);
+              }
+            }
+            }
           />
         )}
       />
