@@ -12,6 +12,7 @@ import { Audio, AVPlaybackSource, AVPlaybackStatus } from "expo-av";
     playPrevious: () => Promise<void>;
     playNext: () => Promise<void>;
     seekTo: (positionMillis: number) => Promise<void>;
+    toggleLikeCurrentTrack: () => void;
 }
 
 const AudioPlayerContext = React.createContext<AudioPlayerContextType | undefined>(undefined);
@@ -39,6 +40,19 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
          }
         });
     }, []);
+
+
+    const toggleLikeCurrentTrack = () => {
+        if(!currentTrack) return;
+        const updatedTrack = {
+            ...currentTrack,
+            isLiked :  !currentTrack.isLiked
+        };
+        setCurrentTrack(updatedTrack);
+        setPlaylist((prevPlaylist) =>
+      prevPlaylist.map((s) => (s.id === currentTrack.id ? updatedTrack : s))
+        );
+    }
 
 
     const onPlaybackStatusUpdate = (status : AVPlaybackStatus) => {
@@ -117,7 +131,8 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
             togglePlayPause,
             playPrevious,
             playNext,
-            seekTo
+            seekTo,
+            toggleLikeCurrentTrack
         }}
         >
             {children}

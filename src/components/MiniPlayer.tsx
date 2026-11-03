@@ -19,7 +19,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   title = 'FLOWER',
   artist = 'Me • Jessica Gonzalez',
 }) => {
-  const {currentTrack, isPlaying,togglePlayPause} = useAudioPlayer();
+  const {currentTrack, isPlaying,togglePlayPause,toggleLikeCurrentTrack} = useAudioPlayer();
   if(!currentTrack) return null;
 
   return (
@@ -43,10 +43,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
       <TouchableOpacity
         style={styles.iconButton}
-        onPress={onLikePress}
+        onPress={toggleLikeCurrentTrack}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Ionicons name="heart-outline" size={22} color="#FFFFFF" />
+        <Ionicons name={currentTrack.isLiked ? "heart" : "heart-outline"} size={22} color="#FFFFFF" />
       </TouchableOpacity>
 
       <TouchableOpacity
