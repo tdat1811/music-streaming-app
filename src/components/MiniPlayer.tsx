@@ -3,7 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { IMAGES } from '../constants/images';
-
+import { useAudioPlayer } from '../context/AudioPlayerContext';
 interface MiniPlayerProps {
   onPress?: () => void;
   onPlayPausePress?: () => void;
@@ -19,6 +19,9 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   title = 'FLOWER',
   artist = 'Me • Jessica Gonzalez',
 }) => {
+  const {currentTrack, isPlaying,togglePlayPause} = useAudioPlayer();
+  if(!currentTrack) return null;
+
   return (
     <TouchableOpacity
       style={styles.container}
@@ -26,17 +29,18 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       onPress={onPress}
     >
       <Image
-        source={IMAGES.playlistMiniPlayerEye}
+        source={currentTrack.coverImage}
         style={styles.thumbnail}
       />
       <View style={styles.textContainer}>
         <Text style={styles.title} numberOfLines={1}>
-          {title}
+          {currentTrack.title}
         </Text>
         <Text style={styles.artist} numberOfLines={1}>
-          {artist}
+          {currentTrack.artist}
         </Text>
       </View>
+
       <TouchableOpacity
         style={styles.iconButton}
         onPress={onLikePress}
@@ -44,12 +48,13 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       >
         <Ionicons name="heart-outline" size={22} color="#FFFFFF" />
       </TouchableOpacity>
+
       <TouchableOpacity
         style={styles.iconButton}
-        onPress={onPlayPausePress}
+        onPress={togglePlayPause}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Ionicons name="play-outline" size={24} color="#FFFFFF" />
+        <Ionicons name={isPlaying ? "pause-outline" : "play-outline"}  size={24} color="#FFFFFF" />
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -64,6 +69,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderTopWidth: 1,
     borderTopColor: '#25262B',
+     position: 'absolute',
+    bottom: 60, // 60 chính là chiều cao của thanh BottomTabBar
+    left: 0,
+    right: 0,
   },
   thumbnail: {
     width: 40,
