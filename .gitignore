@@ -49,3 +49,11 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Tài liệu văn phòng & File báo cáo Word
+*.docx
+*.doc
+*.pptx
+*.xlsx
+~$*.docx
+~$*.doc
