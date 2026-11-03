@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from "r
 import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from "expo-audio";
 import { PLAYLIST_DETAILS_TRACKS, Song } from "../data/musicData";
 
-
+// "03:36" | "1:02:10" -> millis
 const parseDuration = (d?: string): number => {
   if (!d) return 0;
   const secs = d.split(":").map(Number).reduce((acc, p) => acc * 60 + p, 0);
@@ -69,6 +69,8 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setDurationMillis(parseDuration(song.duration));
 
     releasePlayer();
+
+    // Link nhạc mặc định nếu bài hát chưa có link riêng
     const audioUri = song.audioUrl || "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
 
     try {
@@ -95,16 +97,13 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
-    const togglePlayPause = async () => {
+  const togglePlayPause = async () => {
     const player = playerRef.current;
     if (!player) {
-      if (currentTrackRef.current) {
-        await playSong(currentTrackRef.current);
-      }
+      if (currentTrackRef.current) await playSong(currentTrackRef.current);
       return;
     }
-
-    if (isPlaying) {
+    if (player.playing) {
       player.pause();
       setIsPlaying(false);
     } else {

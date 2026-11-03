@@ -12,11 +12,13 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
-import { SEARCH_ARTIST, SEARCH_RESULTS, Song } from '../../src/data/musicData';
+import { SEARCH_ARTIST, SEARCH_RESULTS, PLAYLIST_DETAILS_TRACKS, SUGGESTIONS, Song } from '../../src/data/musicData';
 import { SongItem } from '../../src/components/SongItem';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
+import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
 
 interface SearchResultsScreenProps {
+  searchQuery?: string;
   onBackToSuggestions?: () => void;
   onNavigateToArtist?: (artistId?: string) => void;
   onNavigateToPlay?: (trackId?: string) => void;
@@ -24,20 +26,40 @@ interface SearchResultsScreenProps {
 }
 
 export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
+  searchQuery = 'me',
   onBackToSuggestions,
   onNavigateToArtist,
   onNavigateToPlay,
   onTabPress,
 }) => {
+  const { playSong } = useAudioPlayer();
   const [activeFilter, setActiveFilter] = useState<'All' | 'Tracks' | 'Albums' | 'Artists'>('All');
   const [isFollowing, setIsFollowing] = useState(false);
 
+  const shouldShowSongs = activeFilter === 'All' || activeFilter === 'Tracks';
+  const shouldShowArtist = activeFilter === 'All' || activeFilter === 'Artists';
   const filters: ('All' | 'Tracks' | 'Albums' | 'Artists')[] = [
     'All',
     'Tracks',
     'Albums',
     'Artists',
-  ];
+    ];
+
+    const ALL_SONGS: Song[] = [
+    ...SEARCH_RESULTS,
+    ...PLAYLIST_DETAILS_TRACKS,
+    ...SUGGESTIONS,
+  ].filter((song, index, self) => index === self.findIndex((s) => s.id === song.id));
+  // Lọc bài hát theo từ khóa tìm kiếm (theo tên bài hát hoặc ca sĩ)
+  const q = searchQuery.toLowerCase().trim();
+  const matchedSongs = ALL_SONGS.filter((song) => {
+    return (
+      song.title.toLowerCase().includes(q) ||
+      song.artist.toLowerCase().includes(q)
+    );
+  });
+  // Nếu tìm có bài khớp -> hiện bài đó. Nếu không gõ gì -> hiện SEARCH_RESULTS mặc định
+  const displaySongs = q === '' ? SEARCH_RESULTS : matchedSongs;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -48,10 +70,11 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
         <View style={styles.searchPill}>
           <TextInput
             style={styles.input}
-            value="me"
+            value={searchQuery}
             onFocus={onBackToSuggestions}
             placeholder="Search"
             placeholderTextColor={COLORS.textMuted}
+            editable={false}
           />
           <TouchableOpacity
             onPress={onBackToSuggestions}
@@ -89,43 +112,43 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
 
       {/* Results List */}
       <FlatList
-        data={SEARCH_RESULTS}
+        data={shouldShowSongs ? displaySongs : []}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
-          /* Mer Watson Artist Card */
-          <View style={styles.artistCardContainer}>
-            <Image
-              source={SEARCH_ARTIST.avatarImage}
-              style={styles.artistAvatar}
-            />
-            <View style={styles.artistInfo}>
-              <Text style={styles.artistName}>{SEARCH_ARTIST.name}</Text>
-              <View style={styles.followersRow}>
-                <Ionicons name="person-outline" size={13} color={COLORS.textSecondary} style={{ marginRight: 4 }} />
-                <Text style={styles.followersText}>{SEARCH_ARTIST.followers}</Text>
+          shouldShowArtist ? (
+            <View style={styles.artistCardContainer}>
+              <Image source={SEARCH_ARTIST.avatarImage} style={styles.artistAvatar} />
+              <View style={styles.artistInfo}>
+                <Text style={styles.artistName}>{SEARCH_ARTIST.name}</Text>
+                <View style={styles.followersRow}>
+                  <Ionicons name="person-outline" size={13} color={COLORS.textSecondary} style={{ marginRight: 4 }} />
+                  <Text style={styles.followersText}>{SEARCH_ARTIST.followers}</Text>
+                </View>
               </View>
+              <TouchableOpacity
+                style={[styles.followButton, isFollowing && styles.followingButton]}
+                onPress={() => setIsFollowing(!isFollowing)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={[styles.followButton, isFollowing && styles.followingButton]}
-              onPress={() => {
-                setIsFollowing(!isFollowing);
-                if (onNavigateToArtist) onNavigateToArtist();
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-                {isFollowing ? 'Following' : 'Follow'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          ) : undefined
         }
         renderItem={({ item }) => (
           <SongItem
             song={item}
             rightAction="dots"
-            onPress={() => onNavigateToPlay && onNavigateToPlay(item.id)}
+            onPress={() => {
+              playSong(item, displaySongs);
+              if (onNavigateToPlay) {
+                onNavigateToPlay(item.id);
+              }
+            }}
           />
         )}
       />

@@ -24,6 +24,10 @@ export const SearchAudioScreen: React.FC<SearchAudioScreenProps> = ({
 }) => {
   const [query, setQuery] = useState('me');
 
+  const filteredSuggestions = SEARCH_SUGGESTIONS.filter((item) =>
+    item.toLowerCase().includes(query.trim().toLowerCase())
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
@@ -54,8 +58,9 @@ export const SearchAudioScreen: React.FC<SearchAudioScreenProps> = ({
 
       {/* Search Suggestions List */}
       <FlatList
-        data={SEARCH_SUGGESTIONS}
+        data={query.trim() === '' ? SEARCH_SUGGESTIONS : filteredSuggestions}
         keyExtractor={(item, index) => `${item}-${index}`}
+        keyboardShouldPersistTaps="handled" 
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -113,7 +118,10 @@ export const SearchAudioScreen: React.FC<SearchAudioScreenProps> = ({
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.key, styles.doneKey]}
-            onPress={() => onSelectSuggestion && onSelectSuggestion(query)}
+             onPress={() => {
+            const searchTarget = query.trim() || 'me';
+          if (onSelectSuggestion) onSelectSuggestion(searchTarget);
+          }}
           >
             <Text style={styles.doneKeyText}>done</Text>
           </TouchableOpacity>

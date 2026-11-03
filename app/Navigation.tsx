@@ -21,7 +21,7 @@ import {MiniPlayer} from "../src/components/MiniPlayer";
 export const Navigation: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('Home');
   const [history, setHistory] = useState<ScreenId[]>(['Home']);
-
+   const [searchQuery, setSearchQuery] = useState<string>('me');
   const navigateTo = (screen: ScreenId) => {
     setHistory((prev) => [...prev, screen]);
     setCurrentScreen(screen);
@@ -94,22 +94,26 @@ export const Navigation: React.FC = () => {
         );
 
       case 'SearchAudio':
-        return (
-          <SearchAudioScreen
-            onSelectSuggestion={() => navigateTo('SearchResults')}
-            onBack={goBack}
-          />
-        );
+      return (
+      <SearchAudioScreen
+         onSelectSuggestion={(selectedText) => {
+        setSearchQuery(selectedText); 
+        navigateTo('SearchResults');  
+      }}
+      onBack={goBack}
+    />
+  );
 
       case 'SearchResults':
-        return (
-          <SearchResultsScreen
-            onBackToSuggestions={() => navigateTo('SearchAudio')}
-            onNavigateToArtist={() => navigateTo('ArtistProfile')}
-            onNavigateToPlay={() => navigateTo('PlayAudio')}
-            onTabPress={handleTabPress}
-          />
-        );
+  return (
+    <SearchResultsScreen
+      searchQuery={searchQuery} // Truyền từ khóa sang!
+      onBackToSuggestions={() => navigateTo('SearchAudio')}
+      onNavigateToArtist={() => navigateTo('ArtistProfile')}
+      onNavigateToPlay={() => navigateTo('PlayAudio')}
+      onTabPress={handleTabPress}
+    />
+  );
 
       case 'Feed':
         return (
@@ -183,7 +187,7 @@ export const Navigation: React.FC = () => {
     }
   };
 
-  const hiddenMiniPLayer = currentScreen === 'Launch' || currentScreen === 'LaunchPremium' || currentScreen === 'SubscriptionPlans'||currentScreen === "PlayAudio";
+  const hiddenMiniPLayer = currentScreen === 'Launch' || currentScreen === 'LaunchPremium' || currentScreen === 'SubscriptionPlans'||currentScreen === "PlayAudio" || currentScreen === 'SearchAudio';;
   return (
     <View style={styles.container}>
       {renderScreen()}
