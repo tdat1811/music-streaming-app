@@ -61,7 +61,7 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
             if(newPlaylist && newPlaylist.length > 0) {
                 setPlaylist(newPlaylist);
             }
-            const uri = song.audioUrl || 'https://open.spotify.com/track/0NyrI1tMvqcK3vU5z9DMdI';
+            const uri = song.audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3';
             const {sound : newSound} = await Audio.Sound.createAsync({uri},{shouldPlay : true},onPlaybackStatusUpdate);
             setSound(newSound);
             setIsPlaying(true);

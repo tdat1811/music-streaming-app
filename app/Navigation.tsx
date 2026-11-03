@@ -17,7 +17,7 @@ import { MyPlaylistsScreen } from './screens/MyPlaylistsScreen';
 import { PlaylistDetailsScreen } from './screens/PlaylistDetailsScreen';
 import { ArtistProfileScreen } from './screens/ArtistProfileScreen';
 import { PlayAudioScreen } from './screens/PlayAudioScreen';
-
+import {MiniPlayer} from "../src/components/MiniPlayer";
 export const Navigation: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('Home');
   const [history, setHistory] = useState<ScreenId[]>(['Home']);
@@ -183,9 +183,14 @@ export const Navigation: React.FC = () => {
     }
   };
 
+  const hiddenMiniPLayer = currentScreen === 'Launch' || currentScreen === 'LaunchPremium' || currentScreen === 'SubscriptionPlans'||currentScreen === "PlayAudio";
   return (
     <View style={styles.container}>
       {renderScreen()}
+
+      {!hiddenMiniPLayer && (
+        <MiniPlayer onPress={() => navigateTo('PlayAudio')} />
+      )}
 
       {/* Floating 13-Screen Switcher */}
       <ScreenSwitcher
