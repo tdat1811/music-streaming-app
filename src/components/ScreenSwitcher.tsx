@@ -90,7 +90,7 @@ export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({
         ]}
         {...panResponder.panHandlers}
       >
-        <TouchableOpacity
+        <TouchableOpacity 
           style={styles.floatingButton}
           onPress={() => setModalVisible(true)}
           activeOpacity={0.8}
