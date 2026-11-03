@@ -24,7 +24,7 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
   trackTitle = 'FLOWER',
   artistName = 'Jessica Gonzalez',
 }) => {
-  const {currentTrack, isPlaying, positionMillis, durationMillis, playSong, togglePlayPause, playPrevious, playNext, seekTo} = useAudioPlayer();
+  const {currentTrack, isPlaying, positionMillis, durationMillis, playSong, togglePlayPause, playPrevious, playNext, seekTo,toggleLikeCurrentTrack} = useAudioPlayer();
   const [isLiked, setIsLiked] = useState(false);
 
   // 36 bars for waveform
@@ -33,7 +33,6 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
     32, 26, 40, 50, 46, 32, 20, 28, 36, 42, 38, 28,
     22, 32, 40, 36, 26, 18, 24, 30, 22, 16, 12, 8,
   ];
-  const progressIndex = 0; 
 
   const formatTime = (millims : number) => {
     if(!millims || millims < 0) return '0:00';
@@ -160,13 +159,13 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
               <View style={styles.leftInteractions}>
                 <TouchableOpacity
                   style={styles.interactionItem}
-                  onPress={() => setIsLiked(!isLiked)}
+                  onPress={toggleLikeCurrentTrack}
                   activeOpacity={0.7}
                 >
                   <Ionicons
-                    name={isLiked ? 'heart' : 'heart-outline'}
+                    name={currentTrack?.isLiked ? 'heart' : 'heart-outline'}
                     size={22}
-                    color={isLiked ? '#10C7D5' : '#FFFFFF'}
+                    color={currentTrack?.isLiked ? '#10C7D5' : '#FFFFFF'}
                   />
                   <Text style={styles.interactionCount}>12K</Text>
                 </TouchableOpacity>
