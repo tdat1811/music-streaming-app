@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -22,11 +22,25 @@ export const SearchAudioScreen: React.FC<SearchAudioScreenProps> = ({
   onSelectSuggestion,
   onBack,
 }) => {
-  const [query, setQuery] = useState('me');
+  const [query, setQuery] = useState('');
 
-  const filteredSuggestions = SEARCH_SUGGESTIONS.filter((item) =>
-    item.toLowerCase().includes(query.trim().toLowerCase())
-  );
+  const filteredSuggestions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q === '') return SEARCH_SUGGESTIONS;
+    return SEARCH_SUGGESTIONS.filter((item) => item.toLowerCase().includes(q));
+  }, [query]);
+
+  const keyExtractor = useCallback((item: string, index: number) => `${item}-${index}`, []);
+
+  const renderSuggestionItem = useCallback(({ item }: { item: string }) => (
+    <TouchableOpacity
+      style={styles.suggestionItem}
+      onPress={() => onSelectSuggestion && onSelectSuggestion(item)}
+      activeOpacity={0.6}
+    >
+      <Text style={styles.suggestionText}>{item}</Text>
+    </TouchableOpacity>
+  ), [onSelectSuggestion]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -58,19 +72,15 @@ export const SearchAudioScreen: React.FC<SearchAudioScreenProps> = ({
 
       {/* Search Suggestions List */}
       <FlatList
-        data={query.trim() === '' ? SEARCH_SUGGESTIONS : filteredSuggestions}
-        keyExtractor={(item, index) => `${item}-${index}`}
+        data={filteredSuggestions}
+        keyExtractor={keyExtractor}
+        renderItem={renderSuggestionItem}
         keyboardShouldPersistTaps="handled" 
         contentContainerStyle={styles.listContainer}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.suggestionItem}
-            onPress={() => onSelectSuggestion && onSelectSuggestion(item)}
-            activeOpacity={0.6}
-          >
-            <Text style={styles.suggestionText}>{item}</Text>
-          </TouchableOpacity>
-        )}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
 
@@ -119,7 +129,7 @@ export const SearchAudioScreen: React.FC<SearchAudioScreenProps> = ({
           <TouchableOpacity
             style={[styles.key, styles.doneKey]}
              onPress={() => {
-            const searchTarget = query.trim() || 'me';
+            const searchTarget = query.trim() || '';
           if (onSelectSuggestion) onSelectSuggestion(searchTarget);
           }}
           >

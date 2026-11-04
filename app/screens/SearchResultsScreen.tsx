@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -26,7 +26,7 @@ interface SearchResultsScreenProps {
 }
 
 export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
-  searchQuery = 'me',
+  searchQuery = '',
   onBackToSuggestions,
   onNavigateToArtist,
   onNavigateToPlay,
@@ -45,21 +45,36 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
     'Artists',
     ];
 
-    const ALL_SONGS: Song[] = [
-    ...SEARCH_RESULTS,
-    ...PLAYLIST_DETAILS_TRACKS,
-    ...SUGGESTIONS,
-  ].filter((song, index, self) => index === self.findIndex((s) => s.id === song.id));
+    const ALL_SONGS: Song[] = useMemo(() => [
+      ...SEARCH_RESULTS,
+      ...PLAYLIST_DETAILS_TRACKS,
+      ...SUGGESTIONS,
+    ].filter((song, index, self) => index === self.findIndex((s) => s.id === song.id)), []);
+
   // Lọc bài hát theo từ khóa tìm kiếm (theo tên bài hát hoặc ca sĩ)
   const q = searchQuery.toLowerCase().trim();
-  const matchedSongs = ALL_SONGS.filter((song) => {
-    return (
+  const displaySongs = useMemo(() => {
+    if (q === '') return SEARCH_RESULTS;
+    return ALL_SONGS.filter((song) =>
       song.title.toLowerCase().includes(q) ||
       song.artist.toLowerCase().includes(q)
     );
-  });
-  // Nếu tìm có bài khớp -> hiện bài đó. Nếu không gõ gì -> hiện SEARCH_RESULTS mặc định
-  const displaySongs = q === '' ? SEARCH_RESULTS : matchedSongs;
+  }, [q, ALL_SONGS]);
+
+  const renderSongItem = useCallback(({ item }: { item: Song }) => (
+    <SongItem
+      song={item}
+      rightAction="dots"
+      onPress={() => {
+        playSong(item, displaySongs);
+        if (onNavigateToPlay) {
+          onNavigateToPlay(item.id);
+        }
+      }}
+    />
+  ), [displaySongs, playSong, onNavigateToPlay]);
+
+  const keyExtractor = useCallback((item: Song) => item.id, []);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -113,13 +128,22 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
       {/* Results List */}
       <FlatList
         data={shouldShowSongs ? displaySongs : []}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
+        renderItem={renderSongItem}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews={true}
         ListHeaderComponent={
           shouldShowArtist ? (
             <View style={styles.artistCardContainer}>
-              <Image source={SEARCH_ARTIST.avatarImage} style={styles.artistAvatar} />
+              <Image
+                source={SEARCH_ARTIST.avatarImage}
+                style={styles.artistAvatar}
+                fadeDuration={0}
+              />
               <View style={styles.artistInfo}>
                 <Text style={styles.artistName}>{SEARCH_ARTIST.name}</Text>
                 <View style={styles.followersRow}>
@@ -139,18 +163,6 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
             </View>
           ) : undefined
         }
-        renderItem={({ item }) => (
-          <SongItem
-            song={item}
-            rightAction="dots"
-            onPress={() => {
-              playSong(item, displaySongs);
-              if (onNavigateToPlay) {
-                onNavigateToPlay(item.id);
-              }
-            }}
-          />
-        )}
       />
 
       {/* Bottom Tab Bar */}

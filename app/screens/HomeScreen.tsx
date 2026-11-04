@@ -46,6 +46,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           source={IMAGES.homeLogo}
           style={styles.logoImage}
           resizeMode="contain"
+          fadeDuration={0}
         />
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.headerIconBtn} activeOpacity={0.7}>
@@ -55,7 +56,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             onPress={() => onNavigateToArtist && onNavigateToArtist()}
             activeOpacity={0.8}
           >
-            <Image source={IMAGES.homeAvatar} style={styles.avatarImage} />
+            <Image source={IMAGES.homeAvatar} style={styles.avatarImage} fadeDuration={0} />
           </TouchableOpacity>
         </View>
       </View>
@@ -106,7 +107,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               }}
               activeOpacity={0.85}
             >
-              <Image source={item.coverImage} style={styles.suggestionImage} />
+              <Image source={item.coverImage} style={styles.suggestionImage} fadeDuration={0} />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -133,7 +134,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               onPress={() => onNavigateToPlaylist && onNavigateToPlaylist(chart.id)}
               activeOpacity={0.85}
             >
-              <Image source={chart.coverImage} style={styles.chartImage} />
+              <Image source={chart.coverImage} style={styles.chartImage} fadeDuration={0} />
               <Text style={styles.chartUpdateText} numberOfLines={2}>
                 {chart.updateText}
               </Text>
@@ -160,7 +161,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               onPress={() => onNavigateToPlaylist && onNavigateToPlaylist(album.id)}
               activeOpacity={0.85}
             >
-              <Image source={album.coverImage} style={styles.albumImage} />
+              <Image source={album.coverImage} style={styles.albumImage} fadeDuration={0} />
               <Text style={styles.albumTitle} numberOfLines={1}>
                 {album.title}
               </Text>
@@ -190,7 +191,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               onPress={() => onNavigateToArtist && onNavigateToArtist(artist.id)}
               activeOpacity={0.85}
             >
-              <Image source={artist.avatarImage} style={styles.artistImage} />
+              <Image source={artist.avatarImage} style={styles.artistImage} fadeDuration={0} />
               <Text style={styles.artistName} numberOfLines={1}>
                 {artist.name}
               </Text>
