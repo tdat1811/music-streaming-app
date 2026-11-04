@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
@@ -11,7 +11,7 @@ interface SongItemProps {
   onRightActionPress?: () => void;
 }
 
-export const SongItem: React.FC<SongItemProps> = ({
+export const SongItem: React.FC<SongItemProps> = memo(({
   song,
   rightAction = 'dots',
   onPress,
@@ -19,7 +19,7 @@ export const SongItem: React.FC<SongItemProps> = ({
 }) => {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      <Image source={song.coverImage} style={styles.coverImage} />
+      <Image source={song.coverImage} style={styles.coverImage} fadeDuration={0} />
 
       <View style={styles.infoContainer}>
         <Text style={styles.title} numberOfLines={1}>
@@ -63,7 +63,7 @@ export const SongItem: React.FC<SongItemProps> = ({
       </TouchableOpacity>
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

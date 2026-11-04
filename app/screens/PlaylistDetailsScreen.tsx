@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -28,7 +28,23 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
   onNavigateToPlay,
   onTabPress,
 }) => {
-  const {playSong} = useAudioPlayer();
+  const { playSong } = useAudioPlayer();
+
+  const keyExtractor = useCallback((item: (typeof PLAYLIST_DETAILS_TRACKS)[0]) => item.id, []);
+
+  const renderSongItem = useCallback(({ item }: { item: (typeof PLAYLIST_DETAILS_TRACKS)[0] }) => (
+    <SongItem
+      song={item}
+      rightAction="dots"
+      onPress={() => {
+        playSong(item, PLAYLIST_DETAILS_TRACKS);
+        if (onNavigateToPlay) {
+          onNavigateToPlay(item.id);
+        }
+      }}
+    />
+  ), [playSong, onNavigateToPlay]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
@@ -50,9 +66,14 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
 
       <FlatList
         data={PLAYLIST_DETAILS_TRACKS}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
+        renderItem={renderSongItem}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews={true}
         ListHeaderComponent={
           <>
             {/* Playlist Banner */}
@@ -60,6 +81,7 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
               <Image
                 source={IMAGES.playlistDetailsCover}
                 style={styles.coverImage}
+                fadeDuration={0}
               />
 
               <View style={styles.bannerInfo}>
@@ -91,12 +113,12 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
 
               <View style={styles.rightActions}>
                 <TouchableOpacity style={styles.shuffleBtn} onPress={() => {
-                  playSong(PLAYLIST_DETAILS_TRACKS[0],PLAYLIST_DETAILS_TRACKS)
-                  if(onNavigateToPlay){
+                  playSong(PLAYLIST_DETAILS_TRACKS[0], PLAYLIST_DETAILS_TRACKS);
+                  if (onNavigateToPlay) {
                     onNavigateToPlay(PLAYLIST_DETAILS_TRACKS[0].id);
                   } 
                 }}>
-                  <Ionicons name="shuffle" size={22} color="#111216"  />
+                  <Ionicons name="shuffle" size={22} color="#111216" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.playButton}
@@ -109,23 +131,7 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
             </View>
           </>
         }
-        renderItem={({ item }) => (
-          <SongItem
-            song={item}
-            rightAction="dots"
-            onPress={() => { 
-              playSong(item, PLAYLIST_DETAILS_TRACKS);
-              if(onNavigateToPlay){
-                onNavigateToPlay(item.id);
-              }
-            }
-            }
-          />
-        )}
       />
-
-      {/* Mini Player */}
-      <MiniPlayer onPress={() => onNavigateToPlay && onNavigateToPlay('pdt1')} />
 
       {/* Bottom Tab Bar */}
       <BottomTabBar
