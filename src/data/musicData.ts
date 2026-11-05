@@ -28,10 +28,11 @@ export interface Artist {
 
 export interface Playlist {
   id: string;
+  ownerId: string;
   title: string;
-  creator: string;
-  songCount: number;
+  description: string;
   coverImage: any;
+  songIds: string[];
 }
 
 export interface FeedPost {
@@ -57,6 +58,88 @@ export interface CommentItem {
   likes: number;
   replies?: CommentItem[];
 }
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  planId: string | null;
+  likedSongIds: string[];
+  followedArtistIds: string[];
+}
+
+// Tài khoản mẫu, chưa có backend nên mật khẩu để dạng chữ thường. Không dùng dữ liệu thật.
+export const SAMPLE_USERS: User[] = [
+  {
+    id: 'u1',
+    name: 'Ashley Scott',
+    email: 'ashley@example.com',
+    phone: '0900000001',
+    password: '123456',
+    planId: null,
+    likedSongIds: ['pdt1', 'sr2', 's1', 'apt1'],
+    followedArtistIds: ['pa1', 'pa3', 'sa1'],
+  },
+  {
+    id: 'u2',
+    name: 'Jason Smith',
+    email: 'jason@example.com',
+    phone: '0900000002',
+    password: '123456',
+    planId: 'premium',
+    likedSongIds: ['pdt4', 'pdt5'],
+    followedArtistIds: ['pa2', 'ar1'],
+  },
+];
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  badge: string;
+  price: string;
+  perks: string[];
+}
+
+export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: 'premium',
+    name: 'Premium',
+    badge: 'Free for 1 month',
+    price: '$12.99/ month',
+    perks: [
+      'Ad-free listening',
+      'Download to listen offline',
+      'Access full catalog Premium',
+      'High sound quality',
+      'Cancel anytime',
+    ],
+  },
+  {
+    id: 'family',
+    name: 'Family',
+    badge: 'Up to 6 accounts',
+    price: '$19.99/ month',
+    perks: [
+      '6 individual accounts',
+      'Block explicit music',
+      'Ad-free listening',
+    ],
+  },
+  {
+    id: 'student',
+    name: 'Student',
+    badge: 'Student discount',
+    price: '$6.99/ month',
+    perks: [
+      'Ad-free listening',
+      'Download to listen offline',
+      'High sound quality',
+      'Cancel anytime',
+    ],
+  },
+];
 
 export const SUGGESTIONS: Song[] = [
   {
@@ -295,83 +378,65 @@ export const FEED_COMMENTS: CommentItem[] = [
   },
 ];
 
-export const MY_PLAYLISTS: Playlist[] = [
+export const DEFAULT_PLAYLIST_COVER = IMAGES.libraryTrack5;
+
+export const USER_PLAYLISTS: Playlist[] = [
   {
     id: 'p1',
+    ownerId: 'u1',
     title: 'Ipsum sit nulla',
-    creator: 'Ashley Scott',
-    songCount: 12,
+    description: 'Songs for a slow morning',
     coverImage: IMAGES.playlist1,
+    songIds: ['pdt1', 'pdt2', 'pdt3', 'sr1'],
   },
   {
     id: 'p2',
+    ownerId: 'u1',
     title: 'Occaecat aliq',
-    creator: 'Jose Garcia',
-    songCount: 4,
+    description: 'Late night favorites',
     coverImage: IMAGES.playlist2,
+    songIds: ['sr2', 'sr3'],
+  },
+  {
+    id: 'p3',
+    ownerId: 'u2',
+    title: 'Magna nost',
+    description: 'Tracks for the road',
+    coverImage: IMAGES.libraryTrack3,
+    songIds: ['apt1', 'apt2', 's2'],
   },
 ];
 
-export const LIBRARY_ARTIST = {
-  id: 'la1',
-  name: 'Mer Watson',
-  followers: '1.234K Followers',
-  avatarImage: IMAGES.libraryArtistMer,
-};
-
-export const LIBRARY_TRACKS: (Song & { isPlaylist?: boolean; songCount?: number })[] = [
+export const ARTISTS: Artist[] = [
   {
-    id: 'lt1',
-    title: 'FLOWER',
-    artist: 'Jessica Gonzalez',
-    plays: '2,1M',
-    duration: '3:36',
-    coverImage: IMAGES.libraryTrack1,
-    isLiked: true,
+    id: 'pa1',
+    name: 'Jennifer Wilson',
+    followers: '820K Followers',
+    avatarImage: IMAGES.artistJennifer,
   },
   {
-    id: 'lt2',
-    title: 'Shape of You',
-    artist: 'Anthony Taylor',
-    plays: '68M',
-    duration: '03:35',
-    coverImage: IMAGES.libraryTrack2,
-    isLiked: true,
+    id: 'pa2',
+    name: 'Elizabeth Hall',
+    followers: '410K Followers',
+    avatarImage: IMAGES.artistElizabeth,
   },
   {
-    id: 'lt3',
-    title: 'Blinding Lights',
-    artist: 'Ashley Scott',
-    songCount: 4,
-    isPlaylist: true,
-    coverImage: IMAGES.libraryTrack3,
+    id: 'pa3',
+    name: 'Anthony Taylor',
+    followers: '2.3M Followers',
+    avatarImage: IMAGES.artistAnthony,
   },
   {
-    id: 'lt4',
-    title: 'Levitating',
-    artist: 'Anthony Taylor',
-    plays: '9M',
-    duration: '07:48',
-    coverImage: IMAGES.libraryTrack4,
-    isLiked: true,
+    id: 'sa1',
+    name: 'Mer Watson',
+    followers: '1.234K Followers',
+    avatarImage: IMAGES.libraryArtistMer,
   },
   {
-    id: 'lt5',
-    title: 'Astronaut in the Ocean',
-    artist: 'Pedro Moreno',
-    plays: '23M',
-    duration: '3:36',
-    coverImage: IMAGES.libraryTrack5,
-    isLiked: true,
-  },
-  {
-    id: 'lt6',
-    title: 'Dynamite',
-    artist: 'Elena Jimenez',
-    plays: '10M',
-    duration: '06:22',
-    coverImage: IMAGES.libraryTrack6,
-    isLiked: true,
+    id: 'ar1',
+    name: 'Ryan Young',
+    followers: '65.1K Followers',
+    avatarImage: IMAGES.artistRyanProfile,
   },
 ];
 
@@ -468,6 +533,16 @@ export const ARTIST_POPULAR_TRACKS: Song[] = [
     coverImage: IMAGES.artistPopular5,
   },
 ];
+
+const ALL_SONGS: Song[] = [
+  ...SUGGESTIONS,
+  ...SEARCH_RESULTS,
+  ...PLAYLIST_DETAILS_TRACKS,
+  ...ARTIST_POPULAR_TRACKS,
+];
+
+export const getSongsByIds = (songIds: string[]): Song[] =>
+  songIds.flatMap((id) => ALL_SONGS.find((song) => song.id === id) ?? []);
 
 export const ARTIST_ALBUMS: Album[] = [
   {

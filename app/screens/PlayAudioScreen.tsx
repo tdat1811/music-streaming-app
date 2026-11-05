@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { IMAGES } from '../../src/constants/images';
 import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
+import { useAuth } from '../../src/context/AuthContext';
 interface PlayAudioScreenProps {
   onMinimize?: () => void;
   onOpenComments?: () => void;
@@ -24,8 +25,9 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
   trackTitle = 'FLOWER',
   artistName = 'Jessica Gonzalez',
 }) => {
-  const {currentTrack, isPlaying, positionMillis, durationMillis, playSong, togglePlayPause, playPrevious, playNext, seekTo,toggleLikeCurrentTrack} = useAudioPlayer();
-  const [isLiked, setIsLiked] = useState(false);
+  const {currentTrack, isPlaying, positionMillis, durationMillis, playSong, togglePlayPause, playPrevious, playNext, seekTo} = useAudioPlayer();
+  const { currentUser, toggleLikeSong } = useAuth();
+  const isLiked = !!currentTrack && !!currentUser?.likedSongIds.includes(currentTrack.id);
 
   // 36 bars for waveform
   const waveformHeights = [
@@ -159,13 +161,13 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
               <View style={styles.leftInteractions}>
                 <TouchableOpacity
                   style={styles.interactionItem}
-                  onPress={toggleLikeCurrentTrack}
+                  onPress={() => currentTrack && toggleLikeSong(currentTrack.id)}
                   activeOpacity={0.7}
                 >
                   <Ionicons
-                    name={currentTrack?.isLiked ? 'heart' : 'heart-outline'}
+                    name={isLiked ? 'heart' : 'heart-outline'}
                     size={22}
-                    color={currentTrack?.isLiked ? '#10C7D5' : '#FFFFFF'}
+                    color={isLiked ? '#10C7D5' : '#FFFFFF'}
                   />
                   <Text style={styles.interactionCount}>12K</Text>
                 </TouchableOpacity>

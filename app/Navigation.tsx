@@ -12,19 +12,52 @@ import { SearchAudioScreen } from './screens/SearchAudioScreen';
 import { SearchResultsScreen } from './screens/SearchResultsScreen';
 import { FeedScreen } from './screens/FeedScreen';
 import { FeedCommentsScreen } from './screens/FeedCommentsScreen';
-import { MyLibraryScreen } from './screens/MyLibraryScreen';
-import { MyPlaylistsScreen } from './screens/MyPlaylistsScreen';
+import { MyLibraryScreen, LibraryTag } from './screens/MyLibraryScreen';
 import { PlaylistDetailsScreen } from './screens/PlaylistDetailsScreen';
 import { ArtistProfileScreen } from './screens/ArtistProfileScreen';
 import { PlayAudioScreen } from './screens/PlayAudioScreen';
+import { LoginScreen } from './screens/LoginScreen';
+import { SignUpScreen } from './screens/SignUpScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
 import {MiniPlayer} from "../src/components/MiniPlayer";
+import { useAuth } from '../src/context/AuthContext';
+import { Playlist } from '../src/data/musicData';
 export const Navigation: React.FC = () => {
-  const [currentScreen, setCurrentScreen] = useState<ScreenId>('Home');
-  const [history, setHistory] = useState<ScreenId[]>(['Home']);
+  const { currentUser, logout } = useAuth();
+  const [currentScreen, setCurrentScreen] = useState<ScreenId>('Launch');
+  const [history, setHistory] = useState<ScreenId[]>(['Launch']);
    const [searchQuery, setSearchQuery] = useState<string>('me');
+  // Màn hình cần quay lại sau khi đăng nhập (ví dụ khách bấm mua gói ở màn chọn gói)
+  const [afterAuth, setAfterAuth] = useState<ScreenId | null>(null);
+  // Giữ ở đây để không mất tag đang chọn khi quay lại từ màn Play hoặc Playlist Details
+  const [libraryTag, setLibraryTag] = useState<LibraryTag>('Playlists');
+  // null là playlist mẫu Top 50 - Canada
+  const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
   const navigateTo = (screen: ScreenId) => {
     setHistory((prev) => [...prev, screen]);
     setCurrentScreen(screen);
+  };
+
+  const finishAuth = (defaultScreen: ScreenId) => {
+    navigateTo(afterAuth ?? defaultScreen);
+    setAfterAuth(null);
+  };
+
+  const openLoginThenProfile = () => {
+    setAfterAuth('Profile');
+    navigateTo('Login');
+  };
+
+  const openPlaylist = (playlist: Playlist | null) => {
+    setSelectedPlaylist(playlist);
+    navigateTo('PlaylistDetails');
+  };
+
+  const handleLogout = () => {
+    logout();
+    setLibraryTag('Playlists');
+    setHistory(['Launch']);
+    setCurrentScreen('Launch');
   };
 
   const goBack = () => {
@@ -61,15 +94,35 @@ export const Navigation: React.FC = () => {
       case 'Launch':
         return (
           <LaunchScreen
-            onNavigateToHome={() => navigateTo('Home')}
-            onNavigateToPremium={() => navigateTo('LaunchPremium')}
+            onNavigateToSignUp={() => navigateTo('SignUp')}
+            onNavigateToLogin={() => navigateTo('Login')}
+          />
+        );
+
+      case 'Login':
+        return (
+          <LoginScreen
+            onBack={() => {
+              setAfterAuth(null);
+              goBack();
+            }}
+            onLoginSuccess={() => finishAuth('Home')}
+            onNavigateToSignUp={() => navigateTo('SignUp')}
+          />
+        );
+
+      case 'SignUp':
+        return (
+          <SignUpScreen
+            onBack={goBack}
+            onSignUpSuccess={() => finishAuth('LaunchPremium')}
+            onNavigateToLogin={() => navigateTo('Login')}
           />
         );
 
       case 'LaunchPremium':
         return (
           <LaunchScreenPremium
-            onStartListening={() => navigateTo('Home')}
             onNavigateToSubscription={() => navigateTo('SubscriptionPlans')}
           />
         );
@@ -79,6 +132,10 @@ export const Navigation: React.FC = () => {
           <SubscriptionPlansScreen
             onBackHome={() => navigateTo('Home')}
             onSubscribe={() => navigateTo('Home')}
+            onRequireLogin={() => {
+              setAfterAuth('SubscriptionPlans');
+              navigateTo('Login');
+            }}
           />
         );
 
@@ -86,10 +143,22 @@ export const Navigation: React.FC = () => {
         return (
           <HomeScreen
             onNavigateToSearch={() => navigateTo('SearchAudio')}
-            onNavigateToPlaylist={() => navigateTo('PlaylistDetails')}
+            onNavigateToPlaylist={() => openPlaylist(null)}
             onNavigateToArtist={() => navigateTo('ArtistProfile')}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
+            onNavigateToLogin={() => navigateTo('Login')}
+            onNavigateToProfile={() => (currentUser ? navigateTo('Profile') : openLoginThenProfile())}
+            onLogout={handleLogout}
             onTabPress={handleTabPress}
+          />
+        );
+
+      case 'Profile':
+        return (
+          <ProfileScreen
+            onBack={goBack}
+            onNavigateToPlans={() => navigateTo('SubscriptionPlans')}
+            onNavigateToLogin={openLoginThenProfile}
           />
         );
 
@@ -130,20 +199,15 @@ export const Navigation: React.FC = () => {
       case 'MyLibrary':
         return (
           <MyLibraryScreen
-            onNavigateToPlaylists={() => navigateTo('MyPlaylists')}
-            onNavigateToPlaylistDetails={() => navigateTo('PlaylistDetails')}
-            onNavigateToArtist={() => navigateTo('ArtistProfile')}
+            selectedTag={libraryTag}
+            onSelectTag={setLibraryTag}
+            onSelectPlaylist={openPlaylist}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onNavigateToSearch={() => navigateTo('SearchAudio')}
-            onTabPress={handleTabPress}
-          />
-        );
-
-      case 'MyPlaylists':
-        return (
-          <MyPlaylistsScreen
-            onBack={goBack}
-            onSelectPlaylist={() => navigateTo('PlaylistDetails')}
+            onNavigateToLogin={() => {
+              setAfterAuth('MyLibrary');
+              navigateTo('Login');
+            }}
             onTabPress={handleTabPress}
           />
         );
@@ -151,6 +215,7 @@ export const Navigation: React.FC = () => {
       case 'PlaylistDetails':
         return (
           <PlaylistDetailsScreen
+            playlist={selectedPlaylist}
             onBack={goBack}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onTabPress={handleTabPress}
@@ -178,7 +243,7 @@ export const Navigation: React.FC = () => {
         return (
           <HomeScreen
             onNavigateToSearch={() => navigateTo('SearchAudio')}
-            onNavigateToPlaylist={() => navigateTo('PlaylistDetails')}
+            onNavigateToPlaylist={() => openPlaylist(null)}
             onNavigateToArtist={() => navigateTo('ArtistProfile')}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onTabPress={handleTabPress}
@@ -187,7 +252,7 @@ export const Navigation: React.FC = () => {
     }
   };
 
-  const hiddenMiniPLayer = currentScreen === 'Launch' || currentScreen === 'LaunchPremium' || currentScreen === 'SubscriptionPlans'||currentScreen === "PlayAudio" || currentScreen === 'SearchAudio';;
+  const hiddenMiniPLayer = currentScreen === 'Login' || currentScreen === 'SignUp' || currentScreen === 'Profile' || currentScreen === 'Launch' || currentScreen === 'LaunchPremium' || currentScreen === 'SubscriptionPlans'||currentScreen === "PlayAudio" || currentScreen === 'SearchAudio';;
   return (
     <View style={styles.container}>
       {renderScreen()}
@@ -196,10 +261,11 @@ export const Navigation: React.FC = () => {
         <MiniPlayer onPress={() => navigateTo('PlayAudio')} />
       )}
 
-      {/* Floating 13-Screen Switcher */}
+      {/* Floating Screen Switcher */}
       <ScreenSwitcher
         currentScreen={currentScreen}
         onSelectScreen={(screenId) => {
+          if (screenId === 'PlaylistDetails') setSelectedPlaylist(null);
           setHistory((prev) => [...prev, screenId]);
           setCurrentScreen(screenId);
         }}

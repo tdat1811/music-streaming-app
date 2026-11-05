@@ -20,11 +20,15 @@ import {
 } from '../../src/data/musicData';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
+import { useAuth } from '../../src/context/AuthContext';
 interface HomeScreenProps {
   onNavigateToSearch?: () => void;
   onNavigateToPlaylist?: (playlistId?: string) => void;
   onNavigateToArtist?: (artistId?: string) => void;
   onNavigateToPlay?: (trackId?: string) => void;
+  onNavigateToLogin?: () => void;
+  onNavigateToProfile?: () => void;
+  onLogout?: () => void;
   onTabPress?: (tab: TabName) => void;
 }
 
@@ -33,9 +37,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToPlaylist,
   onNavigateToArtist,
   onNavigateToPlay,
+  onNavigateToLogin,
+  onNavigateToProfile,
+  onLogout,
   onTabPress,
 }) => {
-  const {playSong} = useAudioPlayer();
+  const {playSong, isPlaying, togglePlayPause} = useAudioPlayer();
+  const { currentUser, activePlan } = useAuth();
+
+  const handleLogout = () => {
+    if (isPlaying) togglePlayPause();
+    if (onLogout) onLogout();
+  };
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
@@ -53,7 +66,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <Ionicons name="notifications-outline" size={24} color={COLORS.textPrimary} />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => onNavigateToArtist && onNavigateToArtist()}
+            onPress={onNavigateToProfile}
             activeOpacity={0.8}
           >
             <Image source={IMAGES.homeAvatar} style={styles.avatarImage} fadeDuration={0} />
@@ -68,7 +81,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         {/* Greeting */}
         <View style={styles.greetingContainer}>
           <Text style={styles.greetingSub}>Good morning,</Text>
-          <Text style={styles.greetingName}>Ashley Scott</Text>
+          <View style={styles.greetingRow}>
+            <Text style={styles.greetingName} numberOfLines={1}>
+              {currentUser ? currentUser.name : 'Guest'}
+            </Text>
+            <TouchableOpacity
+              onPress={currentUser ? handleLogout : onNavigateToLogin}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.accountAction}>{currentUser ? 'Log out' : 'Log in'}</Text>
+            </TouchableOpacity>
+          </View>
+          {activePlan && (
+            <View style={styles.vipBadge}>
+              <Ionicons name="diamond" size={12} color="#FFFFFF" />
+              <Text style={styles.vipBadgeText}>VIP • {activePlan.name}</Text>
+            </View>
+          )}
         </View>
 
         {/* Search Bar */}
@@ -257,10 +286,38 @@ const styles = StyleSheet.create({
     color: '#686A70',
     marginBottom: 2,
   },
+  greetingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   greetingName: {
+    flex: 1,
     fontSize: 24,
     fontWeight: '800',
     color: '#111216',
+  },
+  accountAction: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  vipBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    backgroundColor: '#7B2CBF',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    marginTop: 6,
+  },
+  vipBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   searchBar: {
     flexDirection: 'row',

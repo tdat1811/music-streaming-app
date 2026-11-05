@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { IMAGES } from '../constants/images';
 import { useAudioPlayer } from '../context/AudioPlayerContext';
+import { useAuth } from '../context/AuthContext';
 interface MiniPlayerProps {
   onPress?: () => void;
   onPlayPausePress?: () => void;
@@ -19,8 +20,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
   title = 'FLOWER',
   artist = 'Me • Jessica Gonzalez',
 }) => {
-  const {currentTrack, isPlaying,togglePlayPause,toggleLikeCurrentTrack} = useAudioPlayer();
+  const {currentTrack, isPlaying,togglePlayPause} = useAudioPlayer();
+  const { currentUser, toggleLikeSong } = useAuth();
   if(!currentTrack) return null;
+  const isLiked = currentUser?.likedSongIds.includes(currentTrack.id) ?? false;
 
   return (
     <TouchableOpacity
@@ -43,10 +46,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
       <TouchableOpacity
         style={styles.iconButton}
-        onPress={toggleLikeCurrentTrack}
+        onPress={() => toggleLikeSong(currentTrack.id)}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Ionicons name={currentTrack.isLiked ? "heart" : "heart-outline"} size={22} color="#FFFFFF" />
+        <Ionicons name={isLiked ? "heart" : "heart-outline"} size={22} color="#FFFFFF" />
       </TouchableOpacity>
 
       <TouchableOpacity
