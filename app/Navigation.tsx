@@ -33,6 +33,10 @@ export const Navigation: React.FC = () => {
   const [libraryTag, setLibraryTag] = useState<LibraryTag>('Playlists');
   // null là playlist mẫu Top 50 - Canada
   const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+  // null là bài post đầu tiên (khi mở màn bình luận từ menu Screens)
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  // Các nghệ sĩ đã mở, phần tử cuối là trang đang xem (nút quay lại đi ngược danh sách này)
+  const [artistStack, setArtistStack] = useState<string[]>([]);
   const navigateTo = (screen: ScreenId) => {
     setHistory((prev) => [...prev, screen]);
     setCurrentScreen(screen);
@@ -53,8 +57,35 @@ export const Navigation: React.FC = () => {
     navigateTo('PlaylistDetails');
   };
 
+  const openArtist = (artistId?: string) => {
+    if (artistId) setArtistStack((prev) => [...prev, artistId]);
+    navigateTo('ArtistProfile');
+  };
+
+  const openComments = (postId: string) => {
+    setSelectedPostId(postId);
+    navigateTo('FeedComments');
+  };
+
+  // Màn nằm dưới sheet bình luận: màn gần nhất trong lịch sử, bỏ qua sheet và các màn đăng nhập
+  const commentsBaseIndex = history.findLastIndex(
+    (screen) => screen !== 'FeedComments' && screen !== 'Login' && screen !== 'SignUp'
+  );
+  const commentsBaseScreen: ScreenId = commentsBaseIndex >= 0 ? history[commentsBaseIndex] : 'Feed';
+
+  const closeComments = () => {
+    setHistory(commentsBaseIndex >= 0 ? history.slice(0, commentsBaseIndex + 1) : ['Feed']);
+    setCurrentScreen(commentsBaseScreen);
+  };
+
+  const openLoginThenReturn = (screen: ScreenId) => {
+    setAfterAuth(screen);
+    navigateTo('Login');
+  };
+
   const handleLogout = () => {
     logout();
+    setArtistStack([]);
     setLibraryTag('Playlists');
     setHistory(['Launch']);
     setCurrentScreen('Launch');
@@ -89,8 +120,12 @@ export const Navigation: React.FC = () => {
     }
   };
 
+  const isCommentsOpen = currentScreen === 'FeedComments';
+  // Khi mở sheet, màn phía dưới vẫn được giữ nguyên (không mất vị trí đang cuộn)
+  const visibleScreen = isCommentsOpen ? commentsBaseScreen : currentScreen;
+
   const renderScreen = () => {
-    switch (currentScreen) {
+    switch (visibleScreen) {
       case 'Launch':
         return (
           <LaunchScreen
@@ -144,7 +179,7 @@ export const Navigation: React.FC = () => {
           <HomeScreen
             onNavigateToSearch={() => navigateTo('SearchAudio')}
             onNavigateToPlaylist={() => openPlaylist(null)}
-            onNavigateToArtist={() => navigateTo('ArtistProfile')}
+            onNavigateToArtist={openArtist}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onNavigateToLogin={() => navigateTo('Login')}
             onNavigateToProfile={() => (currentUser ? navigateTo('Profile') : openLoginThenProfile())}
@@ -178,8 +213,9 @@ export const Navigation: React.FC = () => {
     <SearchResultsScreen
       searchQuery={searchQuery} // Truyền từ khóa sang!
       onBackToSuggestions={() => navigateTo('SearchAudio')}
-      onNavigateToArtist={() => navigateTo('ArtistProfile')}
+      onNavigateToArtist={openArtist}
       onNavigateToPlay={() => navigateTo('PlayAudio')}
+      onNavigateToAlbum={() => openPlaylist(null)}
       onTabPress={handleTabPress}
     />
   );
@@ -187,14 +223,12 @@ export const Navigation: React.FC = () => {
       case 'Feed':
         return (
           <FeedScreen
-            onOpenComments={() => navigateTo('FeedComments')}
+            onOpenComments={openComments}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
+            onRequireLogin={() => openLoginThenReturn('Feed')}
             onTabPress={handleTabPress}
           />
         );
-
-      case 'FeedComments':
-        return <FeedCommentsScreen onClose={goBack} />;
 
       case 'MyLibrary':
         return (
@@ -202,6 +236,7 @@ export const Navigation: React.FC = () => {
             selectedTag={libraryTag}
             onSelectTag={setLibraryTag}
             onSelectPlaylist={openPlaylist}
+            onSelectArtist={openArtist}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onNavigateToSearch={() => navigateTo('SearchAudio')}
             onNavigateToLogin={() => {
@@ -225,7 +260,13 @@ export const Navigation: React.FC = () => {
       case 'ArtistProfile':
         return (
           <ArtistProfileScreen
-            onBack={goBack}
+            key={artistStack[artistStack.length - 1]}
+            artistId={artistStack[artistStack.length - 1]}
+            onSelectArtist={openArtist}
+            onBack={() => {
+              setArtistStack((prev) => prev.slice(0, -1));
+              goBack();
+            }}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onTabPress={handleTabPress}
           />
@@ -235,7 +276,7 @@ export const Navigation: React.FC = () => {
         return (
           <PlayAudioScreen
             onMinimize={goBack}
-            onOpenComments={() => navigateTo('FeedComments')}
+            onOpenComments={openComments}
           />
         );
 
@@ -244,7 +285,7 @@ export const Navigation: React.FC = () => {
           <HomeScreen
             onNavigateToSearch={() => navigateTo('SearchAudio')}
             onNavigateToPlaylist={() => openPlaylist(null)}
-            onNavigateToArtist={() => navigateTo('ArtistProfile')}
+            onNavigateToArtist={openArtist}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onTabPress={handleTabPress}
           />
@@ -252,7 +293,7 @@ export const Navigation: React.FC = () => {
     }
   };
 
-  const hiddenMiniPLayer = currentScreen === 'Login' || currentScreen === 'SignUp' || currentScreen === 'Profile' || currentScreen === 'Launch' || currentScreen === 'LaunchPremium' || currentScreen === 'SubscriptionPlans'||currentScreen === "PlayAudio" || currentScreen === 'SearchAudio';;
+  const hiddenMiniPLayer = visibleScreen === 'Login' || visibleScreen === 'SignUp' || visibleScreen === 'Profile' || visibleScreen === 'Launch' || visibleScreen === 'LaunchPremium' || visibleScreen === 'SubscriptionPlans'||visibleScreen === "PlayAudio" || visibleScreen === 'SearchAudio';;
   return (
     <View style={styles.container}>
       {renderScreen()}
@@ -261,11 +302,21 @@ export const Navigation: React.FC = () => {
         <MiniPlayer onPress={() => navigateTo('PlayAudio')} />
       )}
 
+      {isCommentsOpen && (
+        <FeedCommentsScreen
+          postId={selectedPostId}
+          onClose={closeComments}
+          onRequireLogin={() => openLoginThenReturn('FeedComments')}
+        />
+      )}
+
       {/* Floating Screen Switcher */}
       <ScreenSwitcher
         currentScreen={currentScreen}
         onSelectScreen={(screenId) => {
           if (screenId === 'PlaylistDetails') setSelectedPlaylist(null);
+          if (screenId === 'FeedComments') setSelectedPostId(null);
+          if (screenId === 'ArtistProfile') setArtistStack([]);
           setHistory((prev) => [...prev, screenId]);
           setCurrentScreen(screenId);
         }}

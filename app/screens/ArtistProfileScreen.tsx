@@ -11,33 +11,51 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
-import { IMAGES } from '../../src/constants/images';
-import {
-  ARTIST_POPULAR_TRACKS,
-  ARTIST_ALBUMS,
-  ARTIST_FANS_ALSO_LIKE,
-} from '../../src/data/musicData';
+import { ALL_SONGS, ARTIST_ALBUMS, ARTISTS, Song } from '../../src/data/musicData';
 import { SongItem } from '../../src/components/SongItem';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAuth } from '../../src/context/AuthContext';
+import { shuffleTracks, useAudioPlayer } from '../../src/context/AudioPlayerContext';
 
-// Trang nghệ sĩ hiện vẫn là trang mẫu của Ryan Young
-const ARTIST_ID = 'ar1';
+// Dùng khi mở trang từ menu Screens, chưa chọn nghệ sĩ nào
+const DEFAULT_ARTIST_ID = 'ar1';
 
 interface ArtistProfileScreenProps {
+  artistId?: string | null;
+  onSelectArtist?: (artistId: string) => void;
   onBack?: () => void;
   onNavigateToPlay?: (trackId?: string) => void;
   onTabPress?: (tab: TabName) => void;
 }
 
 export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
+  artistId,
+  onSelectArtist,
   onBack,
   onNavigateToPlay,
   onTabPress,
 }) => {
   const { currentUser, toggleFollowArtist } = useAuth();
-  const isFollowing = !!currentUser?.followedArtistIds.includes(ARTIST_ID);
+  const artist =
+    ARTISTS.find((item) => item.id === (artistId ?? DEFAULT_ARTIST_ID)) ??
+    ARTISTS.find((item) => item.id === DEFAULT_ARTIST_ID) ??
+    ARTISTS[0];
+  const tracks = ALL_SONGS.filter((song) => song.artist === artist.name);
+  const albums = ARTIST_ALBUMS.filter((album) => album.artist === artist.name);
+  const relatedArtists = ARTISTS.filter((item) => item.id !== artist.id);
+  const isFollowing = !!currentUser?.followedArtistIds.includes(artist.id);
   const [aboutExpanded, setAboutExpanded] = useState(false);
+  const { playSong } = useAudioPlayer();
+
+  const playFrom = (track: Song, queue: Song[]) => {
+    playSong(track, queue);
+    if (onNavigateToPlay) onNavigateToPlay(track.id);
+  };
+
+  const handleShuffle = () => {
+    const queue = shuffleTracks(tracks);
+    playFrom(queue[0], queue);
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -61,17 +79,17 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
         {/* Profile Card */}
         <View style={styles.profileSection}>
           <Image
-            source={IMAGES.artistRyanProfile}
+            source={artist.avatarImage}
             style={styles.artistPhoto}
           />
-          <Text style={styles.artistName}>Ryan Young</Text>
-          <Text style={styles.followersText}>65.1K Followers</Text>
+          <Text style={styles.artistName}>{artist.name}</Text>
+          <Text style={styles.followersText}>{artist.followers}</Text>
 
           {/* Actions Row */}
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={[styles.followButton, isFollowing && styles.followingButton]}
-              onPress={() => toggleFollowArtist(ARTIST_ID)}
+              onPress={() => toggleFollowArtist(artist.id)}
               activeOpacity={0.8}
             >
               <Text
@@ -92,14 +110,19 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
               />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.iconBtn}>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              onPress={handleShuffle}
+              accessibilityLabel="Shuffle artist tracks"
+            >
               <Ionicons name="shuffle" size={22} color="#111216" />
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.playButton}
-              onPress={() => onNavigateToPlay && onNavigateToPlay('apt1')}
+              onPress={() => playFrom(tracks[0], tracks)}
               activeOpacity={0.85}
+              accessibilityLabel="Play artist tracks"
             >
               <Ionicons name="play" size={24} color="#FFFFFF" style={{ marginLeft: 2 }} />
             </TouchableOpacity>
@@ -111,12 +134,12 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
           <Text style={styles.sectionTitle}>Popular</Text>
         </View>
         <View style={styles.popularTracksList}>
-          {ARTIST_POPULAR_TRACKS.map((track) => (
+          {tracks.map((track) => (
             <SongItem
               key={track.id}
               song={track}
               rightAction="dots"
-              onPress={() => onNavigateToPlay && onNavigateToPlay(track.id)}
+              onPress={() => playFrom(track, tracks)}
             />
           ))}
         </View>
@@ -130,7 +153,7 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalScroll}
         >
-          {ARTIST_ALBUMS.map((album) => (
+          {albums.map((album) => (
             <TouchableOpacity
               key={album.id}
               style={styles.albumCard}
@@ -153,7 +176,7 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
         </View>
         <View style={styles.aboutContainer}>
           <Image
-            source={IMAGES.artistAboutBand}
+            source={artist.aboutImage}
             style={styles.aboutImage}
             resizeMode="cover"
           />
@@ -161,10 +184,7 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
             style={styles.aboutBio}
             numberOfLines={aboutExpanded ? undefined : 3}
           >
-            Do in cupidatat aute et in officia aute laboris est Lorem est nisi
-            dolor consequat voluptate duis irure. Veniam quis amet irure cillum
-            elit aliquip sunt cillum cillum do aliqua voluptate ad non magna
-            elit. Do ea n
+            {artist.bio}
           </Text>
           <TouchableOpacity
             onPress={() => setAboutExpanded(!aboutExpanded)}
@@ -185,18 +205,19 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalScroll}
         >
-          {ARTIST_FANS_ALSO_LIKE.map((album) => (
+          {relatedArtists.map((item) => (
             <TouchableOpacity
-              key={album.id}
+              key={item.id}
               style={styles.albumCard}
+              onPress={() => onSelectArtist && onSelectArtist(item.id)}
               activeOpacity={0.85}
             >
-              <Image source={album.coverImage} style={styles.albumImage} />
+              <Image source={item.avatarImage} style={styles.relatedArtistImage} />
               <Text style={styles.albumTitle} numberOfLines={1}>
-                {album.title}
+                {item.name}
               </Text>
               <Text style={styles.albumArtist} numberOfLines={1}>
-                {album.artist}
+                {item.followers}
               </Text>
             </TouchableOpacity>
           ))}
@@ -227,7 +248,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 76, // Chừa chỗ cho MiniPlayer
   },
   profileSection: {
     alignItems: 'center',
@@ -317,6 +338,12 @@ const styles = StyleSheet.create({
     width: 130,
     height: 130,
     borderRadius: 8,
+    marginBottom: 6,
+  },
+  relatedArtistImage: {
+    width: 130,
+    height: 130,
+    borderRadius: 65,
     marginBottom: 6,
   },
   albumTitle: {

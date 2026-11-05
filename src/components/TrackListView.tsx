@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Song } from '../data/musicData';
-import { parseDuration, useAudioPlayer } from '../context/AudioPlayerContext';
+import { parseDuration, shuffleTracks, useAudioPlayer } from '../context/AudioPlayerContext';
 import { SongItem } from './SongItem';
 
 const formatTotalDuration = (tracks: Song[]) => {
@@ -14,15 +14,6 @@ const formatTotalDuration = (tracks: Song[]) => {
   return hours > 0
     ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
     : `${pad(minutes)}:${pad(seconds)}`;
-};
-
-const shuffled = (tracks: Song[]) => {
-  const result = [...tracks];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
 };
 
 interface TrackListViewProps {
@@ -62,7 +53,7 @@ export const TrackListView: React.FC<TrackListViewProps> = ({
   );
 
   const handleShuffle = () => {
-    const queue = shuffled(tracks);
+    const queue = shuffleTracks(tracks);
     playFrom(queue[0], queue);
   };
 
