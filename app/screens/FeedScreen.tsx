@@ -5,26 +5,63 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  Share,
+  Alert,
   StyleSheet,
   } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
-import { FEED_POSTS, FeedPost } from '../../src/data/musicData';
+import { FEED_SONGS, getSongsByIds, Song } from '../../src/data/musicData';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
+import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
+import { useAuth } from '../../src/context/AuthContext';
+import { useFeed } from '../../src/context/FeedContext';
 
 interface FeedScreenProps {
   onOpenComments?: (postId: string) => void;
   onNavigateToPlay?: (trackId?: string) => void;
+  onRequireLogin?: () => void;
   onTabPress?: (tab: TabName) => void;
 }
 
 export const FeedScreen: React.FC<FeedScreenProps> = ({
   onOpenComments,
   onNavigateToPlay,
+  onRequireLogin,
   onTabPress,
 }) => {
+  const { playSong } = useAudioPlayer();
+  const { currentUser } = useAuth();
+  const { posts, togglePostLike, addShare, getCommentCount } = useFeed();
+
+  const handlePlay = (song: Song) => {
+    playSong(song, FEED_SONGS);
+    if (onNavigateToPlay) onNavigateToPlay(song.id);
+  };
+
+  const handleLike = (postId: string) => {
+    if (!currentUser) {
+      if (onRequireLogin) onRequireLogin();
+      return;
+    }
+    togglePostLike(postId);
+  };
+
+  const handleShare = async (postId: string, song: Song) => {
+    try {
+      const result = await Share.share({
+        message: `Listen to ${song.title} by ${song.artist}`,
+      });
+      // Android không báo khi người dùng đóng bảng chia sẻ nên chỉ iOS mới có dismissedAction.
+      // Bản web không trả về kết quả nên result có thể rỗng.
+      if (result?.action !== Share.dismissedAction) addShare(postId);
+    } catch {
+      Alert.alert('Share is not available on this device.');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
@@ -42,7 +79,10 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {FEED_POSTS.map((post) => (
+        {posts.map((post) => {
+          const song = getSongsByIds([post.songId])[0];
+          const isLiked = !!currentUser && post.likedByUserIds.includes(currentUser.id);
+          return (
           <View key={post.id} style={styles.postCard}>
             {/* Post Header */}
             <View style={styles.authorRow}>
@@ -69,22 +109,22 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
             {/* Post Media Card */}
             <TouchableOpacity
               style={styles.mediaContainer}
-              onPress={() => onNavigateToPlay && onNavigateToPlay(post.id)}
+              onPress={() => handlePlay(song)}
               activeOpacity={0.9}
             >
-              <Image source={post.trackImage} style={styles.trackImage} />
+              <Image source={song.coverImage} style={styles.trackImage} />
 
               {/* Bottom Track Banner Overlay */}
               <View style={styles.trackBanner}>
                 <View>
-                  <Text style={styles.trackTitle}>{post.trackTitle}</Text>
-                  <Text style={styles.trackAuthor}>{post.authorName}</Text>
+                  <Text style={styles.trackTitle}>{song.title}</Text>
+                  <Text style={styles.trackAuthor}>{song.artist}</Text>
                 </View>
                 <View style={styles.trackMeta}>
                   <Ionicons name="play" size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
-                  <Text style={styles.trackStats}>{post.plays}</Text>
+                  <Text style={styles.trackStats}>{song.plays}</Text>
                   <Text style={styles.trackStatsDot}>•</Text>
-                  <Text style={styles.trackStats}>{post.duration}</Text>
+                  <Text style={styles.trackStats}>{song.duration}</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -92,8 +132,16 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
             {/* Post Actions Row */}
             <View style={styles.actionsRow}>
               <View style={styles.leftActions}>
-                <TouchableOpacity style={styles.actionItem} activeOpacity={0.7}>
-                  <Ionicons name="heart-outline" size={22} color="#4B5563" />
+                <TouchableOpacity
+                  style={styles.actionItem}
+                  onPress={() => handleLike(post.id)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={isLiked ? 'heart' : 'heart-outline'}
+                    size={22}
+                    color={isLiked ? COLORS.primary : '#4B5563'}
+                  />
                   <Text style={styles.actionCount}>{post.likes}</Text>
                 </TouchableOpacity>
 
@@ -103,12 +151,16 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
                   activeOpacity={0.7}
                 >
                   <Ionicons name="chatbubble-outline" size={20} color="#4B5563" />
-                  <Text style={styles.actionCount}>{post.comments}</Text>
+                  <Text style={styles.actionCount}>{getCommentCount(post.id)}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.actionItem} activeOpacity={0.7}>
-                  <MaterialCommunityIcons name="repeat" size={22} color="#4B5563" />
-                  <Text style={styles.actionCount}>{post.reposts}</Text>
+                <TouchableOpacity
+                  style={styles.actionItem}
+                  onPress={() => handleShare(post.id, song)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="share-social-outline" size={22} color="#4B5563" />
+                  <Text style={styles.actionCount}>{post.shares}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -121,7 +173,8 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
               </TouchableOpacity>
             </View>
           </View>
-        ))}
+          );
+        })}
       </ScrollView>
 
       {/* Bottom Tab Bar */}
@@ -154,7 +207,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 76, // Chừa chỗ cho MiniPlayer
   },
   postCard: {
     marginBottom: 20,

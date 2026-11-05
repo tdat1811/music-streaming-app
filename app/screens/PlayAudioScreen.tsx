@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,11 @@ import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { IMAGES } from '../../src/constants/images';
 import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
 import { useAuth } from '../../src/context/AuthContext';
+import { useFeed } from '../../src/context/FeedContext';
+import { AudioWaveform } from '../../src/components/AudioWaveform';
 interface PlayAudioScreenProps {
   onMinimize?: () => void;
-  onOpenComments?: () => void;
+  onOpenComments?: (postId: string) => void;
   trackTitle?: string;
   artistName?: string;
 }
@@ -25,16 +27,15 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
   trackTitle = 'FLOWER',
   artistName = 'Jessica Gonzalez',
 }) => {
-  const {currentTrack, isPlaying, positionMillis, durationMillis, playSong, togglePlayPause, playPrevious, playNext, seekTo} = useAudioPlayer();
+  const {currentTrack, isPlaying, positionMillis, durationMillis, playSong, togglePlayPause, playPrevious, playNext, seekTo, isShuffle, repeatMode, toggleShuffle, cycleRepeatMode} = useAudioPlayer();
   const { currentUser, toggleLikeSong } = useAuth();
   const isLiked = !!currentTrack && !!currentUser?.likedSongIds.includes(currentTrack.id);
+  const { posts, getCommentCount } = useFeed();
+  // Chỉ bài hát có bài post trên Feed mới có bình luận
+  const trackPost = posts.find((post) => post.songId === currentTrack?.id);
 
-  // 36 bars for waveform
-  const waveformHeights = [
-    12, 18, 28, 22, 34, 48, 54, 42, 30, 24, 38, 44,
-    32, 26, 40, 50, 46, 32, 20, 28, 36, 42, 38, 28,
-    22, 32, 40, 36, 26, 18, 24, 30, 22, 16, 12, 8,
-  ];
+  // Vị trí đang kéo trên thanh sóng, chỉ tua thật khi thả tay
+  const [scrubRatio, setScrubRatio] = useState<number | null>(null);
 
   const formatTime = (millims : number) => {
     if(!millims || millims < 0) return '0:00';
@@ -44,10 +45,8 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   }
 
-  const progressPercent = durationMillis > 0 ? positionMillis / durationMillis : 0;
-  const currentWaveformIndex = Math.floor(progressPercent * 36);
-
-
+  const displayedPosition = scrubRatio !== null ? scrubRatio * durationMillis : positionMillis;
+  const progressPercent = durationMillis > 0 ? displayedPosition / durationMillis : 0;
 
   return (
     <View style={styles.container}>
@@ -85,54 +84,37 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
             </View>
 
             {/* Audio Waveform */}
-            <View style={styles.waveformContainer}>
-              {waveformHeights.map((h, i) => {
-                const isPlayed = i <= currentWaveformIndex;
-                return (
-                  <TouchableOpacity
-                  key = {i}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    const seekTarget = (i / 36) * durationMillis;
-                    seekTo(seekTarget);
-                  }}
-                  >
-                  
-                  <View
-                    style={[
-                      styles.waveformBar,
-                      {
-                        height: h,
-                        backgroundColor: isPlayed
-                          ? '#FFFFFF'
-                          : 'rgba(255, 255, 255, 0.45)',
-                      },
-                    ]}
-                  />
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <AudioWaveform
+              progress={progressPercent}
+              isPlaying={isPlaying}
+              onScrub={setScrubRatio}
+              onSeek={(ratio) => seekTo(ratio * durationMillis)}
+            />
 
             {/* Timestamp Row */}
             <View style={styles.timeRow}>
-              <Text style={styles.timeText}>{formatTime(positionMillis)}</Text>
+              <Text style={styles.timeText}>{formatTime(displayedPosition)}</Text>
               <Text style={styles.timeText}>{formatTime(durationMillis)}</Text>
             </View>
 
             {/* Playback Controls */}
             <View style={styles.controlsRow}>
-              <TouchableOpacity style={styles.controlBtn}>
-                <Ionicons name="shuffle" size={22} color="#FFFFFF" />
+              <TouchableOpacity
+                style={styles.controlBtn}
+                onPress={toggleShuffle}
+                accessibilityLabel={`Shuffle: ${isShuffle ? 'on' : 'off'}`}
+              >
+                <Ionicons name="shuffle" size={22} color={isShuffle ? '#10C7D5' : '#FFFFFF'} />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.controlBtn} onPress={playPrevious}>
+              <TouchableOpacity style={styles.controlBtn} onPress={playPrevious} accessibilityLabel="Previous track">
                 <Ionicons name="play-skip-back" size={26} color="#FFFFFF" />
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.playPauseBtn}
                 onPress={togglePlayPause}
+                accessibilityLabel={isPlaying ? 'Pause' : 'Resume'}
                 activeOpacity={0.85}
               >
                 <Ionicons
@@ -143,15 +125,19 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
                 />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.controlBtn} onPress={playNext}>
+              <TouchableOpacity style={styles.controlBtn} onPress={playNext} accessibilityLabel="Next track">
                 <Ionicons name="play-skip-forward" size={26} color="#FFFFFF" />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.controlBtn}>
+              <TouchableOpacity
+                style={styles.controlBtn}
+                onPress={cycleRepeatMode}
+                accessibilityLabel={`Repeat: ${repeatMode}`}
+              >
                 <MaterialCommunityIcons
-                  name="dots-horizontal"
-                  size={26}
-                  color="#FFFFFF"
+                  name={repeatMode === 'one' ? 'repeat-once' : 'repeat'}
+                  size={24}
+                  color={repeatMode === 'off' ? '#FFFFFF' : '#10C7D5'}
                 />
               </TouchableOpacity>
             </View>
@@ -172,18 +158,20 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
                   <Text style={styles.interactionCount}>12K</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.interactionItem}
-                  onPress={onOpenComments}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name="chatbubble-outline"
-                    size={20}
-                    color="#FFFFFF"
-                  />
-                  <Text style={styles.interactionCount}>450</Text>
-                </TouchableOpacity>
+                {trackPost && (
+                  <TouchableOpacity
+                    style={styles.interactionItem}
+                    onPress={() => onOpenComments && onOpenComments(trackPost.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name="chatbubble-outline"
+                      size={20}
+                      color="#FFFFFF"
+                    />
+                    <Text style={styles.interactionCount}>{getCommentCount(trackPost.id)}</Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               <TouchableOpacity style={styles.shareBtn} activeOpacity={0.7}>
@@ -257,17 +245,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#E5E7EB',
     fontWeight: '500',
-  },
-  waveformContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 54,
-    marginBottom: 8,
-  },
-  waveformBar: {
-    width: 3.5,
-    borderRadius: 2,
   },
   timeRow: {
     flexDirection: 'row',

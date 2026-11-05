@@ -32,6 +32,7 @@ interface MyLibraryScreenProps {
   selectedTag: LibraryTag;
   onSelectTag: (tag: LibraryTag) => void;
   onSelectPlaylist?: (playlist: Playlist) => void;
+  onSelectArtist?: (artistId: string) => void;
   onNavigateToPlay?: (trackId?: string) => void;
   onNavigateToSearch?: () => void;
   onNavigateToLogin?: () => void;
@@ -42,6 +43,7 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
   selectedTag,
   onSelectTag,
   onSelectPlaylist,
+  onSelectArtist,
   onNavigateToPlay,
   onNavigateToSearch,
   onNavigateToLogin,
@@ -164,7 +166,11 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
         </Text>
       }
       renderItem={({ item }) => (
-        <View style={styles.artistRow}>
+        <TouchableOpacity
+          style={styles.artistRow}
+          onPress={() => onSelectArtist && onSelectArtist(item.id)}
+          activeOpacity={0.7}
+        >
           <Image source={item.avatarImage} style={styles.artistAvatar} />
           <View style={styles.artistInfo}>
             <Text style={styles.artistName} numberOfLines={1}>{item.name}</Text>
@@ -185,7 +191,7 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
           >
             <Text style={styles.followingButtonText}>Following</Text>
           </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       )}
     />
   );

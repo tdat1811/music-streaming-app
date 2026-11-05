@@ -12,7 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
-import { SEARCH_ARTIST, SEARCH_RESULTS, PLAYLIST_DETAILS_TRACKS, SUGGESTIONS, Song } from '../../src/data/musicData';
+import { Album, ALL_ALBUMS, ALL_SONGS, Artist, ARTISTS, SEARCH_RESULTS, Song } from '../../src/data/musicData';
 import { SongItem } from '../../src/components/SongItem';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
@@ -23,6 +23,7 @@ interface SearchResultsScreenProps {
   onBackToSuggestions?: () => void;
   onNavigateToArtist?: (artistId?: string) => void;
   onNavigateToPlay?: (trackId?: string) => void;
+  onNavigateToAlbum?: () => void;
   onTabPress?: (tab: TabName) => void;
 }
 
@@ -31,15 +32,16 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
   onBackToSuggestions,
   onNavigateToArtist,
   onNavigateToPlay,
+  onNavigateToAlbum,
   onTabPress,
 }) => {
   const { playSong } = useAudioPlayer();
   const [activeFilter, setActiveFilter] = useState<'All' | 'Tracks' | 'Albums' | 'Artists'>('All');
   const { currentUser, toggleFollowArtist } = useAuth();
-  const isFollowing = !!currentUser?.followedArtistIds.includes(SEARCH_ARTIST.id);
 
   const shouldShowSongs = activeFilter === 'All' || activeFilter === 'Tracks';
-  const shouldShowArtist = activeFilter === 'All' || activeFilter === 'Artists';
+  const shouldShowArtists = activeFilter === 'All' || activeFilter === 'Artists';
+  const shouldShowAlbums = activeFilter === 'All' || activeFilter === 'Albums';
   const filters: ('All' | 'Tracks' | 'Albums' | 'Artists')[] = [
     'All',
     'Tracks',
@@ -47,21 +49,76 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
     'Artists',
     ];
 
-    const ALL_SONGS: Song[] = useMemo(() => [
-      ...SEARCH_RESULTS,
-      ...PLAYLIST_DETAILS_TRACKS,
-      ...SUGGESTIONS,
-    ].filter((song, index, self) => index === self.findIndex((s) => s.id === song.id)), []);
-
-  // Lọc bài hát theo từ khóa tìm kiếm (theo tên bài hát hoặc ca sĩ)
+  // Lọc kho nhạc theo từ khóa (bài hát theo tên hoặc ca sĩ, album theo tên hoặc nghệ sĩ)
   const q = searchQuery.toLowerCase().trim();
+  const matches = (text: string) => text.toLowerCase().includes(q);
+
   const displaySongs = useMemo(() => {
     if (q === '') return SEARCH_RESULTS;
-    return ALL_SONGS.filter((song) =>
-      song.title.toLowerCase().includes(q) ||
-      song.artist.toLowerCase().includes(q)
+    return ALL_SONGS.filter((song) => matches(song.title) || matches(song.artist)).filter(
+      // Một bài có thể nằm trong nhiều danh sách mẫu
+      (song, index, self) =>
+        index === self.findIndex((s) => s.title === song.title && s.artist === song.artist)
     );
-  }, [q, ALL_SONGS]);
+  }, [q]);
+
+  const displayArtists = useMemo(() => ARTISTS.filter((artist) => matches(artist.name)), [q]);
+
+  const displayAlbums = useMemo(
+    () => ALL_ALBUMS.filter((album) => matches(album.title) || matches(album.artist)),
+    [q]
+  );
+
+  const hasResults =
+    (shouldShowSongs && displaySongs.length > 0) ||
+    (shouldShowArtists && displayArtists.length > 0) ||
+    (shouldShowAlbums && displayAlbums.length > 0);
+
+  const renderArtist = (artist: Artist) => {
+    const isFollowing = !!currentUser?.followedArtistIds.includes(artist.id);
+    return (
+      <TouchableOpacity
+        key={artist.id}
+        style={styles.artistCardContainer}
+        onPress={() => onNavigateToArtist && onNavigateToArtist(artist.id)}
+        activeOpacity={0.7}
+      >
+        <Image source={artist.avatarImage} style={styles.artistAvatar} fadeDuration={0} />
+        <View style={styles.artistInfo}>
+          <Text style={styles.artistName}>{artist.name}</Text>
+          <View style={styles.followersRow}>
+            <Ionicons name="person-outline" size={13} color={COLORS.textSecondary} style={{ marginRight: 4 }} />
+            <Text style={styles.followersText}>{artist.followers}</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={[styles.followButton, isFollowing && styles.followingButton]}
+          onPress={() => toggleFollowArtist(artist.id)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
+            {isFollowing ? 'Following' : 'Follow'}
+          </Text>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderAlbum = (album: Album) => (
+    <TouchableOpacity
+      key={album.id}
+      style={styles.albumRow}
+      onPress={onNavigateToAlbum}
+      activeOpacity={0.7}
+    >
+      <Image source={album.coverImage} style={styles.albumCover} fadeDuration={0} />
+      <View style={styles.artistInfo}>
+        <Text style={styles.albumTitle} numberOfLines={1}>{album.title}</Text>
+        <Text style={styles.followersText} numberOfLines={1}>{album.artist}</Text>
+      </View>
+      <Feather name="chevron-right" size={20} color={COLORS.textPrimary} />
+    </TouchableOpacity>
+  );
 
   const renderSongItem = useCallback(({ item }: { item: Song }) => (
     <SongItem
@@ -138,32 +195,19 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
         maxToRenderPerBatch={8}
         windowSize={5}
         removeClippedSubviews={true}
-        ListHeaderComponent={
-          shouldShowArtist ? (
-            <View style={styles.artistCardContainer}>
-              <Image
-                source={SEARCH_ARTIST.avatarImage}
-                style={styles.artistAvatar}
-                fadeDuration={0}
-              />
-              <View style={styles.artistInfo}>
-                <Text style={styles.artistName}>{SEARCH_ARTIST.name}</Text>
-                <View style={styles.followersRow}>
-                  <Ionicons name="person-outline" size={13} color={COLORS.textSecondary} style={{ marginRight: 4 }} />
-                  <Text style={styles.followersText}>{SEARCH_ARTIST.followers}</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={[styles.followButton, isFollowing && styles.followingButton]}
-                onPress={() => toggleFollowArtist(SEARCH_ARTIST.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-                  {isFollowing ? 'Following' : 'Follow'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+        ListHeaderComponent={shouldShowArtists ? <>{displayArtists.map(renderArtist)}</> : undefined}
+        ListFooterComponent={
+          shouldShowAlbums && displayAlbums.length > 0 ? (
+            <>
+              {activeFilter === 'All' && <Text style={styles.sectionTitle}>Albums</Text>}
+              {displayAlbums.map(renderAlbum)}
+            </>
           ) : undefined
+        }
+        ListEmptyComponent={
+          hasResults ? undefined : (
+            <Text style={styles.emptyText}>No results for "{searchQuery}"</Text>
+          )
         }
       />
 
@@ -232,11 +276,43 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     height: 2.5,
-    backgroundColor: '#10C7D5',
+    backgroundColor: '#F97316',
     borderRadius: 2,
   },
   listContent: {
-    paddingBottom: 20,
+    paddingBottom: 76, // Chừa chỗ cho MiniPlayer
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111216',
+    paddingHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 6,
+  },
+  albumRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  albumCover: {
+    width: 52,
+    height: 52,
+    borderRadius: 8,
+  },
+  albumTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111216',
+    marginBottom: 2,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#686A70',
+    textAlign: 'center',
+    marginTop: 24,
+    paddingHorizontal: 24,
   },
   artistCardContainer: {
     flexDirection: 'row',
