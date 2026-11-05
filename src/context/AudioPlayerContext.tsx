@@ -3,7 +3,7 @@ import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from "expo-audio";
 import { PLAYLIST_DETAILS_TRACKS, Song } from "../data/musicData";
 
 // "03:36" | "1:02:10" -> millis
-const parseDuration = (d?: string): number => {
+export const parseDuration = (d?: string): number => {
   if (!d) return 0;
   const secs = d.split(":").map(Number).reduce((acc, p) => acc * 60 + p, 0);
   return secs * 1000;
@@ -19,7 +19,6 @@ interface AudioPlayerContextType {
   playPrevious: () => Promise<void>;
   playNext: () => Promise<void>;
   seekTo: (positionMillis: number) => Promise<void>;
-  toggleLikeCurrentTrack: () => void;
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(undefined);
@@ -136,13 +135,6 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     await playerRef.current?.seekTo(posMillis / 1000);
   };
 
-  const toggleLikeCurrentTrack = () => {
-    if (!currentTrack) return;
-    const updated = { ...currentTrack, isLiked: !currentTrack.isLiked };
-    setCurrentTrack(updated);
-    setPlaylist((prev) => prev.map((s) => (s.id === currentTrack.id ? updated : s)));
-  };
-
   return (
     <AudioPlayerContext.Provider
       value={{
@@ -155,7 +147,6 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         playPrevious,
         playNext,
         seekTo,
-        toggleLikeCurrentTrack,
       }}
     >
       {children}

@@ -16,6 +16,7 @@ import { SEARCH_ARTIST, SEARCH_RESULTS, PLAYLIST_DETAILS_TRACKS, SUGGESTIONS, So
 import { SongItem } from '../../src/components/SongItem';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
+import { useAuth } from '../../src/context/AuthContext';
 
 interface SearchResultsScreenProps {
   searchQuery?: string;
@@ -34,7 +35,8 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
 }) => {
   const { playSong } = useAudioPlayer();
   const [activeFilter, setActiveFilter] = useState<'All' | 'Tracks' | 'Albums' | 'Artists'>('All');
-  const [isFollowing, setIsFollowing] = useState(false);
+  const { currentUser, toggleFollowArtist } = useAuth();
+  const isFollowing = !!currentUser?.followedArtistIds.includes(SEARCH_ARTIST.id);
 
   const shouldShowSongs = activeFilter === 'All' || activeFilter === 'Tracks';
   const shouldShowArtist = activeFilter === 'All' || activeFilter === 'Artists';
@@ -153,7 +155,7 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
               </View>
               <TouchableOpacity
                 style={[styles.followButton, isFollowing && styles.followingButton]}
-                onPress={() => setIsFollowing(!isFollowing)}
+                onPress={() => toggleFollowArtist(SEARCH_ARTIST.id)}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>

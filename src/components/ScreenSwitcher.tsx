@@ -23,10 +23,12 @@ export type ScreenId =
   | 'Feed'
   | 'FeedComments'
   | 'MyLibrary'
-  | 'MyPlaylists'
   | 'PlaylistDetails'
   | 'ArtistProfile'
-  | 'PlayAudio';
+  | 'PlayAudio'
+  | 'Login'
+  | 'SignUp'
+  | 'Profile';
 
 interface ScreenSwitcherProps {
   currentScreen: ScreenId;
@@ -43,10 +45,12 @@ export const SCREEN_LIST: { id: ScreenId; title: string; category: string }[] = 
   { id: 'Feed', title: '7. Feed - Audio Listing', category: 'Feed' },
   { id: 'FeedComments', title: '8. Feed - Comment on an Audio', category: 'Feed' },
   { id: 'MyLibrary', title: '9. My Library', category: 'Library' },
-  { id: 'MyPlaylists', title: '10. My Playlists', category: 'Library' },
-  { id: 'PlaylistDetails', title: '11. Playlist Details - Audio Listing', category: 'Detail' },
-  { id: 'ArtistProfile', title: '12. Artist Profile', category: 'Detail' },
-  { id: 'PlayAudio', title: '13. Play an Audio', category: 'Player' },
+  { id: 'PlaylistDetails', title: '10. Playlist Details - Audio Listing', category: 'Detail' },
+  { id: 'ArtistProfile', title: '11. Artist Profile', category: 'Detail' },
+  { id: 'PlayAudio', title: '12. Play an Audio', category: 'Player' },
+  { id: 'Login', title: '13. Log In', category: 'Account' },
+  { id: 'SignUp', title: '14. Sign Up', category: 'Account' },
+  { id: 'Profile', title: '15. Profile', category: 'Account' },
 ];
 
 export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({
@@ -96,7 +100,7 @@ export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({
           activeOpacity={0.8}
         >
           <Ionicons name="grid-outline" size={16} color="#FFFFFF" />
-          <Text style={styles.floatingButtonText}>Screens (13)</Text>
+          <Text style={styles.floatingButtonText}>Screens ({SCREEN_LIST.length})</Text>
         </TouchableOpacity>
   </Animated.View>
 
@@ -111,7 +115,7 @@ export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalTitle}>Select Sample Screen</Text>
-                <Text style={styles.modalSubtitle}>13 screens from design document</Text>
+                <Text style={styles.modalSubtitle}>{SCREEN_LIST.length} screens in the app</Text>
               </View>
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}

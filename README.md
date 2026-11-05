@@ -16,8 +16,8 @@
 6. **Audio Listing - Search Results**: Kết quả tìm kiếm với các tab phân loại (*All, Tracks, Albums, Artists*), thẻ nghệ sĩ có nút Follow và danh sách bài hát chi tiết.
 7. **Feed - Audio Listing**: Bảng tin âm nhạc hiển thị bài đăng của nghệ sĩ với huy hiệu verified, hình ảnh đĩa/băng cassette và số liệu lượt nghe, tương tác.
 8. **Feed - Comment on an Audio**: Bottom sheet hiển thị bình luận, các câu trả lời lồng nhau (@mention), nút like và thanh nhập bình luận kèm emoji.
-9. **My Library**: Thư viện cá nhân với các tag lọc nhanh (*Playlists, New tag, Songs, Albums, Artists*), nghệ sĩ đang theo dõi và danh sách bài hát yêu thích.
-10. **My Playlists**: Quản lý danh sách phát của tôi với số lượng bài hát và nút nổi (FAB) thêm playlist mới.
+9. **My Library**: Thư viện cá nhân với các tag (*Playlists, Songs, Albums, Artists*): playlist riêng của tài khoản, bài hát yêu thích và nghệ sĩ đang theo dõi.
+10. **My Playlists**: Đã gộp vào tag *Playlists* của My Library, gồm danh sách playlist của tài khoản và nút nổi (FAB) tạo playlist mới.
 11. **Playlist Details - Audio Listing**: Chi tiết danh sách phát (Top 50 Canada) kèm thanh phát nhạc thu nhỏ (**Mini Player Bar**) cố định phía trên thanh điều hướng.
 12. **Artist Profile**: Trang thông tin nghệ sĩ (Ryan Young) với lượng người theo dõi, các ca khúc phổ biến nhất, album đã phát hành, phần giới thiệu ban nhạc (*About*) và các nghệ sĩ tương tự (*Fans also like*).
 13. **Play an Audio**: Màn hình phát nhạc toàn màn hình với ảnh nền concert, visualizer sóng âm thanh (Audio Waveform), thanh thời lượng thực, các nút điều khiển phát nhạc và tương tác.
@@ -50,7 +50,6 @@
 │       ├── FeedScreen.tsx
 │       ├── FeedCommentsScreen.tsx
 │       ├── MyLibraryScreen.tsx
-│       ├── MyPlaylistsScreen.tsx
 │       ├── PlaylistDetailsScreen.tsx
 │       ├── ArtistProfileScreen.tsx
 │       └── PlayAudioScreen.tsx

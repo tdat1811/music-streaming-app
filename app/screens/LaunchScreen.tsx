@@ -13,13 +13,13 @@ import { IMAGES } from '../../src/constants/images';
 import { COLORS } from '../../src/constants/theme';
 
 interface LaunchScreenProps {
-  onNavigateToHome?: () => void;
-  onNavigateToPremium?: () => void;
+  onNavigateToSignUp?: () => void;
+  onNavigateToLogin?: () => void;
 }
 
 export const LaunchScreen: React.FC<LaunchScreenProps> = ({
-  onNavigateToHome,
-  onNavigateToPremium,
+  onNavigateToSignUp,
+  onNavigateToLogin,
 }) => {
   return (
     <View style={styles.container}>
@@ -50,7 +50,7 @@ export const LaunchScreen: React.FC<LaunchScreenProps> = ({
           <View style={styles.bottomContainer}>
             <TouchableOpacity
               style={styles.createAccountButton}
-              onPress={onNavigateToHome}
+              onPress={onNavigateToSignUp}
               activeOpacity={0.85}
             >
               <Text style={styles.createAccountText}>Create an account</Text>
@@ -58,7 +58,7 @@ export const LaunchScreen: React.FC<LaunchScreenProps> = ({
 
             <TouchableOpacity
               style={styles.loginButton}
-              onPress={onNavigateToPremium || onNavigateToHome}
+              onPress={onNavigateToLogin}
               activeOpacity={0.85}
             >
               <Text style={styles.loginText}>I already have an account</Text>

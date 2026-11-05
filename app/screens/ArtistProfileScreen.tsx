@@ -19,6 +19,10 @@ import {
 } from '../../src/data/musicData';
 import { SongItem } from '../../src/components/SongItem';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
+import { useAuth } from '../../src/context/AuthContext';
+
+// Trang nghệ sĩ hiện vẫn là trang mẫu của Ryan Young
+const ARTIST_ID = 'ar1';
 
 interface ArtistProfileScreenProps {
   onBack?: () => void;
@@ -31,7 +35,8 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
   onNavigateToPlay,
   onTabPress,
 }) => {
-  const [isFollowing, setIsFollowing] = useState(false);
+  const { currentUser, toggleFollowArtist } = useAuth();
+  const isFollowing = !!currentUser?.followedArtistIds.includes(ARTIST_ID);
   const [aboutExpanded, setAboutExpanded] = useState(false);
 
   return (
@@ -66,7 +71,7 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={[styles.followButton, isFollowing && styles.followingButton]}
-              onPress={() => setIsFollowing(!isFollowing)}
+              onPress={() => toggleFollowArtist(ARTIST_ID)}
               activeOpacity={0.8}
             >
               <Text
