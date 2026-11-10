@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo ,useEffect} from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import { SongActionModal } from '../../src/components/SongActionModal';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
 import { useAuth } from '../../src/context/AuthContext';
-
+import { api } from '../../src/services/api';
 interface SearchResultsScreenProps {
   searchQuery?: string;
   onBackToSuggestions?: () => void;
@@ -45,6 +45,7 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
   const shouldShowSongs = activeFilter === 'All' || activeFilter === 'Tracks';
   const shouldShowArtists = activeFilter === 'All' || activeFilter === 'Artists';
   const shouldShowAlbums = activeFilter === 'All' || activeFilter === 'Albums';
+  const [dbSongs, setDbSongs] = useState<Song[]>([]);
   const filters: ('All' | 'Tracks' | 'Albums' | 'Artists')[] = [
     'All',
     'Tracks',
@@ -52,18 +53,38 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
     'Artists',
     ];
 
+     useEffect(() => {
+    async function searchFromDB() {
+      try {
+        // Gọi API tìm kiếm lên backend Express + MongoDB
+        const res: any = await api.songs.search(searchQuery);
+        
+        if (res && res.songs) {
+          console.log(`🔎 MongoDB tìm thấy ${res.songs.length} bài hát cho từ khóa "${searchQuery}"`);
+          setDbSongs(res.songs);
+        }
+      } catch (error) {
+        console.log('⚠️ Không gọi được API tìm kiếm, dùng dữ liệu mặc định');
+      }
+    }
+    searchFromDB();
+  }, [searchQuery]);
+
   // Lọc kho nhạc theo từ khóa (bài hát theo tên hoặc ca sĩ, album theo tên hoặc nghệ sĩ)
   const q = searchQuery.toLowerCase().trim();
   const matches = (text: string) => text.toLowerCase().includes(q);
 
-  const displaySongs = useMemo(() => {
+    const displaySongs = useMemo(() => {
+    // NẾU DATABASE CÓ KẾT QUẢ THÌ ƯU TIÊN HIỂN THỊ TỪ DATABASE:
+    if (dbSongs && dbSongs.length > 0) return dbSongs;
+
+    // Dự phòng khi server offline:
     if (q === '') return SEARCH_RESULTS;
     return ALL_SONGS.filter((song) => matches(song.title) || matches(song.artist)).filter(
-      // Một bài có thể nằm trong nhiều danh sách mẫu
       (song, index, self) =>
         index === self.findIndex((s) => s.title === song.title && s.artist === song.artist)
     );
-  }, [q]);
+  }, [q, dbSongs]);
 
   const displayArtists = useMemo(() => ARTISTS.filter((artist) => matches(artist.name)), [q]);
 

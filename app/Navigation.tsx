@@ -37,6 +37,25 @@ export const Navigation: React.FC = () => {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   // Các nghệ sĩ đã mở, phần tử cuối là trang đang xem (nút quay lại đi ngược danh sách này)
   const [artistStack, setArtistStack] = useState<string[]>([]);
+  const [searchFilter, setSearchFilter] = useState<'All' | 'Tracks' | 'Albums' | 'Artists'>('All');
+
+  const seeAllArtists = () => {
+    setSearchQuery('');
+    setSearchFilter('Artists');
+    navigateTo('SearchResults');
+  };
+
+  const seeAllAlbums = () => {
+    setSearchQuery('');
+    setSearchFilter('Albums');
+    navigateTo('SearchResults');
+  };
+
+  const seeAllCharts = () => {
+    setSearchQuery('');
+    setSearchFilter('Tracks');
+    navigateTo('SearchResults');
+  };
   const navigateTo = (screen: ScreenId) => {
     setHistory((prev) => [...prev, screen]);
     setCurrentScreen(screen);

@@ -17,9 +17,10 @@ export const SongItem: React.FC<SongItemProps> = memo(({
   onPress,
   onRightActionPress,
 }) => {
+  const imageSource = typeof song.coverImage === 'string' ? { uri: song.coverImage } : song.coverImage;
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
-      <Image source={song.coverImage} style={styles.coverImage} fadeDuration={0} />
+      <Image source={imageSource} style={styles.coverImage} fadeDuration={0} />
 
       <View style={styles.infoContainer}>
         <Text style={styles.title} numberOfLines={1}>
