@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
 import { IMAGES } from '../../src/constants/images';
-import { ARTISTS, getSongsByIds, Playlist } from '../../src/data/musicData';
+import { ARTISTS, ALL_ALBUMS, Album, getSongsByIds, Playlist } from '../../src/data/musicData';
 import { AuthInput } from '../../src/components/AuthInput';
 import { SongItem } from '../../src/components/SongItem';
 import { TrackListView } from '../../src/components/TrackListView';
@@ -32,6 +32,7 @@ interface MyLibraryScreenProps {
   selectedTag: LibraryTag;
   onSelectTag: (tag: LibraryTag) => void;
   onSelectPlaylist?: (playlist: Playlist) => void;
+  onSelectAlbum?: (album: Album) => void;
   onSelectArtist?: (artistId: string) => void;
   onNavigateToPlay?: (trackId?: string) => void;
   onNavigateToSearch?: () => void;
@@ -43,13 +44,14 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
   selectedTag,
   onSelectTag,
   onSelectPlaylist,
+  onSelectAlbum,
   onSelectArtist,
   onNavigateToPlay,
   onNavigateToSearch,
   onNavigateToLogin,
   onTabPress,
 }) => {
-  const { currentUser, userPlaylists, createPlaylist, toggleLikeSong, toggleFollowArtist } = useAuth();
+  const { currentUser, userPlaylists, createPlaylist, toggleLikeSong, toggleFollowArtist, likedAlbumIds } = useAuth();
   const [artistQuery, setArtistQuery] = useState('');
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
@@ -115,6 +117,37 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
           />
         );
       }}
+    />
+  );
+
+  const likedAlbums = useMemo(
+    () => ALL_ALBUMS.filter((album) => likedAlbumIds.includes(album.id)),
+    [likedAlbumIds]
+  );
+
+  const renderAlbums = () => (
+    <FlatList
+      data={likedAlbums}
+      keyExtractor={(item) => item.id}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.playlistsContent}
+      ListEmptyComponent={
+        <Text style={styles.emptyText}>You haven\'t liked any albums yet.</Text>
+      }
+      renderItem={({ item }) => (
+        <SongItem
+          song={{
+            id: item.id,
+            title: item.title,
+            artist: item.artist,
+            coverImage: item.coverImage,
+            isLiked: true,
+          }}
+          rightAction="chevron"
+          onPress={() => onSelectAlbum && onSelectAlbum(item)}
+          onRightActionPress={() => onSelectAlbum && onSelectAlbum(item)}
+        />
+      )}
     />
   );
 

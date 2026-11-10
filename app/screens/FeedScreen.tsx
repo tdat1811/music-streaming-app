@@ -69,9 +69,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Feed</Text>
-        <TouchableOpacity style={styles.castButton} activeOpacity={0.7}>
-          <Feather name="cast" size={22} color={COLORS.textPrimary} />
-        </TouchableOpacity>
+        
       </View>
 
       {/* Feed Posts List */}
