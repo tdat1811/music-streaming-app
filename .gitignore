@@ -2,6 +2,7 @@
 
 # Dependencies (Thư mục nặng nhất cần bỏ qua)
 node_modules/
+server/node_modules/
 package-lock.json.bak
 
 # Expo
@@ -46,6 +47,10 @@ Thumbs.db
 # Local Environment
 .env
 .env*.local
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
 
 # TypeScript
 *.tsbuildinfo
