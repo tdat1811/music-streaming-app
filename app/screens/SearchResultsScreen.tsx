@@ -22,7 +22,7 @@ import { api } from '../../src/services/api';
 interface SearchResultsScreenProps {
   searchQuery?: string;
   onBackToSuggestions?: () => void;
-  onNavigateToArtist?: (artistId?: string) => void;
+  onNavigateToArtist?: (artist?: any) => void;
   onNavigateToPlay?: (trackId?: string) => void;
   onNavigateToAlbum?: (album: Album) => void;
   onTabPress?: (tab: TabName) => void;
@@ -104,10 +104,10 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
       <TouchableOpacity
         key={artist.id}
         style={styles.artistCardContainer}
-        onPress={() => onNavigateToArtist && onNavigateToArtist(artist.id)}
+        onPress={() => onNavigateToArtist && onNavigateToArtist(artist)}
         activeOpacity={0.7}
       >
-        <Image source={artist.avatarImage} style={styles.artistAvatar} fadeDuration={0} />
+        <Image source={typeof artist.avatarImage === 'string' ? { uri: artist.avatarImage } : artist.avatarImage} style={styles.artistAvatar} fadeDuration={0} />
         <View style={styles.artistInfo}>
           <Text style={styles.artistName}>{artist.name}</Text>
           <View style={styles.followersRow}>

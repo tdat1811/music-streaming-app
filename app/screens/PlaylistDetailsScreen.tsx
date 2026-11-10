@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
 import { IMAGES } from '../../src/constants/images';
-import { getSongsByIds, Playlist, PLAYLIST_DETAILS_TRACKS } from '../../src/data/musicData';
+import { getSongsByIds, Playlist, PLAYLIST_DETAILS_TRACKS, Song } from '../../src/data/musicData';
 import { TrackListView } from '../../src/components/TrackListView';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAuth } from '../../src/context/AuthContext';
+import { api } from '../../src/services/api';
 
 interface PlaylistDetailsScreenProps {
   playlist?: Playlist | null;
@@ -24,6 +25,30 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
   onTabPress,
 }) => {
   const { currentUser, toggleLikeSong } = useAuth();
+  const [dbTracks, setDbTracks] = useState<Song[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (playlist && playlist.songIds && playlist.songIds.length > 0) {
+      api.songs.getByIds(playlist.songIds)
+        .then((res: any) => {
+          const list = res?.data || res;
+          if (isMounted && Array.isArray(list) && list.length > 0) {
+            setDbTracks(list);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [playlist]);
+
+  const localTracks = playlist && playlist.songIds?.length
+    ? getSongsByIds(playlist.songIds)
+    : PLAYLIST_DETAILS_TRACKS;
+
+  const currentTracks = dbTracks.length > 0 ? dbTracks : localTracks;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -44,35 +69,25 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
         </TouchableOpacity>
       </View>
 
-      {playlist ? (
-        <TrackListView
-          title={playlist.title}
-          description={playlist.description}
-          coverImage={playlist.coverImage}
-          tracks={getSongsByIds(playlist.songIds).map((song) => ({
-            ...song,
-            isLiked: currentUser?.likedSongIds.includes(song.id),
-          }))}
-          emptyText="This playlist has no songs yet."
-          onNavigateToPlay={onNavigateToPlay}
-          onToggleLike={toggleLikeSong}
-        />
-      ) : (
-        <TrackListView
-          title="Top 50 - Canada"
-          description="Daily chart-toppers update"
-          coverImage={IMAGES.playlistDetailsCover}
-          tracks={PLAYLIST_DETAILS_TRACKS}
-          likesLabel="1,234"
-          durationLabel="05:10:18"
-          showExtraActions
-          onNavigateToPlay={onNavigateToPlay}
-        />
-      )}
+      <TrackListView
+        title={playlist?.title || 'Top 50 - Canada'}
+        description={playlist?.description || 'Daily chart-toppers update'}
+        coverImage={playlist?.coverImage || IMAGES.playlistDetailsCover}
+        tracks={currentTracks.map((song) => ({
+          ...song,
+          isLiked: currentUser?.likedSongIds.includes(song.id),
+        }))}
+        likesLabel="1,234"
+        durationLabel="05:10:18"
+        showExtraActions
+        emptyText="This playlist has no songs yet."
+        onNavigateToPlay={onNavigateToPlay}
+        onToggleLike={toggleLikeSong}
+      />
 
       {/* Bottom Tab Bar */}
       <BottomTabBar
-        currentTab={playlist ? 'Library' : 'Home'}
+        currentTab={playlist?.ownerId === 'chart' ? 'Home' : 'Library'}
         onTabPress={(tab) => onTabPress && onTabPress(tab)}
       />
     </SafeAreaView>

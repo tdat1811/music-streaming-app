@@ -26,11 +26,17 @@ import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
 import { useAuth } from '../../src/context/AuthContext';
 import { api } from '../../src/services/api';
 interface HomeScreenProps {
+  onSeeAllCharts?: () => void;
+  onSeeAllAlbums?: () => void;
+  onSeeAllArtists?: () => void;
   onNavigateToSearch?: () => void;
   onNavigateToPlaylist?: (playlistId?: string) => void;
-  onNavigateToChart?: (chartId: string) => void;
+  onNavigateToChartsList?: () => void;
+  onNavigateToAlbumsList?: () => void;
+  onNavigateToArtistsList?: () => void;
+  onNavigateToChart?: (chartTarget: any) => void;
   onNavigateToAlbum?: (album: Album) => void;
-  onNavigateToArtist?: (artistId?: string) => void;
+  onNavigateToArtist?: (artist?: any) => void;
   onNavigateToPlay?: (trackId?: string) => void;
   onNavigateToLogin?: () => void;
   onNavigateToProfile?: () => void;
@@ -41,6 +47,9 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToSearch,
   onNavigateToPlaylist,
+  onNavigateToChartsList,
+  onNavigateToAlbumsList,
+  onNavigateToArtistsList,
   onNavigateToChart,
   onNavigateToAlbum,
   onNavigateToArtist,
@@ -194,6 +203,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       </View>
 
       <ScrollView
+        style={styles.mainScrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
@@ -282,10 +292,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <View style={styles.sectionHeaderWithAction}>
           <Text style={styles.sectionTitle}>Charts</Text>
           <TouchableOpacity
-            onPress={() => onNavigateToPlaylist && onNavigateToPlaylist()}
+            onPress={() => onNavigateToChartsList ? onNavigateToChartsList() : onNavigateToPlaylist && onNavigateToPlaylist()}
             activeOpacity={0.7}
           >
-            <Text style={styles.seeAllText}>See all</Text>
+            <Text style={styles.seeAllText}> See all</Text>
           </TouchableOpacity>
         </View>
         <ScrollView
@@ -299,7 +309,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               style={styles.chartCard}
               onPress={() => {
                 if (onNavigateToChart) {
-                  onNavigateToChart(chart.id);
+                  onNavigateToChart(chart);
                 } else if (onNavigateToPlaylist) {
                   onNavigateToPlaylist(chart.id);
                 }
@@ -321,7 +331,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         {/* Section 3: Trending albums */}
         <View style={styles.sectionHeaderWithAction}>
           <Text style={styles.sectionTitle}>Trending albums</Text>
-          <TouchableOpacity activeOpacity={0.7}>
+          <TouchableOpacity 
+            onPress={() => onNavigateToAlbumsList && onNavigateToAlbumsList()}
+            activeOpacity={0.7}
+          >
             <Text style={styles.seeAllText}>See all</Text>
           </TouchableOpacity>
         </View>
@@ -360,7 +373,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         {/* Section 4: Popular artists */}
         <View style={styles.sectionHeaderWithAction}>
           <Text style={styles.sectionTitle}>Popular artists</Text>
-          <TouchableOpacity activeOpacity={0.7}>
+          <TouchableOpacity 
+            onPress={() => onNavigateToArtistsList && onNavigateToArtistsList()}
+            activeOpacity={0.7}
+          >
             <Text style={styles.seeAllText}>See all</Text>
           </TouchableOpacity>
         </View>
@@ -373,10 +389,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <TouchableOpacity
               key={artist.id}
               style={styles.artistCard}
-              onPress={() => onNavigateToArtist && onNavigateToArtist(artist.id)}
+              onPress={() => onNavigateToArtist && onNavigateToArtist(artist)}
               activeOpacity={0.85}
             >
-              <Image source={artist.avatarImage} style={styles.artistImage} fadeDuration={0} />
+              <Image
+                source={typeof artist.avatarImage === 'string' ? { uri: artist.avatarImage } : artist.avatarImage}
+                style={styles.artistImage}
+                fadeDuration={0}
+              />
               <Text style={styles.artistName} numberOfLines={1}>
                 {artist.name}
               </Text>
@@ -429,8 +449,11 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
   },
+  mainScrollView: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 130,
   },
   greetingContainer: {
     paddingHorizontal: 16,

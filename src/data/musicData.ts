@@ -8,13 +8,26 @@ export interface Song {
   duration?: string;
   coverImage: any;
   isLiked?: boolean;
-  audioUrl?:string;
+  audioUrl?: string;
+  category?: string;
 }
 
 export interface Album {
   id: string;
   title: string;
   artist: string;
+  coverImage: any;
+  songIds?: string[];
+  releaseYear?: string;
+  isTrending?: boolean;
+}
+
+export type Chart = ChartItem;
+export interface ChartItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  updateText?: string;
   coverImage: any;
   songIds?: string[];
 }
@@ -27,6 +40,8 @@ export interface Artist {
   isFollowing?: boolean;
   bio?: string;
   aboutImage?: any;
+  isVerified?: boolean;
+  isPopular?: boolean;
 }
 
 export interface Playlist {
@@ -74,6 +89,959 @@ export interface User {
 }
 
 // Tài khoản mẫu, chưa có backend nên mật khẩu để dạng chữ thường. Không dùng dữ liệu thật.
+
+// ==================== MONGO DB LIVE SYNCED DATA ====================
+export const SEED_SONGS: Song[] = [
+  {
+    "id": "s1",
+    "title": "Reflection",
+    "artist": "Christina Aguilera",
+    "duration": "03:36",
+    "plays": "1.2M",
+    "category": "suggestions",
+    "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+  },
+  {
+    "id": "s2",
+    "title": "In The Stars",
+    "artist": "Benson Boone",
+    "duration": "03:15",
+    "plays": "3.4M",
+    "category": "suggestions",
+    "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+  },
+  {
+    "id": "s3",
+    "title": "Starboy",
+    "artist": "The Weeknd ft. Daft Punk",
+    "duration": "03:50",
+    "plays": "8.5M",
+    "category": "suggestions",
+    "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+  },
+  {
+    "id": "s4",
+    "title": "Blinding Lights",
+    "artist": "The Weeknd",
+    "duration": "03:20",
+    "plays": "12.8M",
+    "category": "suggestions",
+    "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+  },
+  {
+    "id": "s5",
+    "title": "As It Was",
+    "artist": "Harry Styles",
+    "duration": "02:47",
+    "plays": "9.1M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
+  },
+  {
+    "id": "s6",
+    "title": "Stay",
+    "artist": "The Kid LAROI, Justin Bieber",
+    "duration": "02:21",
+    "plays": "7.8M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
+  },
+  {
+    "id": "s7",
+    "title": "Levitating",
+    "artist": "Dua Lipa",
+    "duration": "03:23",
+    "plays": "6.5M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3"
+  },
+  {
+    "id": "s8",
+    "title": "Flowers",
+    "artist": "Miley Cyrus",
+    "duration": "03:20",
+    "plays": "11.2M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
+  },
+  {
+    "id": "s9",
+    "title": "Shape of You",
+    "artist": "Ed Sheeran",
+    "duration": "03:53",
+    "plays": "15.4M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3"
+  },
+  {
+    "id": "s10",
+    "title": "Bad Guy",
+    "artist": "Billie Eilish",
+    "duration": "03:14",
+    "plays": "8.9M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3"
+  },
+  {
+    "id": "s11",
+    "title": "Perfect",
+    "artist": "Ed Sheeran",
+    "duration": "04:23",
+    "plays": "14.1M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3"
+  },
+  {
+    "id": "s12",
+    "title": "Someone You Loved",
+    "artist": "Lewis Capaldi",
+    "duration": "03:02",
+    "plays": "9.6M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1520523839898-507124976779?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3"
+  },
+  {
+    "id": "s13",
+    "title": "Sunflower",
+    "artist": "Post Malone, Swae Lee",
+    "duration": "02:38",
+    "plays": "13.3M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3"
+  },
+  {
+    "id": "s14",
+    "title": "Save Your Tears",
+    "artist": "The Weeknd",
+    "duration": "03:35",
+    "plays": "10.7M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3"
+  },
+  {
+    "id": "s15",
+    "title": "Heat Waves",
+    "artist": "Glass Animals",
+    "duration": "03:58",
+    "plays": "8.2M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3"
+  },
+  {
+    "id": "s16",
+    "title": "Anti-Hero",
+    "artist": "Taylor Swift",
+    "duration": "03:20",
+    "plays": "7.9M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3"
+  },
+  {
+    "id": "s17",
+    "title": "Cruel Summer",
+    "artist": "Taylor Swift",
+    "duration": "02:58",
+    "plays": "11.8M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+  },
+  {
+    "id": "s18",
+    "title": "Kill Bill",
+    "artist": "SZA",
+    "duration": "02:33",
+    "plays": "6.7M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+  },
+  {
+    "id": "s19",
+    "title": "Calm Down",
+    "artist": "Rema, Selena Gomez",
+    "duration": "03:59",
+    "plays": "8.4M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+  },
+  {
+    "id": "s20",
+    "title": "Peaches",
+    "artist": "Justin Bieber ft. Daniel Caesar",
+    "duration": "03:18",
+    "plays": "7.2M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+  },
+  {
+    "id": "s21",
+    "title": "Espresso",
+    "artist": "Sabrina Carpenter",
+    "duration": "02:55",
+    "plays": "9.4M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
+  },
+  {
+    "id": "s22",
+    "title": "Birds of a Feather",
+    "artist": "Billie Eilish",
+    "duration": "03:30",
+    "plays": "8.1M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
+  },
+  {
+    "id": "s23",
+    "title": "Seven",
+    "artist": "Jung Kook ft. Latto",
+    "duration": "03:04",
+    "plays": "10.2M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3"
+  },
+  {
+    "id": "s24",
+    "title": "Greedy",
+    "artist": "Tate McRae",
+    "duration": "02:11",
+    "plays": "5.8M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1520523839898-507124976779?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
+  },
+  {
+    "id": "s25",
+    "title": "Water",
+    "artist": "Tyla",
+    "duration": "03:20",
+    "plays": "6.1M",
+    "category": "charts",
+    "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3"
+  },
+  {
+    "id": "s26",
+    "title": "Nơi Này Có Anh",
+    "artist": "Sơn Tùng M-TP",
+    "duration": "04:20",
+    "plays": "15.8M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3"
+  },
+  {
+    "id": "s27",
+    "title": "Lạc Trôi",
+    "artist": "Sơn Tùng M-TP",
+    "duration": "03:52",
+    "plays": "18.2M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3"
+  },
+  {
+    "id": "s28",
+    "title": "Chúng Ta Của Hiện Tại",
+    "artist": "Sơn Tùng M-TP",
+    "duration": "05:01",
+    "plays": "12.4M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3"
+  },
+  {
+    "id": "s29",
+    "title": "Nàng Thơ",
+    "artist": "Hoàng Dũng",
+    "duration": "04:14",
+    "plays": "10.5M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3"
+  },
+  {
+    "id": "s30",
+    "title": "Bước Qua Mùa Cô Đơn",
+    "artist": "Vũ.",
+    "duration": "04:38",
+    "plays": "8.7M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3"
+  },
+  {
+    "id": "s31",
+    "title": "Lạ Lùng",
+    "artist": "Vũ.",
+    "duration": "04:21",
+    "plays": "11.9M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3"
+  },
+  {
+    "id": "s32",
+    "title": "Có Em Chờ",
+    "artist": "MIN ft. Mr.A",
+    "duration": "03:45",
+    "plays": "7.8M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3"
+  },
+  {
+    "id": "s33",
+    "title": "See Tình",
+    "artist": "Hoàng Thùy Linh",
+    "duration": "03:05",
+    "plays": "14.5M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+  },
+  {
+    "id": "s34",
+    "title": "Để Mị Nói Cho Mà Nghe",
+    "artist": "Hoàng Thùy Linh",
+    "duration": "03:19",
+    "plays": "13.1M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+  },
+  {
+    "id": "s35",
+    "title": "Waiting For You",
+    "artist": "MONO, Onionn",
+    "duration": "04:16",
+    "plays": "12.0M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+  },
+  {
+    "id": "s36",
+    "title": "Cắt Đôi Nỗi Sầu",
+    "artist": "Tăng Duy Tân",
+    "duration": "03:02",
+    "plays": "9.3M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1520523839898-507124976779?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+  },
+  {
+    "id": "s37",
+    "title": "Bên Trên Tầng Lầu",
+    "artist": "Tăng Duy Tân",
+    "duration": "03:12",
+    "plays": "11.4M",
+    "category": "vpop",
+    "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
+  },
+  {
+    "id": "s38",
+    "title": "Zombie",
+    "artist": "Ryan Young",
+    "duration": "03:30",
+    "plays": "2.1M",
+    "category": "artist",
+    "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
+  },
+  {
+    "id": "s39",
+    "title": "Alone",
+    "artist": "Ryan Young",
+    "duration": "03:45",
+    "plays": "1.8M",
+    "category": "artist",
+    "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3"
+  },
+  {
+    "id": "s40",
+    "title": "Midnight Echo",
+    "artist": "Ryan Young",
+    "duration": "04:02",
+    "plays": "950K",
+    "category": "artist",
+    "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
+  },
+  {
+    "id": "s41",
+    "title": "Neon Skyline",
+    "artist": "Ryan Young",
+    "duration": "03:18",
+    "plays": "1.4M",
+    "category": "artist",
+    "coverImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3"
+  },
+  {
+    "id": "s42",
+    "title": "Fly Away",
+    "artist": "Mer Watson",
+    "duration": "03:15",
+    "plays": "3.2M",
+    "category": "artist",
+    "coverImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3"
+  },
+  {
+    "id": "s43",
+    "title": "Ocean Breeze",
+    "artist": "Mer Watson",
+    "duration": "03:40",
+    "plays": "2.5M",
+    "category": "artist",
+    "coverImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3"
+  },
+  {
+    "id": "s44",
+    "title": "Velvet Sky",
+    "artist": "Mer Watson",
+    "duration": "04:11",
+    "plays": "1.9M",
+    "category": "artist",
+    "coverImage": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3"
+  },
+  {
+    "id": "s45",
+    "title": "Flower Fields",
+    "artist": "Jessica Gonzalez",
+    "duration": "03:25",
+    "plays": "4.6M",
+    "category": "artist",
+    "coverImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3"
+  },
+  {
+    "id": "s46",
+    "title": "Golden Hour Sunset",
+    "artist": "Jessica Gonzalez",
+    "duration": "03:50",
+    "plays": "3.8M",
+    "category": "artist",
+    "coverImage": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3"
+  },
+  {
+    "id": "s47",
+    "title": "Coffee in Paris",
+    "artist": "Lofi Coffee Club",
+    "duration": "02:40",
+    "plays": "2.2M",
+    "category": "chill",
+    "coverImage": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3"
+  },
+  {
+    "id": "s48",
+    "title": "Rainy Day Thoughts",
+    "artist": "Chillhop Beats",
+    "duration": "02:55",
+    "plays": "1.7M",
+    "category": "chill",
+    "coverImage": "https://images.unsplash.com/photo-1520523839898-507124976779?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3"
+  },
+  {
+    "id": "s49",
+    "title": "Deep Midnight Walk",
+    "artist": "Nightfall Beats",
+    "duration": "03:05",
+    "plays": "1.1M",
+    "category": "chill",
+    "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+  },
+  {
+    "id": "s50",
+    "title": "Quiet Study Session",
+    "artist": "Study Vibes",
+    "duration": "02:48",
+    "plays": "3.0M",
+    "category": "chill",
+    "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+  },
+  {
+    "id": "s51",
+    "title": "Sunrise Acoustic",
+    "artist": "Morning Breeze",
+    "duration": "03:15",
+    "plays": "980K",
+    "category": "chill",
+    "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+  },
+  {
+    "id": "s52",
+    "title": "Under the Stars",
+    "artist": "Acoustic Soul",
+    "duration": "03:32",
+    "plays": "1.5M",
+    "category": "chill",
+    "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+  }
+];
+
+export const SEED_ALBUMS: Album[] = [
+  {
+    "id": "alb1",
+    "title": "ME - Deluxe Edition",
+    "artist": "Jessica Gonzalez",
+    "releaseYear": "2024",
+    "isTrending": true,
+    "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s1",
+      "s2",
+      "s3",
+      "s45",
+      "s46"
+    ]
+  },
+  {
+    "id": "alb2",
+    "title": "Magna Certe - Live Acoustic",
+    "artist": "Mer Watson",
+    "releaseYear": "2024",
+    "isTrending": true,
+    "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s42",
+      "s43",
+      "s44",
+      "s5",
+      "s6"
+    ]
+  },
+  {
+    "id": "alb3",
+    "title": "After Hours & Dawn FM",
+    "artist": "The Weeknd",
+    "releaseYear": "2023",
+    "isTrending": true,
+    "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s3",
+      "s4",
+      "s14"
+    ]
+  },
+  {
+    "id": "alb4",
+    "title": "Midnights & Folklore",
+    "artist": "Taylor Swift",
+    "releaseYear": "2023",
+    "isTrending": true,
+    "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s16",
+      "s17",
+      "s8"
+    ]
+  },
+  {
+    "id": "alb5",
+    "title": "Divide & Equals",
+    "artist": "Ed Sheeran",
+    "releaseYear": "2022",
+    "isTrending": false,
+    "coverImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s9",
+      "s11",
+      "s12"
+    ]
+  },
+  {
+    "id": "alb6",
+    "title": "Hit Me Hard and Soft",
+    "artist": "Billie Eilish",
+    "releaseYear": "2024",
+    "isTrending": true,
+    "coverImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s10",
+      "s22"
+    ]
+  },
+  {
+    "id": "alb7",
+    "title": "Chúng Ta - Single Album",
+    "artist": "Sơn Tùng M-TP",
+    "releaseYear": "2024",
+    "isTrending": true,
+    "coverImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s26",
+      "s27",
+      "s28"
+    ]
+  },
+  {
+    "id": "alb8",
+    "title": "Một Vạn Năm",
+    "artist": "Vũ.",
+    "releaseYear": "2023",
+    "isTrending": false,
+    "coverImage": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s30",
+      "s31"
+    ]
+  },
+  {
+    "id": "alb9",
+    "title": "LINK & Hoàng",
+    "artist": "Hoàng Thùy Linh",
+    "releaseYear": "2023",
+    "isTrending": true,
+    "coverImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s33",
+      "s34"
+    ]
+  },
+  {
+    "id": "alb10",
+    "title": "Electric Night Club",
+    "artist": "Ryan Young",
+    "releaseYear": "2024",
+    "isTrending": false,
+    "coverImage": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s38",
+      "s39",
+      "s40",
+      "s41"
+    ]
+  },
+  {
+    "id": "alb11",
+    "title": "Coffee & Lofi Chill",
+    "artist": "Lofi Coffee Club",
+    "releaseYear": "2024",
+    "isTrending": false,
+    "coverImage": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s47",
+      "s48",
+      "s49",
+      "s50"
+    ]
+  },
+  {
+    "id": "alb12",
+    "title": "Morning Acoustic Breeze",
+    "artist": "Morning Breeze",
+    "releaseYear": "2024",
+    "isTrending": false,
+    "coverImage": "https://images.unsplash.com/photo-1520523839898-507124976779?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s51",
+      "s52",
+      "s29"
+    ]
+  }
+];
+
+export const SEED_CHARTS: ChartItem[] = [
+  {
+    "id": "ch1",
+    "title": "Top 50 - Canada",
+    "subtitle": "Daily update",
+    "updateText": "Daily chart-toppers update",
+    "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s1",
+      "s2",
+      "s3",
+      "s4",
+      "s5",
+      "s6",
+      "s7",
+      "s8",
+      "s9",
+      "s10"
+    ]
+  },
+  {
+    "id": "ch2",
+    "title": "Top 50 - Global",
+    "subtitle": "Daily update",
+    "updateText": "Your daily update of the most played tracks right now",
+    "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s4",
+      "s5",
+      "s8",
+      "s13",
+      "s14",
+      "s15",
+      "s16",
+      "s17",
+      "s21",
+      "s22"
+    ]
+  },
+  {
+    "id": "ch3",
+    "title": "Top 50 - Việt Nam",
+    "subtitle": "Bảng xếp hạng tuần",
+    "updateText": "Top những ca khúc V-Pop hot nhất tuần qua",
+    "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s26",
+      "s27",
+      "s28",
+      "s29",
+      "s30",
+      "s31",
+      "s32",
+      "s33",
+      "s34",
+      "s35",
+      "s36",
+      "s37"
+    ]
+  },
+  {
+    "id": "ch4",
+    "title": "Top 50 - USA",
+    "subtitle": "Daily update",
+    "updateText": "The hottest tracks in the United States",
+    "coverImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s3",
+      "s8",
+      "s9",
+      "s10",
+      "s13",
+      "s16",
+      "s17",
+      "s18",
+      "s20",
+      "s21"
+    ]
+  },
+  {
+    "id": "ch5",
+    "title": "Viral 50 - Toàn cầu",
+    "subtitle": "Trending trends",
+    "updateText": "Các ca khúc viral mạnh mẽ nhất trên TikTok và mạng xã hội",
+    "coverImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s21",
+      "s22",
+      "s23",
+      "s24",
+      "s25",
+      "s33",
+      "s35",
+      "s36"
+    ]
+  },
+  {
+    "id": "ch6",
+    "title": "Top 50 - UK",
+    "subtitle": "Weekly Official",
+    "updateText": "Official UK Top 40 / 50 Singles Chart",
+    "coverImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s5",
+      "s7",
+      "s9",
+      "s11",
+      "s12",
+      "s14"
+    ]
+  },
+  {
+    "id": "ch7",
+    "title": "K-Pop Top Hits",
+    "subtitle": "Seoul Trending",
+    "updateText": "Top những ca khúc K-Pop bùng nổ nhất châu Á",
+    "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s23",
+      "s24",
+      "s25",
+      "s3",
+      "s6"
+    ]
+  },
+  {
+    "id": "ch8",
+    "title": "EDM & Dance Festival",
+    "subtitle": "Weekend Banger",
+    "updateText": "Âm nhạc điện tử sôi động bùng cháy cho ngày cuối tuần",
+    "coverImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
+    "songIds": [
+      "s3",
+      "s4",
+      "s7",
+      "s38",
+      "s40",
+      "s41"
+    ]
+  }
+];
+
+export const SEED_ARTISTS: Artist[] = [
+  {
+    "id": "art1",
+    "name": "The Weeknd",
+    "followers": "85.4M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    "bio": "Abel Makkonen Tesfaye, known professionally as the Weeknd, is a Canadian singer-songwriter and record producer.",
+    "isPopular": true,
+    "isVerified": true
+  },
+  {
+    "id": "art2",
+    "name": "Taylor Swift",
+    "followers": "102.1M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
+    "bio": "Taylor Alison Swift is an American singer-songwriter. Her narrative songwriting, which often centers around her personal life, has received widespread critical plaudits.",
+    "isPopular": true,
+    "isVerified": true
+  },
+  {
+    "id": "art3",
+    "name": "Ed Sheeran",
+    "followers": "76.8M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&w=600&q=80",
+    "bio": "Edward Christopher Sheeran MBE is an English singer-songwriter. Born in Halifax, West Yorkshire, he has sold more than 150 million records worldwide.",
+    "isPopular": true,
+    "isVerified": true
+  },
+  {
+    "id": "art4",
+    "name": "Billie Eilish",
+    "followers": "68.5M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
+    "bio": "Billie Eilish Pirate Baird O'Connell is an American singer and songwriter. She first gained public attention in 2015 with her debut single Ocean Eyes.",
+    "isPopular": true,
+    "isVerified": true
+  },
+  {
+    "id": "art5",
+    "name": "Sơn Tùng M-TP",
+    "followers": "14.2M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    "bio": "Nguyễn Thanh Tùng, thường được biết đến với nghệ danh Sơn Tùng M-TP, là một ca sĩ kiêm nhạc sĩ và nhà sản xuất âm nhạc hàng đầu Việt Nam.",
+    "isPopular": true,
+    "isVerified": true
+  },
+  {
+    "id": "art6",
+    "name": "Vũ.",
+    "followers": "4.8M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1520523839898-507124976779?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
+    "bio": "Hoàng Thái Vũ, thường được biết đến với nghệ danh Vũ., là một ca sĩ kiêm nhạc sĩ indie pop nổi tiếng của Việt Nam với danh xưng Hoàng tử Indie.",
+    "isPopular": true,
+    "isVerified": true
+  },
+  {
+    "id": "art7",
+    "name": "Hoàng Thùy Linh",
+    "followers": "5.9M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&w=600&q=80",
+    "bio": "Hoàng Thùy Linh là một nữ ca sĩ, diễn viên người Việt Nam, nổi tiếng với phong cách âm nhạc dân gian đương đại kết hợp điện tử hiện đại.",
+    "isPopular": true,
+    "isVerified": true
+  },
+  {
+    "id": "art8",
+    "name": "Ryan Young",
+    "followers": "43.6M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
+    "bio": "Ryan Young is a multi-platinum recording artist and live performer known for blending modern electronic sounds with energetic live instruments.",
+    "isPopular": true,
+    "isVerified": true
+  },
+  {
+    "id": "art9",
+    "name": "Jessica Gonzalez",
+    "followers": "2.1M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
+    "bio": "Pop & RnB singer-songwriter with melodious tracks that have reached millions of listeners worldwide.",
+    "isPopular": true,
+    "isVerified": true
+  },
+  {
+    "id": "art10",
+    "name": "Mer Watson",
+    "followers": "1.2M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
+    "bio": "Indie and acoustic songwriter creating serene listening experiences for peaceful mornings and late nights.",
+    "isPopular": true,
+    "isVerified": true
+  },
+  {
+    "id": "art11",
+    "name": "Justin Bieber",
+    "followers": "92.3M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
+    "bio": "Justin Drew Bieber is a Canadian pop star recognized for his genre-melding musicianship and global impact.",
+    "isPopular": true,
+    "isVerified": true
+  },
+  {
+    "id": "art12",
+    "name": "Dua Lipa",
+    "followers": "62.7M Followers",
+    "avatarImage": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
+    "aboutImage": "https://images.unsplash.com/photo-1520523839898-507124976779?auto=format&fit=crop&w=600&q=80",
+    "bio": "Dua Lipa is an English and Albanian singer known for her disco-pop sound and critical acclaim.",
+    "isPopular": true,
+    "isVerified": true
+  }
+];
+// ===================================================================
+
 export const SAMPLE_USERS: User[] = [
   {
     id: 'u1',
@@ -163,7 +1131,8 @@ export const SUGGESTIONS: Song[] = [
   },
 ];
 
-export const CHARTS = [
+export const CHARTS: ChartItem[] = [
+  ...SEED_CHARTS,
   {
     id: 'c1',
     title: 'Top 50',
@@ -191,6 +1160,7 @@ export const CHARTS = [
 ];
 
 export const TRENDING_ALBUMS: Album[] = [
+  ...SEED_ALBUMS.slice(0, 6),
   {
     id: 'ta1',
     title: 'ME',
@@ -214,26 +1184,7 @@ export const TRENDING_ALBUMS: Album[] = [
   },
 ];
 
-export const POPULAR_ARTISTS: Artist[] = [
-  {
-    id: 'pa1',
-    name: 'Jennifer Wilson',
-    avatarImage: IMAGES.artistJennifer,
-    isFollowing: true,
-  },
-  {
-    id: 'pa2',
-    name: 'Elizabeth Hall',
-    avatarImage: IMAGES.artistElizabeth,
-    isFollowing: true,
-  },
-  {
-    id: 'pa3',
-    name: 'Anthony Taylor',
-    avatarImage: IMAGES.artistAnthony,
-    isFollowing: true,
-  },
-];
+export const POPULAR_ARTISTS: Artist[] = SEED_ARTISTS.slice(0, 7);
 
 export const SEARCH_SUGGESTIONS = [
   'Reflection',
@@ -514,6 +1465,7 @@ export const USER_PLAYLISTS: Playlist[] = [
 ];
 
 export const ARTISTS: Artist[] = [
+  ...SEED_ARTISTS,
   {
     id: 'pa1',
     name: 'Jennifer Wilson',
@@ -695,6 +1647,7 @@ const EXTRA_ARTIST_SONGS: Song[] = [
 ];
 
 export const ALL_SONGS: Song[] = [
+  ...SEED_SONGS,
   ...SUGGESTIONS,
   ...SEARCH_RESULTS,
   ...PLAYLIST_DETAILS_TRACKS,
@@ -707,6 +1660,7 @@ export const getSongsByIds = (songIds: string[]): Song[] =>
   songIds.flatMap((id) => ALL_SONGS.find((song) => song.id === id) ?? []);
 
 export const ARTIST_ALBUMS: Album[] = [
+  ...SEED_ALBUMS,
   {
     id: 'aa1',
     title: 'ME',
@@ -760,6 +1714,7 @@ export const ARTIST_ALBUMS: Album[] = [
 
 // Kho album để tìm kiếm, cùng tên và nghệ sĩ chỉ giữ một bản
 export const ALL_ALBUMS: Album[] = [
+  ...SEED_ALBUMS,
   ...TRENDING_ALBUMS,
   ...ARTIST_ALBUMS,
 ].filter(

@@ -14,6 +14,9 @@ import { FeedScreen } from './screens/FeedScreen';
 import { FeedCommentsScreen } from './screens/FeedCommentsScreen';
 import { MyLibraryScreen, LibraryTag } from './screens/MyLibraryScreen';
 import { PlaylistDetailsScreen } from './screens/PlaylistDetailsScreen';
+import { ChartsListScreen } from './screens/ChartsListScreen';
+import { AlbumsListScreen } from './screens/AlbumsListScreen';
+import { ArtistsListScreen } from './screens/ArtistsListScreen';
 import { ArtistProfileScreen } from './screens/ArtistProfileScreen';
 import { PlayAudioScreen } from './screens/PlayAudioScreen';
 import { LoginScreen } from './screens/LoginScreen';
@@ -21,7 +24,7 @@ import { SignUpScreen } from './screens/SignUpScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import {MiniPlayer} from "../src/components/MiniPlayer";
 import { useAuth } from '../src/context/AuthContext';
-import { Album, CHARTS, getAlbumSongIds, getChartSongIds, Playlist } from '../src/data/musicData';
+import { Album, Artist, ARTISTS, CHARTS, getAlbumSongIds, getChartSongIds, Playlist } from '../src/data/musicData';
 export const Navigation: React.FC = () => {
   const { currentUser, logout } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('Launch');
@@ -37,6 +40,7 @@ export const Navigation: React.FC = () => {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   // Các nghệ sĩ đã mở, phần tử cuối là trang đang xem (nút quay lại đi ngược danh sách này)
   const [artistStack, setArtistStack] = useState<string[]>([]);
+  const [artistCache, setArtistCache] = useState<Record<string, any>>({});
   const [searchFilter, setSearchFilter] = useState<'All' | 'Tracks' | 'Albums' | 'Artists'>('All');
 
   const seeAllArtists = () => {
@@ -89,8 +93,11 @@ export const Navigation: React.FC = () => {
     navigateTo('PlaylistDetails');
   };
 
-  const openChart = (chartId: string) => {
-    const chart = CHARTS.find((c) => c.id === chartId);
+  const openChart = (chartTarget: any) => {
+    let chart: any = chartTarget;
+    if (typeof chartTarget === 'string') {
+      chart = CHARTS.find((c) => c.id === chartTarget);
+    }
     if (!chart) {
       setSelectedPlaylist(null);
       navigateTo('PlaylistDetails');
@@ -99,17 +106,30 @@ export const Navigation: React.FC = () => {
     const chartPlaylist: Playlist = {
       id: chart.id,
       ownerId: 'chart',
-      title: `${chart.title} - ${chart.subtitle}`,
-      description: chart.updateText,
+      title: chart.subtitle ? `${chart.title} • ${chart.subtitle}` : chart.title,
+      description: chart.updateText || 'Daily chart-toppers update',
       coverImage: chart.coverImage,
-      songIds: getChartSongIds(chart.id),
+      songIds: chart.songIds || getChartSongIds(chart.id) || [],
     };
     setSelectedPlaylist(chartPlaylist);
     navigateTo('PlaylistDetails');
   };
 
-  const openArtist = (artistId?: string) => {
-    if (artistId) setArtistStack((prev) => [...prev, artistId]);
+  const openArtist = (target?: string | any) => {
+    if (!target) {
+      navigateTo('ArtistProfile');
+      return;
+    }
+    const id = typeof target === 'string' ? target : target.id;
+    const artistObj =
+      typeof target === 'object' && target.id
+        ? target
+        : ARTISTS.find((a) => a.id === id) || artistCache[id] || null;
+
+    if (artistObj) {
+      setArtistCache((prev) => ({ ...prev, [id]: artistObj }));
+    }
+    setArtistStack((prev) => [...prev, id]);
     navigateTo('ArtistProfile');
   };
 
@@ -230,6 +250,9 @@ export const Navigation: React.FC = () => {
           <HomeScreen
             onNavigateToSearch={() => navigateTo('SearchAudio')}
             onNavigateToPlaylist={() => openPlaylist(null)}
+            onNavigateToChartsList={() => navigateTo('ChartsList')}
+            onNavigateToAlbumsList={() => navigateTo('AlbumsList')}
+            onNavigateToArtistsList={() => navigateTo('ArtistsList')}
             onNavigateToChart={openChart}
             onNavigateToAlbum={openAlbum}
             onNavigateToArtist={openArtist}
@@ -301,6 +324,33 @@ export const Navigation: React.FC = () => {
           />
         );
 
+      case 'ChartsList':
+        return (
+          <ChartsListScreen
+            onBack={goBack}
+            onSelectChart={(chart) => openChart(chart)}
+            onTabPress={handleTabPress}
+          />
+        );
+
+      case 'AlbumsList':
+        return (
+          <AlbumsListScreen
+            onBack={goBack}
+            onSelectAlbum={(album) => openAlbum(album)}
+            onTabPress={handleTabPress}
+          />
+        );
+
+      case 'ArtistsList':
+        return (
+          <ArtistsListScreen
+            onBack={goBack}
+            onSelectArtist={(artist) => openArtist(artist)}
+            onTabPress={handleTabPress}
+          />
+        );
+
       case 'PlaylistDetails':
         return (
           <PlaylistDetailsScreen
@@ -311,11 +361,13 @@ export const Navigation: React.FC = () => {
           />
         );
 
-      case 'ArtistProfile':
+      case 'ArtistProfile': {
+        const curArtistId = artistStack[artistStack.length - 1];
         return (
           <ArtistProfileScreen
-            key={artistStack[artistStack.length - 1]}
-            artistId={artistStack[artistStack.length - 1]}
+            key={curArtistId ?? 'default'}
+            artistId={curArtistId}
+            initialArtist={curArtistId ? artistCache[curArtistId] || ARTISTS.find((a) => a.id === curArtistId) || null : null}
             onSelectArtist={openArtist}
             onSelectAlbum={openAlbum}
             onBack={() => {
@@ -326,6 +378,7 @@ export const Navigation: React.FC = () => {
             onTabPress={handleTabPress}
           />
         );
+      }
 
       case 'PlayAudio':
         return (
@@ -340,6 +393,11 @@ export const Navigation: React.FC = () => {
           <HomeScreen
             onNavigateToSearch={() => navigateTo('SearchAudio')}
             onNavigateToPlaylist={() => openPlaylist(null)}
+            onNavigateToChartsList={() => navigateTo('ChartsList')}
+            onNavigateToAlbumsList={() => navigateTo('AlbumsList')}
+            onNavigateToArtistsList={() => navigateTo('ArtistsList')}
+            onNavigateToChart={openChart}
+            onNavigateToAlbum={openAlbum}
             onNavigateToArtist={openArtist}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onTabPress={handleTabPress}
