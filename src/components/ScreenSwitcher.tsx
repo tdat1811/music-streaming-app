@@ -28,7 +28,11 @@ export type ScreenId =
   | 'PlayAudio'
   | 'Login'
   | 'SignUp'
-  | 'Profile';
+  | 'Profile'
+  | 'ChartsList'
+  | 'AlbumsList'
+  | 'ArtistsList'
+  | 'SeeAll';
 
 interface ScreenSwitcherProps {
   currentScreen: ScreenId;
@@ -58,7 +62,7 @@ export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({
   onSelectScreen,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
-
+  
   const currentItem = SCREEN_LIST.find((s) => s.id === currentScreen);
   const pan = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
