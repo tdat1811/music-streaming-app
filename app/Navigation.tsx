@@ -21,12 +21,12 @@ import { SignUpScreen } from './screens/SignUpScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import {MiniPlayer} from "../src/components/MiniPlayer";
 import { useAuth } from '../src/context/AuthContext';
-import { Playlist } from '../src/data/musicData';
+import { Album, CHARTS, getAlbumSongIds, getChartSongIds, Playlist } from '../src/data/musicData';
 export const Navigation: React.FC = () => {
   const { currentUser, logout } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('Launch');
   const [history, setHistory] = useState<ScreenId[]>(['Launch']);
-   const [searchQuery, setSearchQuery] = useState<string>('me');
+   const [searchQuery, setSearchQuery] = useState<string>('');
   // Màn hình cần quay lại sau khi đăng nhập (ví dụ khách bấm mua gói ở màn chọn gói)
   const [afterAuth, setAfterAuth] = useState<ScreenId | null>(null);
   // Giữ ở đây để không mất tag đang chọn khi quay lại từ màn Play hoặc Playlist Details
@@ -54,6 +54,38 @@ export const Navigation: React.FC = () => {
 
   const openPlaylist = (playlist: Playlist | null) => {
     setSelectedPlaylist(playlist);
+    navigateTo('PlaylistDetails');
+  };
+
+  const openAlbum = (album: Album) => {
+    const albumPlaylist: Playlist = {
+      id: album.id,
+      ownerId: 'album',
+      title: album.title,
+      description: `Album • ${album.artist}`,
+      coverImage: album.coverImage,
+      songIds: getAlbumSongIds(album),
+    };
+    setSelectedPlaylist(albumPlaylist);
+    navigateTo('PlaylistDetails');
+  };
+
+  const openChart = (chartId: string) => {
+    const chart = CHARTS.find((c) => c.id === chartId);
+    if (!chart) {
+      setSelectedPlaylist(null);
+      navigateTo('PlaylistDetails');
+      return;
+    }
+    const chartPlaylist: Playlist = {
+      id: chart.id,
+      ownerId: 'chart',
+      title: `${chart.title} - ${chart.subtitle}`,
+      description: chart.updateText,
+      coverImage: chart.coverImage,
+      songIds: getChartSongIds(chart.id),
+    };
+    setSelectedPlaylist(chartPlaylist);
     navigateTo('PlaylistDetails');
   };
 
@@ -179,6 +211,8 @@ export const Navigation: React.FC = () => {
           <HomeScreen
             onNavigateToSearch={() => navigateTo('SearchAudio')}
             onNavigateToPlaylist={() => openPlaylist(null)}
+            onNavigateToChart={openChart}
+            onNavigateToAlbum={openAlbum}
             onNavigateToArtist={openArtist}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onNavigateToLogin={() => navigateTo('Login')}
@@ -215,7 +249,7 @@ export const Navigation: React.FC = () => {
       onBackToSuggestions={() => navigateTo('SearchAudio')}
       onNavigateToArtist={openArtist}
       onNavigateToPlay={() => navigateTo('PlayAudio')}
-      onNavigateToAlbum={() => openPlaylist(null)}
+      onNavigateToAlbum={openAlbum}
       onTabPress={handleTabPress}
     />
   );
@@ -263,6 +297,7 @@ export const Navigation: React.FC = () => {
             key={artistStack[artistStack.length - 1]}
             artistId={artistStack[artistStack.length - 1]}
             onSelectArtist={openArtist}
+            onSelectAlbum={openAlbum}
             onBack={() => {
               setArtistStack((prev) => prev.slice(0, -1));
               goBack();

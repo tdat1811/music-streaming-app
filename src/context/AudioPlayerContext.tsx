@@ -29,7 +29,7 @@ const SEEK_END_MARGIN_MS = 500;
 
 export type RepeatMode = "off" | "all" | "one";
 
-const NEXT_REPEAT_MODE: Record<RepeatMode, RepeatMode> = { off: "all", all: "one", one: "off" };
+const NEXT_REPEAT_MODE: Record<RepeatMode, RepeatMode> = { off: "one", one: "all", all: "off" };
 
 interface AudioPlayerContextType {
   currentTrack: Song | null;
@@ -70,6 +70,8 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const repeatModeRef = useRef<RepeatMode>("off");
   // Đã yêu cầu phát nhưng chưa có âm thanh (đang tải): vẫn hiển thị là đang phát
   const awaitingPlaybackRef = useRef<boolean>(false);
+  const hasFinishedRef = useRef<boolean>(false);
+  const repeatCountRef = useRef<number>(0);
 
   const getQueue = () => (isShuffleRef.current ? shuffledQueueRef.current : playlistRef.current);
 
@@ -94,6 +96,7 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     currentTrackRef.current = song;
     setPositionMillis(0);
     setDurationMillis(parseDuration(song.duration));
+    repeatCountRef.current = 0;
 
     releasePlayer();
 
@@ -102,22 +105,31 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     try {
       const player = createAudioPlayer({ uri: audioUri });
+      try {
+        player.loop = repeatModeRef.current === "one";
+      } catch {}
       playerRef.current = player;
+      hasFinishedRef.current = false;
 
       subRef.current = player.addListener("playbackStatusUpdate", (status) => {
         setPositionMillis(Math.floor(status.currentTime * 1000));
         if (status.duration > 0) {
           setDurationMillis(Math.floor(status.duration * 1000));
         }
-        // Chỉ coi là đã phát khi thời gian chạy: bản web báo playing ngay từ lúc gọi play()
         if (status.playing && status.currentTime > 0) {
           awaitingPlaybackRef.current = false;
         }
         if (!awaitingPlaybackRef.current) {
           setIsPlaying(status.playing);
         }
-        if (status.didJustFinish) {
-          handleTrackFinished();
+        const isEnded = status.didJustFinish || (status.duration > 0 && status.currentTime >= status.duration - 0.25);
+        if (isEnded) {
+          if (!hasFinishedRef.current) {
+            hasFinishedRef.current = true;
+            handleTrackFinished();
+          }
+        } else {
+          hasFinishedRef.current = false;
         }
       });
 
@@ -133,33 +145,68 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const restartFromBeginning = async (shouldPlay: boolean) => {
     const player = playerRef.current;
-    if (!player) return;
-    await player.seekTo(0);
     setPositionMillis(0);
+    hasFinishedRef.current = false;
     awaitingPlaybackRef.current = shouldPlay;
+    if (!player) {
+      setIsPlaying(shouldPlay);
+      return;
+    }
+    try {
+      await player.seekTo(0);
+    } catch {}
     if (shouldPlay) {
-      player.play();
-      setIsPlaying(true);
+      try {
+        await player.play();
+        setIsPlaying(true);
+      } catch {
+        setIsPlaying(true);
+      }
     } else {
-      player.pause();
+      try {
+        await player.pause();
+      } catch {}
       setIsPlaying(false);
     }
   };
 
   const handleTrackFinished = async () => {
+    // 1. Chế độ lặp 1 lần (icon số 1): Lặp đúng 1 lần rồi dừng lại và tắt vòng lặp
     if (repeatModeRef.current === "one") {
+      if (repeatCountRef.current < 1) {
+        repeatCountRef.current += 1;
+        await restartFromBeginning(true);
+        return;
+      } else {
+        repeatCountRef.current = 0;
+        repeatModeRef.current = "off";
+        setRepeatMode("off");
+        if (playerRef.current) {
+          try {
+            playerRef.current.loop = false;
+          } catch {}
+        }
+        await restartFromBeginning(false);
+        return;
+      }
+    }
+
+    // 2. Chế độ lặp vô hạn ở bài hát đó luôn (icon repeat cyan)
+    if (repeatModeRef.current === "all") {
       await restartFromBeginning(true);
       return;
     }
+
+    // 3. Khi không bật vòng lặp (off): phát bài tiếp nếu có, hết bài cuối thì dừng
     const queue = getQueue();
-    if (queue.length === 0) return;
-    const idx = queue.findIndex((s) => s.id === currentTrackRef.current?.id);
-    // Không lặp danh sách thì dừng lại sau bài cuối
-    if (idx === queue.length - 1 && repeatModeRef.current === "off") {
-      await restartFromBeginning(false);
-      return;
+    if (queue.length > 0) {
+      const idx = queue.findIndex((s) => s.id === currentTrackRef.current?.id);
+      if (idx >= 0 && idx < queue.length - 1) {
+        await startTrack(queue[idx + 1]);
+        return;
+      }
     }
-    await startTrack(queue[(idx + 1) % queue.length]);
+    await restartFromBeginning(false);
   };
 
   const playSong = async (song: Song, newPlaylist?: Song[]) => {
@@ -209,15 +256,26 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const player = playerRef.current;
     const endPosition = durationMillis - SEEK_END_MARGIN_MS;
     if (durationMillis > 0 && posMillis >= endPosition) {
+      if (repeatModeRef.current !== "off") {
+        await handleTrackFinished();
+        return;
+      }
       awaitingPlaybackRef.current = false;
-      player?.pause();
+      try {
+        await player?.pause();
+      } catch {}
       setIsPlaying(false);
       setPositionMillis(endPosition);
-      await player?.seekTo(endPosition / 1000);
+      try {
+        await player?.seekTo(endPosition / 1000);
+      } catch {}
       return;
     }
     setPositionMillis(posMillis);
-    await player?.seekTo(posMillis / 1000);
+    hasFinishedRef.current = false;
+    try {
+      await player?.seekTo(posMillis / 1000);
+    } catch {}
   };
 
   const toggleShuffle = () => {
@@ -233,6 +291,13 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const next = NEXT_REPEAT_MODE[repeatModeRef.current];
     repeatModeRef.current = next;
     setRepeatMode(next);
+    repeatCountRef.current = 0;
+    if (playerRef.current) {
+      try {
+        // Chỉ loop vô hạn native khi ở chế độ 'all' (vô hạn)
+        playerRef.current.loop = next === "all";
+      } catch {}
+    }
   };
 
   return (

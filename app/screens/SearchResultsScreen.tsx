@@ -14,6 +14,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
 import { Album, ALL_ALBUMS, ALL_SONGS, Artist, ARTISTS, SEARCH_RESULTS, Song } from '../../src/data/musicData';
 import { SongItem } from '../../src/components/SongItem';
+import { SongActionModal } from '../../src/components/SongActionModal';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
 import { useAuth } from '../../src/context/AuthContext';
@@ -23,7 +24,7 @@ interface SearchResultsScreenProps {
   onBackToSuggestions?: () => void;
   onNavigateToArtist?: (artistId?: string) => void;
   onNavigateToPlay?: (trackId?: string) => void;
-  onNavigateToAlbum?: () => void;
+  onNavigateToAlbum?: (album: Album) => void;
   onTabPress?: (tab: TabName) => void;
 }
 
@@ -38,6 +39,8 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
   const { playSong } = useAudioPlayer();
   const [activeFilter, setActiveFilter] = useState<'All' | 'Tracks' | 'Albums' | 'Artists'>('All');
   const { currentUser, toggleFollowArtist } = useAuth();
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  const [songModalVisible, setSongModalVisible] = useState(false);
 
   const shouldShowSongs = activeFilter === 'All' || activeFilter === 'Tracks';
   const shouldShowArtists = activeFilter === 'All' || activeFilter === 'Artists';
@@ -108,7 +111,7 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
     <TouchableOpacity
       key={album.id}
       style={styles.albumRow}
-      onPress={onNavigateToAlbum}
+      onPress={() => onNavigateToAlbum && onNavigateToAlbum(album)}
       activeOpacity={0.7}
     >
       <Image source={album.coverImage} style={styles.albumCover} fadeDuration={0} />
@@ -129,6 +132,10 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
         if (onNavigateToPlay) {
           onNavigateToPlay(item.id);
         }
+      }}
+      onRightActionPress={() => {
+        setSelectedSong(item);
+        setSongModalVisible(true);
       }}
     />
   ), [displaySongs, playSong, onNavigateToPlay]);
@@ -209,6 +216,16 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
             <Text style={styles.emptyText}>No results for "{searchQuery}"</Text>
           )
         }
+      />
+
+      {/* Song Action Modal */}
+      <SongActionModal
+        visible={songModalVisible}
+        song={selectedSong}
+        onClose={() => {
+          setSongModalVisible(false);
+          setSelectedSong(null);
+        }}
       />
 
       {/* Bottom Tab Bar */}

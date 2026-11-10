@@ -22,6 +22,8 @@ interface AuthContextType {
   currentUser: User | null;
   activePlan: SubscriptionPlan | null;
   userPlaylists: Playlist[];
+  likedAlbumIds: string[];
+  downloadedSongIds: string[];
   login: (email: string, password: string) => boolean;
   signUp: (name: string, email: string, password: string) => boolean;
   logout: () => void;
@@ -31,6 +33,12 @@ interface AuthContextType {
   toggleLikeSong: (songId: string) => void;
   toggleFollowArtist: (artistId: string) => void;
   createPlaylist: (title: string) => boolean;
+  addSongToPlaylist: (playlistId: string, songId: string) => boolean;
+  toggleLikeAlbum: (albumId: string) => void;
+  isAlbumLiked: (albumId: string) => boolean;
+  downloadSong: (songId: string) => void;
+  downloadAllSongs: (songIds: string[]) => void;
+  isSongDownloaded: (songId: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,6 +55,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [users, setUsers] = useState<User[]>(SAMPLE_USERS);
   const [playlists, setPlaylists] = useState<Playlist[]>(USER_PLAYLISTS);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [likedAlbumIds, setLikedAlbumIds] = useState<string[]>(['ta1']);
+  const [downloadedSongIds, setDownloadedSongIds] = useState<string[]>(['pdt1']);
 
   const currentUser = users.find((user) => user.id === currentUserId) ?? null;
   const activePlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === currentUser?.planId) ?? null;
@@ -149,13 +159,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
+  const addSongToPlaylist = (playlistId: string, songId: string): boolean => {
+    let added = false;
+    setPlaylists((prev) =>
+      prev.map((pl) => {
+        if (pl.id === playlistId) {
+          if (!pl.songIds.includes(songId)) {
+            added = true;
+            return { ...pl, songIds: [...pl.songIds, songId] };
+          }
+        }
+        return pl;
+      })
+    );
+    return added;
+  };
+
+  const toggleLikeAlbum = (albumId: string) => {
+    setLikedAlbumIds((prev) =>
+      prev.includes(albumId) ? prev.filter((id) => id !== albumId) : [...prev, albumId]
+    );
+  };
+
+  const isAlbumLiked = (albumId: string) => likedAlbumIds.includes(albumId);
+
+  const downloadSong = (songId: string) => {
+    setDownloadedSongIds((prev) =>
+      prev.includes(songId) ? prev : [...prev, songId]
+    );
+  };
+
+  const downloadAllSongs = (songIds: string[]) => {
+    setDownloadedSongIds((prev) => {
+      const set = new Set([...prev, ...songIds]);
+      return Array.from(set);
+    });
+  };
+
+  const isSongDownloaded = (songId: string) => downloadedSongIds.includes(songId);
+
   return (
     <AuthContext.Provider
       value={{
         currentUser,
         activePlan,
         userPlaylists,
+        likedAlbumIds,
+        downloadedSongIds,
         createPlaylist,
+        addSongToPlaylist,
+        toggleLikeAlbum,
+        isAlbumLiked,
+        downloadSong,
+        downloadAllSongs,
+        isSongDownloaded,
         login,
         signUp,
         logout,

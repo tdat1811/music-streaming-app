@@ -11,8 +11,9 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
-import { ALL_SONGS, ARTIST_ALBUMS, ARTISTS, Song } from '../../src/data/musicData';
+import { Album, ALL_SONGS, ARTIST_ALBUMS, ARTISTS, Song } from '../../src/data/musicData';
 import { SongItem } from '../../src/components/SongItem';
+import { SongActionModal } from '../../src/components/SongActionModal';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAuth } from '../../src/context/AuthContext';
 import { shuffleTracks, useAudioPlayer } from '../../src/context/AudioPlayerContext';
@@ -23,6 +24,7 @@ const DEFAULT_ARTIST_ID = 'ar1';
 interface ArtistProfileScreenProps {
   artistId?: string | null;
   onSelectArtist?: (artistId: string) => void;
+  onSelectAlbum?: (album: Album) => void;
   onBack?: () => void;
   onNavigateToPlay?: (trackId?: string) => void;
   onTabPress?: (tab: TabName) => void;
@@ -31,6 +33,7 @@ interface ArtistProfileScreenProps {
 export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
   artistId,
   onSelectArtist,
+  onSelectAlbum,
   onBack,
   onNavigateToPlay,
   onTabPress,
@@ -45,6 +48,8 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
   const relatedArtists = ARTISTS.filter((item) => item.id !== artist.id);
   const isFollowing = !!currentUser?.followedArtistIds.includes(artist.id);
   const [aboutExpanded, setAboutExpanded] = useState(false);
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  const [songModalVisible, setSongModalVisible] = useState(false);
   const { playSong } = useAudioPlayer();
 
   const playFrom = (track: Song, queue: Song[]) => {
@@ -140,6 +145,10 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
               song={track}
               rightAction="dots"
               onPress={() => playFrom(track, tracks)}
+              onRightActionPress={() => {
+                setSelectedSong(track);
+                setSongModalVisible(true);
+              }}
             />
           ))}
         </View>
@@ -157,6 +166,7 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
             <TouchableOpacity
               key={album.id}
               style={styles.albumCard}
+              onPress={() => onSelectAlbum && onSelectAlbum(album)}
               activeOpacity={0.85}
             >
               <Image source={album.coverImage} style={styles.albumImage} />
@@ -223,6 +233,16 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
           ))}
         </ScrollView>
       </ScrollView>
+
+      {/* Song Action Modal */}
+      <SongActionModal
+        visible={songModalVisible}
+        song={selectedSong}
+        onClose={() => {
+          setSongModalVisible(false);
+          setSelectedSong(null);
+        }}
+      />
 
       {/* Bottom Tab Bar */}
       <BottomTabBar

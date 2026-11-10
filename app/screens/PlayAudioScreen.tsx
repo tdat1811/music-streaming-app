@@ -5,6 +5,8 @@ import {
   ImageBackground,
   TouchableOpacity,
   StyleSheet,
+  Share,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +16,7 @@ import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
 import { useAuth } from '../../src/context/AuthContext';
 import { useFeed } from '../../src/context/FeedContext';
 import { AudioWaveform } from '../../src/components/AudioWaveform';
+import { SongActionModal } from '../../src/components/SongActionModal';
 interface PlayAudioScreenProps {
   onMinimize?: () => void;
   onOpenComments?: (postId: string) => void;
@@ -28,8 +31,29 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
   artistName = 'Jessica Gonzalez',
 }) => {
   const {currentTrack, isPlaying, positionMillis, durationMillis, playSong, togglePlayPause, playPrevious, playNext, seekTo, isShuffle, repeatMode, toggleShuffle, cycleRepeatMode} = useAudioPlayer();
-  const { currentUser, toggleLikeSong } = useAuth();
+  const { currentUser, toggleLikeSong, downloadSong, isSongDownloaded } = useAuth();
   const isLiked = !!currentTrack && !!currentUser?.likedSongIds.includes(currentTrack.id);
+  const isDownloaded = currentTrack ? isSongDownloaded(currentTrack.id) : false;
+  const [songModalVisible, setSongModalVisible] = useState(false);
+
+  const handleDownload = () => {
+    if (!currentTrack) return;
+    if (isDownloaded) {
+      Alert.alert('Tải xuống', `Bài hát "${currentTrack.title}" đã có sẵn trong bộ nhớ ngoại tuyến của bạn.`);
+    } else {
+      downloadSong(currentTrack.id);
+      Alert.alert('Tải xuống thành công', `Đã tải bài hát "${currentTrack.title}" về máy để nghe ngoại tuyến!`);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!currentTrack) return;
+    try {
+      await Share.share({
+        message: `Nghe bài hát "${currentTrack.title}" của ${currentTrack.artist} trên Soundwave!`,
+      });
+    } catch {}
+  };
   const { posts, getCommentCount } = useFeed();
   // Chỉ bài hát có bài post trên Feed mới có bình luận
   const trackPost = posts.find((post) => post.songId === currentTrack?.id);
@@ -62,13 +86,20 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
         <SafeAreaView style={styles.safeArea}>
           {/* Top Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Play</Text>
             <TouchableOpacity
               onPress={onMinimize}
               style={styles.headerIconBtn}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Feather name="chevron-down" size={26} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Play</Text>
+            <TouchableOpacity
+              onPress={() => setSongModalVisible(true)}
+              style={styles.headerIconBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <MaterialCommunityIcons name="dots-horizontal" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
 
@@ -174,10 +205,37 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
                 )}
               </View>
 
-              <TouchableOpacity style={styles.shareBtn} activeOpacity={0.7}>
-                <Feather name="upload" size={22} color="#FFFFFF" />
-              </TouchableOpacity>
+              <View style={styles.rightInteractions}>
+                <TouchableOpacity
+                  style={styles.iconBtn}
+                  onPress={handleDownload}
+                  activeOpacity={0.7}
+                  accessibilityLabel="Download track"
+                >
+                  <Ionicons
+                    name={isDownloaded ? "cloud-done" : "arrow-down-circle-outline"}
+                    size={24}
+                    color={isDownloaded ? "#10C7D5" : "#FFFFFF"}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.iconBtn}
+                  onPress={handleShare}
+                  activeOpacity={0.7}
+                  accessibilityLabel="Share track"
+                >
+                  <Feather name="upload" size={22} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
             </View>
+
+            {/* Song Options Modal */}
+            <SongActionModal
+              visible={songModalVisible}
+              song={currentTrack}
+              onClose={() => setSongModalVisible(false)}
+            />
           </View>
         </SafeAreaView>
       </ImageBackground>
@@ -298,6 +356,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  rightInteractions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  iconBtn: {
+    padding: 4,
   },
   shareBtn: {
     padding: 4,

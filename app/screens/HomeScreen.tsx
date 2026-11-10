@@ -13,6 +13,7 @@ import { Ionicons, Feather } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
 import { IMAGES } from '../../src/constants/images';
 import {
+  Album,
   SUGGESTIONS,
   CHARTS,
   TRENDING_ALBUMS,
@@ -24,6 +25,8 @@ import { useAuth } from '../../src/context/AuthContext';
 interface HomeScreenProps {
   onNavigateToSearch?: () => void;
   onNavigateToPlaylist?: (playlistId?: string) => void;
+  onNavigateToChart?: (chartId: string) => void;
+  onNavigateToAlbum?: (album: Album) => void;
   onNavigateToArtist?: (artistId?: string) => void;
   onNavigateToPlay?: (trackId?: string) => void;
   onNavigateToLogin?: () => void;
@@ -35,6 +38,8 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToSearch,
   onNavigateToPlaylist,
+  onNavigateToChart,
+  onNavigateToAlbum,
   onNavigateToArtist,
   onNavigateToPlay,
   onNavigateToLogin,
@@ -160,7 +165,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <TouchableOpacity
               key={chart.id}
               style={styles.chartCard}
-              onPress={() => onNavigateToPlaylist && onNavigateToPlaylist(chart.id)}
+              onPress={() => {
+                if (onNavigateToChart) {
+                  onNavigateToChart(chart.id);
+                } else if (onNavigateToPlaylist) {
+                  onNavigateToPlaylist(chart.id);
+                }
+              }}
               activeOpacity={0.85}
             >
               <Image source={chart.coverImage} style={styles.chartImage} fadeDuration={0} />
@@ -187,7 +198,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <TouchableOpacity
               key={album.id}
               style={styles.albumCard}
-              onPress={() => onNavigateToPlaylist && onNavigateToPlaylist(album.id)}
+              onPress={() => {
+                if (onNavigateToAlbum) {
+                  onNavigateToAlbum(album);
+                } else if (onNavigateToPlaylist) {
+                  onNavigateToPlaylist(album.id);
+                }
+              }}
               activeOpacity={0.85}
             >
               <Image source={album.coverImage} style={styles.albumImage} fadeDuration={0} />
