@@ -1,9 +1,12 @@
-import React, { useCallback } from 'react';
-import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useCallback, useState } from 'react';
+import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, Share, Alert } from 'react-native';
+import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Song } from '../data/musicData';
 import { parseDuration, shuffleTracks, useAudioPlayer } from '../context/AudioPlayerContext';
+import { useAuth } from '../context/AuthContext';
 import { SongItem } from './SongItem';
+import { SongActionModal } from './SongActionModal';
+import { AlbumActionModal } from './AlbumActionModal';
 
 const formatTotalDuration = (tracks: Song[]) => {
   const totalSeconds = tracks.reduce((sum, track) => sum + parseDuration(track.duration) / 1000, 0);
@@ -38,11 +41,35 @@ export const TrackListView: React.FC<TrackListViewProps> = ({
   likesLabel,
   durationLabel,
   emptyText,
-  showExtraActions = false,
+  showExtraActions = true,
   onNavigateToPlay,
   onToggleLike,
 }) => {
   const { playSong } = useAudioPlayer();
+  const { toggleLikeAlbum, isAlbumLiked } = useAuth();
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
+  const [songModalVisible, setSongModalVisible] = useState(false);
+  const [albumModalVisible, setAlbumModalVisible] = useState(false);
+
+  const isLiked = isAlbumLiked(title);
+
+  const handleToggleAlbumLike = () => {
+    toggleLikeAlbum(title);
+    Alert.alert(
+      'Yêu thích',
+      !isLiked
+        ? `Đã thêm "${title}" vào danh sách yêu thích!`
+        : `Đã xóa "${title}" khỏi danh sách yêu thích.`
+    );
+  };
+
+  const handleShareAlbum = async () => {
+    try {
+      await Share.share({
+        message: `Nghe "${title}" trên Soundwave! ${description}`,
+      });
+    } catch {}
+  };
 
   const playFrom = useCallback(
     (track: Song, queue: Song[]) => {
@@ -61,89 +88,136 @@ export const TrackListView: React.FC<TrackListViewProps> = ({
     ({ item }: { item: Song }) => (
       <SongItem
         song={item}
-        rightAction={onToggleLike ? 'heart' : 'dots'}
+        rightAction="dots"
         onPress={() => playFrom(item, tracks)}
-        onRightActionPress={onToggleLike ? () => onToggleLike(item.id) : undefined}
+        onRightActionPress={() => {
+          setSelectedSong(item);
+          setSongModalVisible(true);
+        }}
       />
     ),
-    [playFrom, tracks, onToggleLike]
+    [playFrom, tracks]
   );
 
   return (
-    <FlatList
-      data={tracks}
-      keyExtractor={(item) => item.id}
-      renderItem={renderSongItem}
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.listContent}
-      initialNumToRender={8}
-      maxToRenderPerBatch={8}
-      windowSize={5}
-      removeClippedSubviews={true}
-      ListEmptyComponent={emptyText ? <Text style={styles.emptyText}>{emptyText}</Text> : undefined}
-      ListHeaderComponent={
-        <>
-          {/* Banner */}
-          <View style={styles.bannerContainer}>
-            <Image source={coverImage} style={styles.coverImage} fadeDuration={0} />
+    <View style={styles.container}>
+      <FlatList
+        data={tracks}
+        keyExtractor={(item) => item.id}
+        renderItem={renderSongItem}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews={true}
+        ListEmptyComponent={emptyText ? <Text style={styles.emptyText}>{emptyText}</Text> : undefined}
+        ListHeaderComponent={
+          <>
+            {/* Banner */}
+            <View style={styles.bannerContainer}>
+              <Image source={coverImage} style={styles.coverImage} fadeDuration={0} />
 
-            <View style={styles.bannerInfo}>
-              <Text style={styles.playlistTitle}>{title}</Text>
-              <View style={styles.metaRow}>
-                {likesLabel ? (
-                  <>
-                    <Ionicons name="heart-outline" size={14} color="#10C7D5" />
-                    <Text style={styles.metaCount}>{likesLabel}</Text>
-                  </>
-                ) : (
-                  <Text style={styles.metaText}>
-                    {tracks.length} {tracks.length === 1 ? 'song' : 'songs'}
-                  </Text>
-                )}
-                <Text style={styles.metaDot}>•</Text>
-                <Text style={styles.metaText}>{durationLabel ?? formatTotalDuration(tracks)}</Text>
+              <View style={styles.bannerInfo}>
+                <Text style={styles.playlistTitle}>{title}</Text>
+                <View style={styles.metaRow}>
+                  {likesLabel ? (
+                    <>
+                      <Ionicons name="heart-outline" size={14} color="#10C7D5" />
+                      <Text style={styles.metaCount}>{likesLabel}</Text>
+                    </>
+                  ) : (
+                    <Text style={styles.metaText}>
+                      {tracks.length} {tracks.length === 1 ? 'song' : 'songs'}
+                    </Text>
+                  )}
+                  <Text style={styles.metaDot}>•</Text>
+                  <Text style={styles.metaText}>{durationLabel ?? formatTotalDuration(tracks)}</Text>
+                </View>
+                <Text style={styles.description}>{description}</Text>
               </View>
-              <Text style={styles.description}>{description}</Text>
             </View>
-          </View>
 
-          {/* Actions Bar */}
-          <View style={styles.actionsBar}>
-            <View style={styles.leftActions}>
-              {showExtraActions && (
-                <>
-                  <TouchableOpacity style={styles.actionBtn}>
-                    <Ionicons name="heart-outline" size={24} color="#111216" />
+            {/* Actions Bar */}
+            <View style={styles.actionsBar}>
+              <View style={styles.leftActions}>
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={handleToggleAlbumLike}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={isLiked ? 'heart' : 'heart-outline'}
+                    size={24}
+                    color={isLiked ? '#10C7D5' : '#111216'}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={handleShareAlbum}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="share-2" size={21} color="#111216" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.actionBtn}
+                  onPress={() => setAlbumModalVisible(true)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="dots-horizontal" size={24} color="#111216" />
+                </TouchableOpacity>
+              </View>
+
+              {tracks.length > 0 && (
+                <View style={styles.rightActions}>
+                  <TouchableOpacity style={styles.shuffleBtn} onPress={handleShuffle}>
+                    <Ionicons name="shuffle" size={22} color="#111216" />
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionBtn}>
-                    <MaterialCommunityIcons name="dots-horizontal" size={24} color="#111216" />
+                  <TouchableOpacity
+                    style={styles.playButton}
+                    onPress={() => playFrom(tracks[0], tracks)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="play" size={24} color="#FFFFFF" style={{ marginLeft: 2 }} />
                   </TouchableOpacity>
-                </>
+                </View>
               )}
             </View>
+          </>
+        }
+      />
 
-            {tracks.length > 0 && (
-              <View style={styles.rightActions}>
-                <TouchableOpacity style={styles.shuffleBtn} onPress={handleShuffle}>
-                  <Ionicons name="shuffle" size={22} color="#111216" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.playButton}
-                  onPress={() => playFrom(tracks[0], tracks)}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="play" size={24} color="#FFFFFF" style={{ marginLeft: 2 }} />
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </>
-      }
-    />
+      {/* Song Action Modal */}
+      <SongActionModal
+        visible={songModalVisible}
+        song={selectedSong}
+        onClose={() => {
+          setSongModalVisible(false);
+          setSelectedSong(null);
+        }}
+      />
+
+      {/* Album / Playlist Action Modal */}
+      <AlbumActionModal
+        visible={albumModalVisible}
+        title={title}
+        description={description}
+        coverImage={coverImage}
+        tracks={tracks}
+        isLiked={isLiked}
+        onToggleLike={handleToggleAlbumLike}
+        onClose={() => setAlbumModalVisible(false)}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   bannerContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -158,27 +232,29 @@ const styles = StyleSheet.create({
   bannerInfo: {
     flex: 1,
     marginLeft: 18,
+    justifyContent: 'center',
   },
   playlistTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     color: '#111216',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   metaCount: {
     fontSize: 12,
-    color: '#686A70',
+    fontWeight: '600',
+    color: '#10C7D5',
     marginLeft: 4,
   },
   metaDot: {
     fontSize: 12,
-    color: '#686A70',
-    marginHorizontal: 4,
+    color: '#9CA3AF',
+    marginHorizontal: 6,
   },
   metaText: {
     fontSize: 12,
@@ -187,13 +263,14 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 13,
     color: '#686A70',
+    lineHeight: 18,
   },
   actionsBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 12,
   },
   leftActions: {
     flexDirection: 'row',
@@ -209,29 +286,24 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   shuffleBtn: {
-    padding: 4,
+    padding: 6,
   },
   playButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#121316',
-    justifyContent: 'center',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#111216',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    elevation: 4,
+    justifyContent: 'center',
   },
   listContent: {
-    paddingBottom: 76, // Chừa chỗ cho MiniPlayer
+    paddingBottom: 110,
   },
   emptyText: {
+    paddingHorizontal: 20,
+    paddingVertical: 32,
     fontSize: 14,
-    color: '#686A70',
+    color: '#9CA3AF',
     textAlign: 'center',
-    marginTop: 24,
-    paddingHorizontal: 24,
   },
 });

@@ -16,6 +16,7 @@ export interface Album {
   title: string;
   artist: string;
   coverImage: any;
+  songIds?: string[];
 }
 
 export interface Artist {
@@ -169,6 +170,7 @@ export const CHARTS = [
     subtitle: 'Canada',
     updateText: 'Daily chart-toppers update',
     coverImage: IMAGES.chartCanada,
+    songIds: ['pdt1', 'pdt2', 'pdt3', 'pdt4', 'pdt5', 'pdt6'],
   },
   {
     id: 'c2',
@@ -176,6 +178,7 @@ export const CHARTS = [
     subtitle: 'Global',
     updateText: 'Daily chart-toppers update',
     coverImage: IMAGES.chartGlobal,
+    songIds: ['pdt2', 'apt1', 'pdt3', 'fs1', 'sr1', 's2'],
   },
   {
     id: 'c3',
@@ -183,6 +186,7 @@ export const CHARTS = [
     subtitle: 'Trending',
     updateText: 'Daily chart-toppers update',
     coverImage: IMAGES.chartTrending,
+    songIds: ['fs1', 'fs2', 'fs3', 'pdt4', 'pdt5', 'as1'],
   },
 ];
 
@@ -192,18 +196,21 @@ export const TRENDING_ALBUMS: Album[] = [
     title: 'ME',
     artist: 'Jessica Gonzalez',
     coverImage: IMAGES.albumMe,
+    songIds: ['pdt1', 'sr1', 's1', 'fs1'],
   },
   {
     id: 'ta2',
     title: 'Magna nost',
     artist: 'Brian Thomas',
     coverImage: IMAGES.albumMagnaNost,
+    songIds: ['pdt3', 'sr3', 's2'],
   },
   {
     id: 'ta3',
     title: 'Magna nost',
     artist: 'Christopher...',
     coverImage: IMAGES.albumMagna3,
+    songIds: ['pdt5', 'pdt6', 'sr5', 'sr6'],
   },
 ];
 
@@ -229,13 +236,28 @@ export const POPULAR_ARTISTS: Artist[] = [
 ];
 
 export const SEARCH_SUGGESTIONS = [
+  'Reflection',
+  'In The Stars',
+  'FLOWER',
+  'Shape of You',
+  'Blinding Lights',
+  'Levitating',
+  'Astronaut in the Ocean',
+  'Dynamite',
+  'Let you free',
+  'Midnight Echo',
+  'Paper Moons',
+  'Slow Tide',
+  'Northern Road',
+  'Quiet Streets',
+  'Glass Rain',
   'Me',
-  'me illum id aliquip',
-  'me lorem',
-  'Me Gonzalez',
-  'Me irure esse',
-  'Me Exercitation',
-  'Me Sint aliquip duis deseru',
+  'Me Inc',
+  'Dozz me',
+  'Eastss me',
+  'Me Ali',
+  'Me quis a',
+  'Me light',
 ];
 
 export const SEARCH_RESULTS: Song[] = [
@@ -690,42 +712,49 @@ export const ARTIST_ALBUMS: Album[] = [
     title: 'ME',
     artist: 'Ryan Young',
     coverImage: IMAGES.artistAlbum1,
+    songIds: ['apt1', 'apt2', 'apt3'],
   },
   {
     id: 'aa2',
     title: 'Magna nost',
     artist: 'Ryan Young',
     coverImage: IMAGES.artistAlbum2,
+    songIds: ['apt4', 'apt5', 'apt1'],
   },
   {
     id: 'aa3',
     title: 'Proident...',
     artist: 'Ryan Young',
     coverImage: IMAGES.artistAlbum3,
+    songIds: ['apt2', 'apt3', 'apt5'],
   },
   {
     id: 'aa4',
     title: 'Paper Moons',
     artist: 'Jennifer Wilson',
     coverImage: IMAGES.artistFans1,
+    songIds: ['as1', 'as2'],
   },
   {
     id: 'aa5',
     title: 'Open Country',
     artist: 'Elizabeth Hall',
     coverImage: IMAGES.artistFans2,
+    songIds: ['as3', 'as4'],
   },
   {
     id: 'aa6',
     title: 'Late Shift',
     artist: 'Anthony Taylor',
     coverImage: IMAGES.albumMagna3,
+    songIds: ['pdt2', 'pdt4', 'sr2', 'sr4'],
   },
   {
     id: 'aa7',
     title: 'After Dark',
     artist: 'Mer Watson',
     coverImage: IMAGES.artistFans3,
+    songIds: ['fs3', 'as5'],
   },
 ];
 
@@ -737,3 +766,15 @@ export const ALL_ALBUMS: Album[] = [
   (album, index, self) =>
     index === self.findIndex((a) => a.title === album.title && a.artist === album.artist)
 );
+
+
+export const getAlbumSongIds = (album: Album): string[] => {
+  if (album.songIds && album.songIds.length > 0) return album.songIds;
+  const match = ALL_SONGS.filter((s) => s.artist === album.artist).map((s) => s.id);
+  return match.length > 0 ? match : ['pdt1', 'pdt2', 'pdt3'];
+};
+
+export const getChartSongIds = (chartId: string): string[] => {
+  const chart = CHARTS.find((c) => c.id === chartId);
+  return chart?.songIds ?? ['pdt1', 'pdt2', 'pdt3', 'pdt4', 'pdt5', 'pdt6'];
+};
