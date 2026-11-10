@@ -270,6 +270,7 @@ export const Navigation: React.FC = () => {
             selectedTag={libraryTag}
             onSelectTag={setLibraryTag}
             onSelectPlaylist={openPlaylist}
+            onSelectAlbum={openAlbum}
             onSelectArtist={openArtist}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onNavigateToSearch={() => navigateTo('SearchAudio')}
