@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import { COLORS } from '../../src/constants/theme';
 import { IMAGES } from '../../src/constants/images';
 import {
   Album,
+  Artist,
+  Song,
   SUGGESTIONS,
   CHARTS,
   TRENDING_ALBUMS,
@@ -22,6 +24,7 @@ import {
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
 import { useAuth } from '../../src/context/AuthContext';
+import { api } from '../../src/services/api';
 interface HomeScreenProps {
   onNavigateToSearch?: () => void;
   onNavigateToPlaylist?: (playlistId?: string) => void;
@@ -49,6 +52,117 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 }) => {
   const {playSong, isPlaying, togglePlayPause} = useAudioPlayer();
   const { currentUser, activePlan } = useAuth();
+  const [suggestions, setSuggestions] = useState<Song[]>(SUGGESTIONS);
+  const [charts, setCharts] = useState(CHARTS);
+  const [trendingAlbums, setTrendingAlbums] = useState<Album[]>(TRENDING_ALBUMS);
+  const [popularArtists, setPopularArtists] = useState<Artist[]>(POPULAR_ARTISTS);
+  const [isDbLoaded, setIsDbLoaded] = useState<boolean>(false);
+  const [dbSuggestion,setDbSuggestion] = useState<Song[]>(SUGGESTIONS);
+  const [loading,setLoading] = useState<boolean>(false);
+  const [DBAlbum,setDBAlbum] = useState<Album[]>(TRENDING_ALBUMS);
+  const [DBChart,setDBChart]  = useState(CHARTS);
+
+
+  useEffect(() => {
+        async function loadDataFromDB() {
+      try {
+        setLoading(true);
+        // Lấy bài hát gợi ý
+        const response: any = await api.songs.getSuggestions();
+        if (response?.data) setDbSuggestion(response.data);
+
+        // 👉 THÊM 2 DÒNG NÀY:
+        // 1. Lấy danh sách Album thịnh hành từ MongoDB
+        const albumRes: any = await api.albums.getTrending();
+        if (albumRes?.data) setDBAlbum(albumRes.data);
+
+        // 2. Lấy Bảng xếp hạng Charts từ MongoDB
+        const chartRes: any = await api.charts.getAll();
+        if (chartRes?.data) setCharts(chartRes.data);
+
+        console.log('✅ Đã tải toàn bộ Suggestions, Albums & Charts từ MongoDB!');
+      } catch (error) {
+        console.log('⚠️ Dùng dữ liệu mặc định');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDataFromDB();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchFromDb() {
+      try {
+        const [sugRes, albRes, artRes, chaRes] = await Promise.all([
+          api.songs.getSuggestions().catch(() => null),
+          api.albums.getTrending().catch(() => null),
+          api.artists.getPopular().catch(() => null),
+          api.charts.getAll().catch(() => null),
+        ]);
+
+        if (!isMounted) return;
+
+        const getData = (res: any) => (Array.isArray(res) ? res : res?.data || []);
+        const sugList = getData(sugRes);
+        const albList = getData(albRes);
+        const artList = getData(artRes);
+        const chaList = getData(chaRes);
+
+        if (sugList.length > 0) {
+          setSuggestions(
+            sugList.map((item: any) => ({
+              ...item,
+              coverImage: item.coverImage
+                ? { uri: item.coverImage }
+                : (SUGGESTIONS.find((s) => s.id === item.id)?.coverImage || IMAGES.suggestion1),
+            }))
+          );
+          setIsDbLoaded(true);
+        }
+
+        if (albList.length > 0) {
+          setTrendingAlbums(
+            albList.map((item: any) => ({
+              ...item,
+              coverImage: item.coverImage
+                ? { uri: item.coverImage }
+                : (TRENDING_ALBUMS.find((a) => a.id === item.id)?.coverImage || IMAGES.albumMe),
+            }))
+          );
+          setIsDbLoaded(true);
+        }
+
+        if (artList.length > 0) {
+          setPopularArtists(
+            artList.map((item: any) => ({
+              ...item,
+              avatarImage: item.avatarImage
+                ? { uri: item.avatarImage }
+                : (POPULAR_ARTISTS.find((a) => a.id === item.id)?.avatarImage || IMAGES.artistJennifer),
+            }))
+          );
+        }
+
+        if (chaList.length > 0) {
+          setCharts(
+            chaList.map((item: any) => ({
+              ...item,
+              coverImage: item.coverImage
+                ? { uri: item.coverImage }
+                : (CHARTS.find((c) => c.id === item.id)?.coverImage || IMAGES.chartCanada),
+            }))
+          );
+        }
+      } catch (err) {
+        console.log('MongoDB server offline, using local fallback data:', err);
+      }
+    }
+    fetchFromDb();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLogout = () => {
     if (isPlaying) togglePlayPause();
@@ -97,6 +211,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <Text style={styles.accountAction}>{currentUser ? 'Log out' : 'Log in'}</Text>
             </TouchableOpacity>
           </View>
+          {isDbLoaded && (
+            <View style={styles.dbBadge}>
+              <View style={styles.dbDot} />
+              <Text style={styles.dbBadgeText}>MongoDB Atlas Live</Text>
+            </View>
+          )}
           {activePlan && (
             <View style={styles.vipBadge}>
               <Ionicons name="diamond" size={12} color="#FFFFFF" />
@@ -120,31 +240,43 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <Text style={styles.searchPlaceholder}>What you want to listen to</Text>
         </TouchableOpacity>
 
-        {/* Section 1: Suggestions for you */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Suggestions for you</Text>
-        </View>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalScroll}
-        >
-          {SUGGESTIONS.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.suggestionCard}
-              onPress={() => {
-                playSong(item, SUGGESTIONS);
-                if(onNavigateToPlay){
-                  onNavigateToPlay(item.id);
-                }
-              }}
-              activeOpacity={0.85}
-            >
-              <Image source={item.coverImage} style={styles.suggestionImage} fadeDuration={0} />
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          {/* Section 1: Suggestions for you */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Suggestions for you</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalScroll}
+          >
+            {dbSuggestion.map((item) => (
+             <TouchableOpacity
+  key={item.id}
+  style={styles.suggestionCard}
+  onPress={() => {
+    playSong(item, suggestions);
+    if (onNavigateToPlay) onNavigateToPlay(item.id);
+  }}
+  activeOpacity={0.85}
+>
+  <Image 
+    source={typeof item.coverImage === 'string' ? { uri: item.coverImage } : item.coverImage} 
+    style={styles.suggestionImage} 
+    fadeDuration={0} 
+  />
+
+  {/* 👉 Lớp phủ chữ nổi màu đen mờ ở góc dưới của ảnh */}
+  <View style={styles.suggestionOverlay}>
+    <Text style={styles.suggestionTitle} numberOfLines={1}>
+      {item.title}
+    </Text>
+    <Text style={styles.suggestionArtist} numberOfLines={1}>
+      {item.artist}
+    </Text>
+  </View>
+</TouchableOpacity>
+            ))}
+          </ScrollView>
 
         {/* Section 2: Charts */}
         <View style={styles.sectionHeaderWithAction}>
@@ -161,7 +293,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalScroll}
         >
-          {CHARTS.map((chart) => (
+          {DBChart.map((chart) => (
             <TouchableOpacity
               key={chart.id}
               style={styles.chartCard}
@@ -174,7 +306,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               }}
               activeOpacity={0.85}
             >
-              <Image source={chart.coverImage} style={styles.chartImage} fadeDuration={0} />
+              <Image 
+              // check string
+  source={typeof chart.coverImage === 'string' ? { uri: chart.coverImage } : chart.coverImage} 
+  style={styles.chartImage} 
+/>
               <Text style={styles.chartUpdateText} numberOfLines={2}>
                 {chart.updateText}
               </Text>
@@ -194,7 +330,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalScroll}
         >
-          {TRENDING_ALBUMS.map((album) => (
+          {DBAlbum.map((album) => (
             <TouchableOpacity
               key={album.id}
               style={styles.albumCard}
@@ -207,7 +343,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               }}
               activeOpacity={0.85}
             >
-              <Image source={album.coverImage} style={styles.albumImage} fadeDuration={0} />
+              <Image 
+  source={typeof album.coverImage === 'string' ? { uri: album.coverImage } : album.coverImage} 
+  style={styles.albumImage} 
+/>
               <Text style={styles.albumTitle} numberOfLines={1}>
                 {album.title}
               </Text>
@@ -230,7 +369,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalScroll}
         >
-          {POPULAR_ARTISTS.map((artist) => (
+          {popularArtists.map((artist) => (
             <TouchableOpacity
               key={artist.id}
               style={styles.artistCard}
@@ -319,6 +458,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  dbBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  dbDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+  },
+  dbBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#065F46',
   },
   vipBadge: {
     flexDirection: 'row',
@@ -453,4 +616,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  suggestionOverlay: {
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  right: 0,
+  backgroundColor: 'rgba(0, 0, 0, 0.55)', // nền đen mờ 55%
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+},
+suggestionTitle: {
+  color: '#FFFFFF',
+  fontSize: 15,
+  fontWeight: '700',
+},
+suggestionArtist: {
+  color: '#D1D5DB',
+  fontSize: 13,
+  marginTop: 2,
+},
 });
