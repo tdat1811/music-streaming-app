@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,17 +33,28 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (email.trim() === '' || password === '') {
       setError('Please enter your email and password.');
       return;
     }
-    if (!login(email, password)) {
-      setError('Email or password is incorrect.');
-      return;
+    setLoading(true);
+    setError('');
+    try {
+      const success = await login(email, password);
+      if (!success) {
+        setError('Email or password is incorrect.');
+        setLoading(false);
+        return;
+      }
+      if (onLoginSuccess) onLoginSuccess();
+    } catch (err) {
+      setError('Connection error. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    if (onLoginSuccess) onLoginSuccess();
   };
 
   return (
@@ -93,8 +105,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             error={error}
           />
 
-          <TouchableOpacity style={styles.primaryButton} onPress={handleLogin} activeOpacity={0.85}>
-            <Text style={styles.primaryButtonText}>Log in</Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleLogin} activeOpacity={0.85} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Log in</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.switchRow}>

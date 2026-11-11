@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,13 +39,14 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({
     confirmPassword: '',
   });
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
+  const [loading, setLoading] = useState(false);
 
   const updateField = (field: Field, text: string) => {
     setValues((prev) => ({ ...prev, [field]: text }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     const nextErrors: Partial<Record<Field, string>> = {};
     if (values.name.trim() === '') {
       nextErrors.name = 'Please enter your name.';
@@ -61,11 +63,20 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    if (!signUp(values.name, values.email, values.password)) {
-      setErrors({ email: 'This email is already registered.' });
-      return;
+    setLoading(true);
+    try {
+      const success = await signUp(values.name, values.email, values.password);
+      if (!success) {
+        setErrors({ email: 'This email is already registered.' });
+        setLoading(false);
+        return;
+      }
+      if (onSignUpSuccess) onSignUpSuccess();
+    } catch (err) {
+      setErrors({ email: 'Connection error. Please try again.' });
+    } finally {
+      setLoading(false);
     }
-    if (onSignUpSuccess) onSignUpSuccess();
   };
 
   return (
@@ -127,8 +138,12 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({
             error={errors.confirmPassword}
           />
 
-          <TouchableOpacity style={styles.primaryButton} onPress={handleSignUp} activeOpacity={0.85}>
-            <Text style={styles.primaryButtonText}>Sign up</Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleSignUp} activeOpacity={0.85} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Sign up</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.switchRow}>

@@ -9,10 +9,13 @@
     "seed": "node src/seed/seedData.js"
   },
   "dependencies": {
+    "@distube/ytdl-core": "^5.2.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "mongoose": "^8.9.5"
+    "mongoose": "^8.9.5",
+    "play-dl": "^1.9.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

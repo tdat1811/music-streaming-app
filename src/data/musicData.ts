@@ -100,7 +100,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "1.2M",
     "category": "suggestions",
     "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    "audioUrl": "http://localhost:5000/audio/s1.m4a"
   },
   {
     "id": "s2",
@@ -110,7 +110,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "3.4M",
     "category": "suggestions",
     "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+    "audioUrl": "http://localhost:5000/audio/s2.m4a"
   },
   {
     "id": "s3",
@@ -120,7 +120,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "8.5M",
     "category": "suggestions",
     "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+    "audioUrl": "http://localhost:5000/audio/s3.m4a"
   },
   {
     "id": "s4",
@@ -130,7 +130,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "12.8M",
     "category": "suggestions",
     "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+    "audioUrl": "http://localhost:5000/audio/s4.m4a"
   },
   {
     "id": "s5",
@@ -140,7 +140,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "9.1M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
+    "audioUrl": "http://localhost:5000/audio/s5.m4a"
   },
   {
     "id": "s6",
@@ -150,7 +150,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "7.8M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
+    "audioUrl": "http://localhost:5000/audio/s6.m4a"
   },
   {
     "id": "s7",
@@ -160,7 +160,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "6.5M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3"
+    "audioUrl": "http://localhost:5000/audio/s7.m4a"
   },
   {
     "id": "s8",
@@ -170,7 +170,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "11.2M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
+    "audioUrl": "http://localhost:5000/audio/s8.m4a"
   },
   {
     "id": "s9",
@@ -180,7 +180,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "15.4M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3"
+    "audioUrl": "http://localhost:5000/audio/s9.m4a"
   },
   {
     "id": "s10",
@@ -190,7 +190,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "8.9M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3"
+    "audioUrl": "http://localhost:5000/audio/s10.m4a"
   },
   {
     "id": "s11",
@@ -200,7 +200,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "14.1M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3"
+    "audioUrl": "http://localhost:5000/audio/s11.m4a"
   },
   {
     "id": "s12",
@@ -210,7 +210,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "9.6M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1520523839898-507124976779?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3"
+    "audioUrl": "http://localhost:5000/audio/s12.m4a"
   },
   {
     "id": "s13",
@@ -220,7 +220,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "13.3M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3"
+    "audioUrl": "http://localhost:5000/audio/s13.m4a"
   },
   {
     "id": "s14",
@@ -230,7 +230,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "10.7M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3"
+    "audioUrl": "http://localhost:5000/audio/s14.m4a"
   },
   {
     "id": "s15",
@@ -240,7 +240,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "8.2M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3"
+    "audioUrl": "http://localhost:5000/audio/s15.m4a"
   },
   {
     "id": "s16",
@@ -250,7 +250,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "7.9M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3"
+    "audioUrl": "http://localhost:5000/audio/s16.m4a"
   },
   {
     "id": "s17",
@@ -260,7 +260,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "11.8M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    "audioUrl": "http://localhost:5000/audio/s17.m4a"
   },
   {
     "id": "s18",
@@ -270,7 +270,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "6.7M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+    "audioUrl": "http://localhost:5000/audio/s18.m4a"
   },
   {
     "id": "s19",
@@ -280,7 +280,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "8.4M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+    "audioUrl": "http://localhost:5000/audio/s19.m4a"
   },
   {
     "id": "s20",
@@ -290,7 +290,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "7.2M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+    "audioUrl": "http://localhost:5000/audio/s20.m4a"
   },
   {
     "id": "s21",
@@ -300,7 +300,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "9.4M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
+    "audioUrl": "http://localhost:5000/audio/s21.m4a"
   },
   {
     "id": "s22",
@@ -310,7 +310,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "8.1M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
+    "audioUrl": "http://localhost:5000/audio/s22.m4a"
   },
   {
     "id": "s23",
@@ -320,7 +320,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "10.2M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3"
+    "audioUrl": "http://localhost:5000/audio/s23.m4a"
   },
   {
     "id": "s24",
@@ -330,7 +330,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "5.8M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1520523839898-507124976779?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
+    "audioUrl": "http://localhost:5000/audio/s24.m4a"
   },
   {
     "id": "s25",
@@ -340,7 +340,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "6.1M",
     "category": "charts",
     "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3"
+    "audioUrl": "http://localhost:5000/audio/s25.m4a"
   },
   {
     "id": "s26",
@@ -350,7 +350,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "15.8M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3"
+    "audioUrl": "http://localhost:5000/audio/s26.m4a"
   },
   {
     "id": "s27",
@@ -360,7 +360,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "18.2M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3"
+    "audioUrl": "http://localhost:5000/audio/s27.m4a"
   },
   {
     "id": "s28",
@@ -370,7 +370,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "12.4M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3"
+    "audioUrl": "http://localhost:5000/audio/s28.m4a"
   },
   {
     "id": "s29",
@@ -380,7 +380,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "10.5M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3"
+    "audioUrl": "http://localhost:5000/audio/s29.m4a"
   },
   {
     "id": "s30",
@@ -390,7 +390,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "8.7M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3"
+    "audioUrl": "http://localhost:5000/audio/s30.m4a"
   },
   {
     "id": "s31",
@@ -400,7 +400,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "11.9M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3"
+    "audioUrl": "http://localhost:5000/audio/s31.m4a"
   },
   {
     "id": "s32",
@@ -410,7 +410,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "7.8M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3"
+    "audioUrl": "http://localhost:5000/audio/s32.m4a"
   },
   {
     "id": "s33",
@@ -420,7 +420,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "14.5M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    "audioUrl": "http://localhost:5000/audio/s33.m4a"
   },
   {
     "id": "s34",
@@ -430,7 +430,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "13.1M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+    "audioUrl": "http://localhost:5000/audio/s34.m4a"
   },
   {
     "id": "s35",
@@ -440,7 +440,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "12.0M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+    "audioUrl": "http://localhost:5000/audio/s35.m4a"
   },
   {
     "id": "s36",
@@ -450,7 +450,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "9.3M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1520523839898-507124976779?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+    "audioUrl": "http://localhost:5000/audio/s36.m4a"
   },
   {
     "id": "s37",
@@ -460,7 +460,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "11.4M",
     "category": "vpop",
     "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"
+    "audioUrl": "http://localhost:5000/audio/s37.m4a"
   },
   {
     "id": "s38",
@@ -470,7 +470,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "2.1M",
     "category": "artist",
     "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
+    "audioUrl": "http://localhost:5000/audio/s38.m4a"
   },
   {
     "id": "s39",
@@ -480,7 +480,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "1.8M",
     "category": "artist",
     "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3"
+    "audioUrl": "http://localhost:5000/audio/s39.m4a"
   },
   {
     "id": "s40",
@@ -490,7 +490,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "950K",
     "category": "artist",
     "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"
+    "audioUrl": "http://localhost:5000/audio/s40.m4a"
   },
   {
     "id": "s41",
@@ -500,7 +500,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "1.4M",
     "category": "artist",
     "coverImage": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3"
+    "audioUrl": "http://localhost:5000/audio/s41.m4a"
   },
   {
     "id": "s42",
@@ -510,7 +510,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "3.2M",
     "category": "artist",
     "coverImage": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3"
+    "audioUrl": "http://localhost:5000/audio/s42.m4a"
   },
   {
     "id": "s43",
@@ -520,7 +520,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "2.5M",
     "category": "artist",
     "coverImage": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-11.mp3"
+    "audioUrl": "http://localhost:5000/audio/s43.m4a"
   },
   {
     "id": "s44",
@@ -530,7 +530,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "1.9M",
     "category": "artist",
     "coverImage": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3"
+    "audioUrl": "http://localhost:5000/audio/s44.m4a"
   },
   {
     "id": "s45",
@@ -540,7 +540,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "4.6M",
     "category": "artist",
     "coverImage": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-13.mp3"
+    "audioUrl": "http://localhost:5000/audio/s45.m4a"
   },
   {
     "id": "s46",
@@ -550,7 +550,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "3.8M",
     "category": "artist",
     "coverImage": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-14.mp3"
+    "audioUrl": "http://localhost:5000/audio/s46.m4a"
   },
   {
     "id": "s47",
@@ -560,7 +560,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "2.2M",
     "category": "chill",
     "coverImage": "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3"
+    "audioUrl": "http://localhost:5000/audio/s47.m4a"
   },
   {
     "id": "s48",
@@ -570,7 +570,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "1.7M",
     "category": "chill",
     "coverImage": "https://images.unsplash.com/photo-1520523839898-507124976779?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3"
+    "audioUrl": "http://localhost:5000/audio/s48.m4a"
   },
   {
     "id": "s49",
@@ -580,7 +580,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "1.1M",
     "category": "chill",
     "coverImage": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+    "audioUrl": "http://localhost:5000/audio/s49.m4a"
   },
   {
     "id": "s50",
@@ -590,7 +590,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "3.0M",
     "category": "chill",
     "coverImage": "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+    "audioUrl": "http://localhost:5000/audio/s50.m4a"
   },
   {
     "id": "s51",
@@ -600,7 +600,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "980K",
     "category": "chill",
     "coverImage": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+    "audioUrl": "http://localhost:5000/audio/s51.m4a"
   },
   {
     "id": "s52",
@@ -610,7 +610,7 @@ export const SEED_SONGS: Song[] = [
     "plays": "1.5M",
     "category": "chill",
     "coverImage": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=600&q=80",
-    "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+    "audioUrl": "http://localhost:5000/audio/s52.m4a"
   }
 ];
 
@@ -1075,39 +1075,28 @@ export interface SubscriptionPlan {
 
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
+    id: 'free',
+    name: 'Gói Thường (Free)',
+    badge: 'Miễn phí',
+    price: '0đ / tháng',
+    perks: [
+      'Nghe nhạc trực tuyến chất lượng 128 kbps',
+      'Có quảng cáo xen kẽ trong quá trình nghe',
+      'Hỗ trợ nghe trên cả Trình duyệt Web và App',
+      'Chế độ phát ngẫu nhiên (Shuffle play)',
+    ],
+  },
+  {
     id: 'premium',
-    name: 'Premium',
-    badge: 'Free for 1 month',
-    price: '$12.99/ month',
+    name: 'Gói VIP (Premium)',
+    badge: 'Đặc quyền VIP',
+    price: '$9.99 / tháng',
     perks: [
-      'Ad-free listening',
-      'Download to listen offline',
-      'Access full catalog Premium',
-      'High sound quality',
-      'Cancel anytime',
-    ],
-  },
-  {
-    id: 'family',
-    name: 'Family',
-    badge: 'Up to 6 accounts',
-    price: '$19.99/ month',
-    perks: [
-      '6 individual accounts',
-      'Block explicit music',
-      'Ad-free listening',
-    ],
-  },
-  {
-    id: 'student',
-    name: 'Student',
-    badge: 'Student discount',
-    price: '$6.99/ month',
-    perks: [
-      'Ad-free listening',
-      'Download to listen offline',
-      'High sound quality',
-      'Cancel anytime',
+      'Nghe nhạc không giới hạn KHÔNG quảng cáo (Ad-free)',
+      'Chất lượng âm thanh Lossless 320 kbps đỉnh cao',
+      'Tải bài hát không giới hạn để nghe ngoại tuyến (Offline)',
+      'Mở khóa toàn bộ album và ca sĩ độc quyền VIP',
+      'Hủy gói cước bất kỳ lúc nào, không ràng buộc',
     ],
   },
 ];
@@ -1119,7 +1108,7 @@ export const SUGGESTIONS: Song[] = [
     artist: 'Christina Aguilera',
     duration: '03:36',
     coverImage: IMAGES.suggestion1,
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', // Link test bài 2
+    audioUrl: 'http://localhost:5000/audio/s1.m4a', // Link test bài 2
   },
   {
     id: 's2',
@@ -1127,7 +1116,7 @@ export const SUGGESTIONS: Song[] = [
     artist: 'Benson Boone',
     duration: '03:15',
     coverImage: IMAGES.suggestion2,
-    audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', // Link test bài 3
+    audioUrl: 'http://localhost:5000/audio/s2.m4a', // Link test bài 3
   },
 ];
 

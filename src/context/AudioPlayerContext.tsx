@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from "expo-audio";
 import { PLAYLIST_DETAILS_TRACKS, Song } from "../data/musicData";
+import { API_BASE_URL } from "../services/api";
 
 // "03:36" | "1:02:10" -> millis
 export const parseDuration = (d?: string): number => {
@@ -100,8 +101,14 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     releasePlayer();
 
-    // Link nhạc mặc định nếu bài hát chưa có link riêng
-    const audioUri = song.audioUrl || "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+    // Ưu tiên phát file âm thanh full chính thức từ server (/audio/<songId>.m4a)
+    const serverHost = API_BASE_URL.replace(/\/api\/?$/, '');
+    let audioUri = `${serverHost}/audio/${song.id}.m4a`;
+
+    // Nếu song có audioUrl trực tiếp (không phải iTunes preview 30s) thì dùng
+    if (song.audioUrl && !song.audioUrl.includes('itunes.apple.com') && song.audioUrl.startsWith('http')) {
+      audioUri = song.audioUrl;
+    }
 
     try {
       const player = createAudioPlayer({ uri: audioUri });

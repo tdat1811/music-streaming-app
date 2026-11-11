@@ -8,6 +8,7 @@ import {
   User,
   USER_PLAYLISTS,
 } from '../data/musicData';
+import { api } from '../services/api';
 
 export const MIN_PASSWORD_LENGTH = 6;
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -24,12 +25,12 @@ interface AuthContextType {
   userPlaylists: Playlist[];
   likedAlbumIds: string[];
   downloadedSongIds: string[];
-  login: (email: string, password: string) => boolean;
-  signUp: (name: string, email: string, password: string) => boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  signUp: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   subscribe: (plan: SubscriptionPlan) => void;
-  updateProfile: (updates: ProfileUpdates) => boolean;
-  changePassword: (currentPassword: string, newPassword: string) => boolean;
+  updateProfile: (updates: ProfileUpdates) => Promise<boolean>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   toggleLikeSong: (songId: string) => void;
   toggleFollowArtist: (artistId: string) => void;
   createPlaylist: (title: string) => boolean;
@@ -62,32 +63,88 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const activePlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === currentUser?.planId) ?? null;
   const userPlaylists = playlists.filter((playlist) => playlist.ownerId === currentUserId);
 
-  const login = (email: string, password: string) => {
-    const user = users.find(
-      (u) => u.email === normalizeEmail(email) && u.password === password
-    );
-    if (!user) return false;
-    setCurrentUserId(user.id);
-    return true;
+  // Đăng nhập qua Backend API (mật khẩu được xác thực bằng bcrypt trên server)
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const response: any = await api.auth.login({ email, password });
+      if (response?.success && response?.data) {
+        const dbUser = response.data;
+        // Cập nhật user vào state local (không lưu password)
+        const mappedUser: User = {
+          id: dbUser.id,
+          name: dbUser.name,
+          email: dbUser.email,
+          phone: dbUser.phone || '',
+          password: '***', // Không lưu password ở client
+          planId: dbUser.planId || null,
+          likedSongIds: dbUser.likedSongIds || [],
+          followedArtistIds: dbUser.followedArtistIds || [],
+        };
+        setUsers((prev) => {
+          const exists = prev.some((u) => u.id === mappedUser.id);
+          return exists
+            ? prev.map((u) => (u.id === mappedUser.id ? mappedUser : u))
+            : [...prev, mappedUser];
+        });
+        setCurrentUserId(mappedUser.id);
+        // Đồng bộ likedAlbumIds và downloadedSongIds từ server
+        if (dbUser.likedAlbumIds) setLikedAlbumIds(dbUser.likedAlbumIds);
+        if (dbUser.downloadedSongIds) setDownloadedSongIds(dbUser.downloadedSongIds);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.log('Login error:', err);
+      // Fallback: thử đăng nhập local (cho trường hợp server offline)
+      const user = users.find(
+        (u) => u.email === normalizeEmail(email) && u.password === password
+      );
+      if (!user) return false;
+      setCurrentUserId(user.id);
+      return true;
+    }
   };
 
-  // Trả về false nếu email đã được dùng
-  const signUp = (name: string, email: string, password: string) => {
-    const normalizedEmail = normalizeEmail(email);
-    if (users.some((u) => u.email === normalizedEmail)) return false;
-    const newUser: User = {
-      id: `u${users.length + 1}`,
-      name: name.trim(),
-      email: normalizedEmail,
-      phone: '',
-      password,
-      planId: null,
-      likedSongIds: [],
-      followedArtistIds: [],
-    };
-    setUsers((prev) => [...prev, newUser]);
-    setCurrentUserId(newUser.id);
-    return true;
+  // Đăng ký qua Backend API (mật khẩu được hash bằng bcrypt trên server)
+  const signUp = async (name: string, email: string, password: string): Promise<boolean> => {
+    try {
+      const response: any = await api.auth.register({ name, email, password });
+      if (response?.success && response?.data) {
+        const dbUser = response.data;
+        const mappedUser: User = {
+          id: dbUser.id,
+          name: dbUser.name,
+          email: dbUser.email,
+          phone: dbUser.phone || '',
+          password: '***', // Không lưu password ở client
+          planId: null,
+          likedSongIds: [],
+          followedArtistIds: [],
+        };
+        setUsers((prev) => [...prev, mappedUser]);
+        setCurrentUserId(mappedUser.id);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.log('SignUp error:', err);
+      // Fallback local
+      const normalizedEmail = normalizeEmail(email);
+      if (users.some((u) => u.email === normalizedEmail)) return false;
+      const newUser: User = {
+        id: `u${users.length + 1}`,
+        name: name.trim(),
+        email: normalizedEmail,
+        phone: '',
+        password,
+        planId: null,
+        likedSongIds: [],
+        followedArtistIds: [],
+      };
+      setUsers((prev) => [...prev, newUser]);
+      setCurrentUserId(newUser.id);
+      return true;
+    }
   };
 
   const logout = () => setCurrentUserId(null);
@@ -96,29 +153,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUsers((prev) =>
       prev.map((u) => (u.id === currentUserId ? { ...u, planId: plan.id } : u))
     );
+    // Đồng bộ lên server
+    if (currentUserId) {
+      api.auth.subscribe(currentUserId, plan.id).catch(() => {});
+    }
   };
 
-  // Trả về false nếu email đã thuộc về tài khoản khác
-  const updateProfile = ({ name, email, phone }: ProfileUpdates) => {
-    const normalizedEmail = normalizeEmail(email);
-    if (users.some((u) => u.id !== currentUserId && u.email === normalizedEmail)) return false;
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === currentUserId
-          ? { ...u, name: name.trim(), email: normalizedEmail, phone: phone.trim() }
-          : u
-      )
-    );
-    return true;
+  // Cập nhật thông tin cá nhân qua Backend API
+  const updateProfile = async ({ name, email, phone }: ProfileUpdates): Promise<boolean> => {
+    if (!currentUserId) return false;
+    try {
+      const response: any = await api.auth.updateProfile({
+        userId: currentUserId,
+        name,
+        email,
+        phone,
+      });
+      if (response?.success && response?.data) {
+        const dbUser = response.data;
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === currentUserId
+              ? { ...u, name: dbUser.name, email: dbUser.email, phone: dbUser.phone || '' }
+              : u
+          )
+        );
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.log('UpdateProfile error:', err);
+      // Fallback: cập nhật local
+      const normalizedEmail = normalizeEmail(email);
+      if (users.some((u) => u.id !== currentUserId && u.email === normalizedEmail)) return false;
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === currentUserId
+            ? { ...u, name: name.trim(), email: normalizedEmail, phone: phone.trim() }
+            : u
+        )
+      );
+      return true;
+    }
   };
 
-  // Trả về false nếu mật khẩu hiện tại không đúng
-  const changePassword = (currentPassword: string, newPassword: string) => {
-    if (currentUser?.password !== currentPassword) return false;
-    setUsers((prev) =>
-      prev.map((u) => (u.id === currentUserId ? { ...u, password: newPassword } : u))
-    );
-    return true;
+  // Đổi mật khẩu qua Backend API (xác thực bcrypt trên server)
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    if (!currentUserId) return false;
+    try {
+      const response: any = await api.auth.changePassword({
+        userId: currentUserId,
+        currentPassword,
+        newPassword,
+      });
+      if (response?.success) {
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.log('ChangePassword error:', err);
+      // Fallback local
+      if (currentUser?.password !== currentPassword) return false;
+      setUsers((prev) =>
+        prev.map((u) => (u.id === currentUserId ? { ...u, password: newPassword } : u))
+      );
+      return true;
+    }
   };
 
   const toggleLikeSong = (songId: string) => {
@@ -127,6 +227,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         u.id === currentUserId ? { ...u, likedSongIds: toggleId(u.likedSongIds, songId) } : u
       )
     );
+    // Đồng bộ lên server
+    if (currentUserId) {
+      api.auth.toggleLikeSong(currentUserId, songId).catch(() => {});
+    }
   };
 
   const toggleFollowArtist = (artistId: string) => {
@@ -137,6 +241,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           : u
       )
     );
+    // Đồng bộ lên server
+    if (currentUserId) {
+      api.auth.toggleFollowArtist(currentUserId, artistId).catch(() => {});
+    }
   };
 
   // Trả về false nếu tài khoản đã có playlist cùng tên
@@ -179,6 +287,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLikedAlbumIds((prev) =>
       prev.includes(albumId) ? prev.filter((id) => id !== albumId) : [...prev, albumId]
     );
+    // Đồng bộ lên server
+    if (currentUserId) {
+      api.auth.toggleLikeAlbum(currentUserId, albumId).catch(() => {});
+    }
   };
 
   const isAlbumLiked = (albumId: string) => likedAlbumIds.includes(albumId);
@@ -187,6 +299,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDownloadedSongIds((prev) =>
       prev.includes(songId) ? prev : [...prev, songId]
     );
+    if (currentUserId) {
+      api.auth.downloadSong(currentUserId, songId).catch(() => {});
+    }
   };
 
   const downloadAllSongs = (songIds: string[]) => {

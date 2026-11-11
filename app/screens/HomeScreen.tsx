@@ -40,6 +40,7 @@ interface HomeScreenProps {
   onNavigateToPlay?: (trackId?: string) => void;
   onNavigateToLogin?: () => void;
   onNavigateToProfile?: () => void;
+  onNavigateToPlans?: () => void;
   onLogout?: () => void;
   onTabPress?: (tab: TabName) => void;
 }
@@ -56,6 +57,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToPlay,
   onNavigateToLogin,
   onNavigateToProfile,
+  onNavigateToPlans,
   onLogout,
   onTabPress,
 }) => {
@@ -221,17 +223,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <Text style={styles.accountAction}>{currentUser ? 'Log out' : 'Log in'}</Text>
             </TouchableOpacity>
           </View>
-          {isDbLoaded && (
-            <View style={styles.dbBadge}>
-              <View style={styles.dbDot} />
-              <Text style={styles.dbBadgeText}>MongoDB Atlas Live</Text>
-            </View>
-          )}
-          {activePlan && (
-            <View style={styles.vipBadge}>
+          {/* Badge thành viên: Thành viên Thường hoặc Thành viên VIP (Premium) */}
+          {activePlan && activePlan.id === 'premium' ? (
+            <TouchableOpacity
+              style={styles.vipBadge}
+              onPress={onNavigateToPlans}
+              activeOpacity={0.8}
+            >
               <Ionicons name="diamond" size={12} color="#FFFFFF" />
               <Text style={styles.vipBadgeText}>VIP • {activePlan.name}</Text>
-            </View>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={styles.freeBadge}
+              onPress={onNavigateToPlans}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="person-circle-outline" size={13} color="#065F46" />
+              <Text style={styles.freeBadgeText}>Thành viên Thường</Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -482,11 +492,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
   },
-  dbBadge: {
+  freeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: 6,
+    gap: 5,
     backgroundColor: '#ECFDF5',
     borderWidth: 1,
     borderColor: '#A7F3D0',
@@ -495,13 +505,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 4,
   },
-  dbDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
-  },
-  dbBadgeText: {
+  freeBadgeText: {
     fontSize: 11,
     fontWeight: '700',
     color: '#065F46',
