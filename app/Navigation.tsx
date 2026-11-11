@@ -259,6 +259,7 @@ export const Navigation: React.FC = () => {
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onNavigateToLogin={() => navigateTo('Login')}
             onNavigateToProfile={() => (currentUser ? navigateTo('Profile') : openLoginThenProfile())}
+            onNavigateToPlans={() => navigateTo('SubscriptionPlans')}
             onLogout={handleLogout}
             onTabPress={handleTabPress}
           />

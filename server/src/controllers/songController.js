@@ -1,4 +1,6 @@
 const Song = require('../models/Song');
+const fs = require('fs');
+const path = require('path');
 
 // Lấy toàn bộ bài hát
 exports.getAllSongs = async (req, res) => {
@@ -78,6 +80,35 @@ exports.search = async (req, res) => {
       suggestions,
       songs: matchedSongs,
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Phát stream bài hát trực tiếp (hỗ trợ HTTP Range requests cho seeking trên mọi thiết bị)
+exports.streamSong = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const audioDir = path.join(__dirname, '../../public/audio');
+    const candidates = [
+      path.join(audioDir, `${id}.m4a`),
+      path.join(audioDir, `${id}.mp3`),
+      path.join(audioDir, `${id}.mp4`),
+    ];
+
+    for (const filePath of candidates) {
+      if (fs.existsSync(filePath)) {
+        return res.sendFile(filePath);
+      }
+    }
+
+    // Nếu chưa có file cục bộ, tìm trong DB để lấy audioUrl dự phòng
+    const song = await Song.findOne({ id });
+    if (song && song.audioUrl && !song.audioUrl.includes('localhost')) {
+      return res.redirect(song.audioUrl);
+    }
+
+    return res.status(404).json({ success: false, message: 'File âm thanh chưa sẵn sàng.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

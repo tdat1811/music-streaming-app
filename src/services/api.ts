@@ -54,6 +54,12 @@ export const api = {
 
     downloadSong: (userId: string, songId: string) =>
       request('/auth/download-song', { method: 'POST', body: JSON.stringify({ userId, songId }) }),
+
+    updateProfile: (data: { userId: string; name: string; email: string; phone: string }) =>
+      request('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
+
+    changePassword: (data: { userId: string; currentPassword: string; newPassword: string }) =>
+      request('/auth/change-password', { method: 'PUT', body: JSON.stringify(data) }),
   },
 
   // 3. Bài hát (Songs)

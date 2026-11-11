@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,10 +45,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   });
   const [infoErrors, setInfoErrors] = useState<Partial<Record<InfoField, string>>>({});
   const [infoSaved, setInfoSaved] = useState(false);
+  const [infoLoading, setInfoLoading] = useState(false);
 
   const [passwords, setPasswords] = useState(EMPTY_PASSWORDS);
   const [passwordErrors, setPasswordErrors] = useState<Partial<Record<PasswordField, string>>>({});
   const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   const updateInfo = (field: InfoField, text: string) => {
     setInfo((prev) => ({ ...prev, [field]: text }));
@@ -61,7 +64,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setPasswordSaved(false);
   };
 
-  const handleSaveInfo = () => {
+  const handleSaveInfo = async () => {
     const nextErrors: Partial<Record<InfoField, string>> = {};
     if (info.name.trim() === '') {
       nextErrors.name = 'Please enter your name.';
@@ -75,14 +78,22 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setInfoErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    if (!updateProfile(info)) {
-      setInfoErrors({ email: 'This email is already registered.' });
-      return;
+    setInfoLoading(true);
+    try {
+      const success = await updateProfile(info);
+      if (!success) {
+        setInfoErrors({ email: 'This email is already registered.' });
+        return;
+      }
+      setInfoSaved(true);
+    } catch (err) {
+      setInfoErrors({ email: 'Connection error. Please try again.' });
+    } finally {
+      setInfoLoading(false);
     }
-    setInfoSaved(true);
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     const nextErrors: Partial<Record<PasswordField, string>> = {};
     if (passwords.next.length < MIN_PASSWORD_LENGTH) {
       nextErrors.next = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
@@ -93,12 +104,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     setPasswordErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    if (!changePassword(passwords.current, passwords.next)) {
-      setPasswordErrors({ current: 'Current password is incorrect.' });
-      return;
+    setPasswordLoading(true);
+    try {
+      const success = await changePassword(passwords.current, passwords.next);
+      if (!success) {
+        setPasswordErrors({ current: 'Current password is incorrect.' });
+        return;
+      }
+      setPasswords(EMPTY_PASSWORDS);
+      setPasswordSaved(true);
+    } catch (err) {
+      setPasswordErrors({ current: 'Connection error. Please try again.' });
+    } finally {
+      setPasswordLoading(false);
     }
-    setPasswords(EMPTY_PASSWORDS);
-    setPasswordSaved(true);
   };
 
   return (
@@ -192,8 +211,12 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               error={infoErrors.phone}
             />
             {infoSaved && <Text style={styles.successText}>Your profile has been updated.</Text>}
-            <TouchableOpacity style={styles.primaryButton} onPress={handleSaveInfo} activeOpacity={0.85}>
-              <Text style={styles.primaryButtonText}>Save changes</Text>
+            <TouchableOpacity style={styles.primaryButton} onPress={handleSaveInfo} activeOpacity={0.85} disabled={infoLoading}>
+              {infoLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Save changes</Text>
+              )}
             </TouchableOpacity>
 
             {/* Change password */}
@@ -230,8 +253,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               style={styles.primaryButton}
               onPress={handleChangePassword}
               activeOpacity={0.85}
+              disabled={passwordLoading}
             >
-              <Text style={styles.primaryButtonText}>Update password</Text>
+              {passwordLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Update password</Text>
+              )}
             </TouchableOpacity>
           </ScrollView>
         )}
