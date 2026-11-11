@@ -46,28 +46,46 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
   const shouldShowArtists = activeFilter === 'All' || activeFilter === 'Artists';
   const shouldShowAlbums = activeFilter === 'All' || activeFilter === 'Albums';
   const [dbSongs, setDbSongs] = useState<Song[]>([]);
+  const [dbArtists, setDbArtists] = useState<Artist[]>([]);
+  const [dbAlbums, setDbAlbums] = useState<Album[]>([]);
   const filters: ('All' | 'Tracks' | 'Albums' | 'Artists')[] = [
     'All',
     'Tracks',
     'Albums',
     'Artists',
-    ];
+  ];
 
-     useEffect(() => {
+  useEffect(() => {
+    let isMounted = true;
     async function searchFromDB() {
       try {
-        // Gọi API tìm kiếm lên backend Express + MongoDB
-        const res: any = await api.songs.search(searchQuery);
-        
-        if (res && res.songs) {
-          console.log(`🔎 MongoDB tìm thấy ${res.songs.length} bài hát cho từ khóa "${searchQuery}"`);
-          setDbSongs(res.songs);
+        const [songRes, artistRes, albumRes] = await Promise.all([
+          api.songs.search(searchQuery).catch(() => null),
+          api.artists.getAll().catch(() => null),
+          api.albums.getAll().catch(() => null),
+        ]);
+
+        if (!isMounted) return;
+
+        if (songRes && (songRes as any).songs) {
+          setDbSongs((songRes as any).songs);
+        }
+        const artList = Array.isArray(artistRes) ? artistRes : (artistRes as any)?.data;
+        if (Array.isArray(artList) && artList.length > 0) {
+          setDbArtists(artList);
+        }
+        const albList = Array.isArray(albumRes) ? albumRes : (albumRes as any)?.data;
+        if (Array.isArray(albList) && albList.length > 0) {
+          setDbAlbums(albList);
         }
       } catch (error) {
-        console.log('⚠️ Không gọi được API tìm kiếm, dùng dữ liệu mặc định');
+        console.log('Using local fallback for search:', error);
       }
     }
     searchFromDB();
+    return () => {
+      isMounted = false;
+    };
   }, [searchQuery]);
 
   // Lọc kho nhạc theo từ khóa (bài hát theo tên hoặc ca sĩ, album theo tên hoặc nghệ sĩ)
@@ -86,7 +104,10 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
     );
   }, [q, dbSongs]);
 
-  const displayArtists = useMemo(() => ARTISTS.filter((artist) => matches(artist.name)), [q]);
+  const displayArtists = useMemo(() => {
+    const source = dbArtists.length > 0 ? dbArtists : ARTISTS;
+    return source.filter((artist) => matches(artist.name));
+  }, [q, dbArtists]);
 
   const displayAlbums = useMemo(
     () => ALL_ALBUMS.filter((album) => matches(album.title) || matches(album.artist)),
