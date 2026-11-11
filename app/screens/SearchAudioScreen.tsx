@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
 import { SEARCH_SUGGESTIONS } from '../../src/data/musicData';
+import { api } from '../../src/services/api';
 
 interface SearchAudioScreenProps {
   onSelectSuggestion?: (query: string) => void;
@@ -23,12 +24,28 @@ export const SearchAudioScreen: React.FC<SearchAudioScreenProps> = ({
   onBack,
 }) => {
   const [query, setQuery] = useState('');
+  const [dbSuggestions, setDbSuggestions] = useState<string[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.songs.search(query)
+      .then((res: any) => {
+        if (isMounted && res && Array.isArray(res.suggestions) && res.suggestions.length > 0) {
+          setDbSuggestions(res.suggestions);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [query]);
 
   const filteredSuggestions = useMemo(() => {
+    if (dbSuggestions.length > 0) return dbSuggestions;
     const q = query.trim().toLowerCase();
     if (q === '') return SEARCH_SUGGESTIONS;
     return SEARCH_SUGGESTIONS.filter((item) => item.toLowerCase().includes(q));
-  }, [query]);
+  }, [query, dbSuggestions]);
 
   const keyExtractor = useCallback((item: string, index: number) => `${item}-${index}`, []);
 
