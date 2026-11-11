@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const playlistController = require('../controllers/playlistController');
+const { requireAuth, requireSelf } = require('../middleware/auth');
 
-router.get('/user/:userId', playlistController.getUserPlaylists);
+// Chỉ xem được playlist của chính mình; tạo/sửa/xoá cần token
+router.get('/user/:userId', requireAuth, requireSelf, playlistController.getUserPlaylists);
 router.get('/:id', playlistController.getPlaylistById);
-router.post('/create', playlistController.createPlaylist);
-router.post('/add-song', playlistController.addSongToPlaylist);
-router.post('/remove-song', playlistController.removeSongFromPlaylist);
-router.delete('/:id', playlistController.deletePlaylist);
+router.post('/create', requireAuth, playlistController.createPlaylist);
+router.post('/add-song', requireAuth, playlistController.addSongToPlaylist);
+router.post('/remove-song', requireAuth, playlistController.removeSongFromPlaylist);
+router.delete('/:id', requireAuth, playlistController.deletePlaylist);
 
 module.exports = router;

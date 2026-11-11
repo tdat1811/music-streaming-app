@@ -16,6 +16,7 @@ import { COLORS } from '../../src/constants/theme';
 import { ARTISTS, Artist } from '../../src/data/musicData';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAuth } from '../../src/context/AuthContext';
+import { useAccess } from '../../src/context/AccessContext';
 import { api } from '../../src/services/api';
 
 interface ArtistsListScreenProps {
@@ -30,6 +31,7 @@ export const ArtistsListScreen: React.FC<ArtistsListScreenProps> = ({
   onTabPress,
 }) => {
   const { currentUser, toggleFollowArtist } = useAuth();
+  const { ensureMember } = useAccess();
   const [artists, setArtists] = useState<Artist[]>(ARTISTS);
   const [loading, setLoading] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -138,7 +140,7 @@ export const ArtistsListScreen: React.FC<ArtistsListScreenProps> = ({
           {/* Follow Button */}
           <TouchableOpacity
             style={[styles.followBtn, isFollowing && styles.followingBtn]}
-            onPress={() => toggleFollowArtist(item.id)}
+            onPress={() => ensureMember() && toggleFollowArtist(item.id)}
             activeOpacity={0.8}
           >
             <Text style={[styles.followBtnText, isFollowing && styles.followingBtnText]}>

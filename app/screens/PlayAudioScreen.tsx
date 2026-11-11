@@ -14,6 +14,7 @@ import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { IMAGES } from '../../src/constants/images';
 import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
 import { useAuth } from '../../src/context/AuthContext';
+import { useAccess } from '../../src/context/AccessContext';
 import { useFeed } from '../../src/context/FeedContext';
 import { AudioWaveform } from '../../src/components/AudioWaveform';
 import { SongActionModal } from '../../src/components/SongActionModal';
@@ -31,13 +32,20 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
   artistName = 'Jessica Gonzalez',
 }) => {
   const {currentTrack, isPlaying, positionMillis, durationMillis, playSong, togglePlayPause, playPrevious, playNext, seekTo, isShuffle, repeatMode, toggleShuffle, cycleRepeatMode} = useAudioPlayer();
-  const { currentUser, toggleLikeSong, downloadSong, isSongDownloaded } = useAuth();
+  const { currentUser, isVip, toggleLikeSong, downloadSong, isSongDownloaded } = useAuth();
+  const { ensureMember, ensureVip } = useAccess();
   const isLiked = !!currentTrack && !!currentUser?.likedSongIds.includes(currentTrack.id);
   const isDownloaded = currentTrack ? isSongDownloaded(currentTrack.id) : false;
   const [songModalVisible, setSongModalVisible] = useState(false);
 
+  const handleLike = () => {
+    if (!currentTrack || !ensureMember()) return;
+    toggleLikeSong(currentTrack.id);
+  };
+
   const handleDownload = () => {
     if (!currentTrack) return;
+    if (!ensureVip('Tải bài hát nghe ngoại tuyến')) return;
     if (isDownloaded) {
       Alert.alert('Tải xuống', `Bài hát "${currentTrack.title}" đã có sẵn trong bộ nhớ ngoại tuyến của bạn.`);
     } else {
@@ -120,6 +128,8 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
               isPlaying={isPlaying}
               onScrub={setScrubRatio}
               onSeek={(ratio) => seekTo(ratio * durationMillis)}
+              canSeek={isVip}
+              onSeekBlocked={() => ensureVip('Tua bài hát')}
             />
 
             {/* Timestamp Row */}
@@ -178,7 +188,7 @@ export const PlayAudioScreen: React.FC<PlayAudioScreenProps> = ({
               <View style={styles.leftInteractions}>
                 <TouchableOpacity
                   style={styles.interactionItem}
-                  onPress={() => currentTrack && toggleLikeSong(currentTrack.id)}
+                  onPress={handleLike}
                   activeOpacity={0.7}
                 >
                   <Ionicons

@@ -45,6 +45,7 @@ export const SongItem: React.FC<SongItemProps> = memo(({
         style={styles.actionButton}
         onPress={onRightActionPress}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityLabel={rightAction === 'dots' ? 'Song options' : undefined}
       >
         {rightAction === 'heart' ? (
           <Ionicons

@@ -5,6 +5,7 @@ import { COLORS } from '../constants/theme';
 import { IMAGES } from '../constants/images';
 import { useAudioPlayer } from '../context/AudioPlayerContext';
 import { useAuth } from '../context/AuthContext';
+import { useAccess } from '../context/AccessContext';
 interface MiniPlayerProps {
   onPress?: () => void;
   onPlayPausePress?: () => void;
@@ -22,6 +23,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 }) => {
   const {currentTrack, isPlaying,togglePlayPause} = useAudioPlayer();
   const { currentUser, toggleLikeSong } = useAuth();
+  const { ensureMember } = useAccess();
   if(!currentTrack) return null;
   const isLiked = currentUser?.likedSongIds.includes(currentTrack.id) ?? false;
 
@@ -46,7 +48,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
 
       <TouchableOpacity
         style={styles.iconButton}
-        onPress={() => toggleLikeSong(currentTrack.id)}
+        onPress={() => ensureMember() && toggleLikeSong(currentTrack.id)}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
         <Ionicons name={isLiked ? "heart" : "heart-outline"} size={22} color="#FFFFFF" />

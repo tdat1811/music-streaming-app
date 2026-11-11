@@ -1,0 +1,302 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2020" height="1240" viewBox="0 0 2020 1240">
+<style>
+  text { font-family: Arial, Helvetica, sans-serif; fill: #14202b; }
+  .box { fill: #ffffff; stroke: #1f4e79; stroke-width: 1.5; }
+  .head { fill: #dde9f5; stroke: #1f4e79; stroke-width: 1.5; }
+  .sep { stroke: #1f4e79; stroke-width: 1.2; }
+  .name { font-size: 16px; font-weight: bold; text-anchor: middle; }
+  .stereo { font-size: 11px; text-anchor: middle; font-style: italic; }
+  .member { font-size: 13px; font-family: Consolas, monospace; }
+  .static { text-decoration: underline; }
+  .rel { stroke: #1f2d3a; stroke-width: 1.4; fill: none; }
+  .relText { font-size: 12.5px; font-style: italic; fill: #1f2d3a; }
+  .mult { font-size: 12.5px; font-weight: bold; fill: #8a2c0d; }
+  .legend { fill: #f7f9fb; stroke: #9aa9b6; }
+  .legendTitle { font-size: 15px; font-weight: bold; }
+  .legendText { font-size: 13px; }
+</style>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<rect x="40" y="40" width="380" height="158" class="box"/>
+<rect x="40" y="40" width="380" height="30" class="head"/>
+<text x="230" y="61" class="name">SubscriptionPlan</text>
+<line x1="40" y1="70" x2="420" y2="70" class="sep"/>
+<text x="50" y="88" class="member">- id: String</text>
+<text x="50" y="106" class="member">- name: String</text>
+<text x="50" y="124" class="member">- badge: String</text>
+<text x="50" y="142" class="member">- price: String</text>
+<text x="50" y="160" class="member">- perks: String[]</text>
+<line x1="40" y1="170" x2="420" y2="170" class="sep"/>
+<text x="50" y="188" class="member static">+ getAll(): SubscriptionPlan[]</text>
+<rect x="560" y="40" width="380" height="266" class="box"/>
+<rect x="560" y="40" width="380" height="30" class="head"/>
+<text x="750" y="61" class="name">Album</text>
+<line x1="560" y1="70" x2="940" y2="70" class="sep"/>
+<text x="570" y="88" class="member">- id: String</text>
+<text x="570" y="106" class="member">- title: String</text>
+<text x="570" y="124" class="member">- artist: String</text>
+<text x="570" y="142" class="member">- coverImage: String</text>
+<text x="570" y="160" class="member">- songIds: String[]</text>
+<text x="570" y="178" class="member">- isTrending: Boolean</text>
+<text x="570" y="196" class="member">- releaseYear: String</text>
+<line x1="560" y1="206" x2="940" y2="206" class="sep"/>
+<text x="570" y="224" class="member static">+ getAll(): Album[]</text>
+<text x="570" y="242" class="member static">+ getTrending(): Album[]</text>
+<text x="570" y="260" class="member static">+ getById(id: String): Album</text>
+<text x="570" y="278" class="member static">+ getByArtist(artistName: String): Album[]</text>
+<text x="570" y="296" class="member">+ getTracks(): Song[]</text>
+<rect x="1080" y="40" width="380" height="302" class="box"/>
+<rect x="1080" y="40" width="380" height="30" class="head"/>
+<text x="1270" y="61" class="name">Artist</text>
+<line x1="1080" y1="70" x2="1460" y2="70" class="sep"/>
+<text x="1090" y="88" class="member">- id: String</text>
+<text x="1090" y="106" class="member">- name: String</text>
+<text x="1090" y="124" class="member">- followers: String</text>
+<text x="1090" y="142" class="member">- avatarImage: String</text>
+<text x="1090" y="160" class="member">- aboutImage: String</text>
+<text x="1090" y="178" class="member">- bio: String</text>
+<text x="1090" y="196" class="member">- isPopular: Boolean</text>
+<text x="1090" y="214" class="member">- isVerified: Boolean</text>
+<line x1="1080" y1="224" x2="1460" y2="224" class="sep"/>
+<text x="1090" y="242" class="member static">+ getAll(): Artist[]</text>
+<text x="1090" y="260" class="member static">+ getPopular(): Artist[]</text>
+<text x="1090" y="278" class="member static">+ getById(id: String): Artist</text>
+<text x="1090" y="296" class="member">+ getTracks(): Song[]</text>
+<text x="1090" y="314" class="member">+ getAlbums(): Album[]</text>
+<text x="1090" y="332" class="member">+ getRelatedArtists(): Artist[]</text>
+<rect x="40" y="400" width="380" height="428" class="box"/>
+<rect x="40" y="400" width="380" height="30" class="head"/>
+<text x="230" y="421" class="name">User</text>
+<line x1="40" y1="430" x2="420" y2="430" class="sep"/>
+<text x="50" y="448" class="member">- id: String</text>
+<text x="50" y="466" class="member">- name: String</text>
+<text x="50" y="484" class="member">- email: String</text>
+<text x="50" y="502" class="member">- phone: String</text>
+<text x="50" y="520" class="member">- password: String</text>
+<text x="50" y="538" class="member">- planId: String</text>
+<text x="50" y="556" class="member">- likedSongIds: String[]</text>
+<text x="50" y="574" class="member">- followedArtistIds: String[]</text>
+<text x="50" y="592" class="member">- likedAlbumIds: String[]</text>
+<text x="50" y="610" class="member">- downloadedSongIds: String[]</text>
+<line x1="40" y1="620" x2="420" y2="620" class="sep"/>
+<text x="50" y="638" class="member static">+ register(name, email, password): User</text>
+<text x="50" y="656" class="member static">+ login(email, password): User</text>
+<text x="50" y="674" class="member">+ logout(): void</text>
+<text x="50" y="692" class="member">+ updateProfile(name, email, phone): Boolean</text>
+<text x="50" y="710" class="member">+ changePassword(current, newPassword): Boolean</text>
+<text x="50" y="728" class="member">+ subscribe(planId: String): void</text>
+<text x="50" y="746" class="member">+ toggleLikeSong(songId: String): Boolean</text>
+<text x="50" y="764" class="member">+ toggleFollowArtist(artistId: String): Boolean</text>
+<text x="50" y="782" class="member">+ toggleLikeAlbum(albumId: String): Boolean</text>
+<text x="50" y="800" class="member">+ downloadSong(songId: String): void</text>
+<text x="50" y="818" class="member">+ createPlaylist(title: String): Playlist</text>
+<rect x="560" y="460" width="380" height="284" class="box"/>
+<rect x="560" y="460" width="380" height="30" class="head"/>
+<text x="750" y="481" class="name">Song</text>
+<line x1="560" y1="490" x2="940" y2="490" class="sep"/>
+<text x="570" y="508" class="member">- id: String</text>
+<text x="570" y="526" class="member">- title: String</text>
+<text x="570" y="544" class="member">- artist: String</text>
+<text x="570" y="562" class="member">- plays: String</text>
+<text x="570" y="580" class="member">- duration: String</text>
+<text x="570" y="598" class="member">- coverImage: String</text>
+<text x="570" y="616" class="member">- audioUrl: String</text>
+<text x="570" y="634" class="member">- category: String</text>
+<line x1="560" y1="644" x2="940" y2="644" class="sep"/>
+<text x="570" y="662" class="member static">+ getAll(): Song[]</text>
+<text x="570" y="680" class="member static">+ getById(id: String): Song</text>
+<text x="570" y="698" class="member static">+ getByIds(ids: String[]): Song[]</text>
+<text x="570" y="716" class="member static">+ getSuggestions(): Song[]</text>
+<text x="570" y="734" class="member static">+ search(keyword: String): Song[]</text>
+<rect x="1080" y="540" width="380" height="212" class="box"/>
+<rect x="1080" y="540" width="380" height="30" class="head"/>
+<text x="1270" y="561" class="name">Chart</text>
+<line x1="1080" y1="570" x2="1460" y2="570" class="sep"/>
+<text x="1090" y="588" class="member">- id: String</text>
+<text x="1090" y="606" class="member">- title: String</text>
+<text x="1090" y="624" class="member">- subtitle: String</text>
+<text x="1090" y="642" class="member">- updateText: String</text>
+<text x="1090" y="660" class="member">- coverImage: String</text>
+<text x="1090" y="678" class="member">- songIds: String[]</text>
+<line x1="1080" y1="688" x2="1460" y2="688" class="sep"/>
+<text x="1090" y="706" class="member static">+ getAll(): Chart[]</text>
+<text x="1090" y="724" class="member static">+ getById(id: String): Chart</text>
+<text x="1090" y="742" class="member">+ getTracks(): Song[]</text>
+<rect x="1600" y="460" width="380" height="302" class="box"/>
+<rect x="1600" y="460" width="380" height="30" class="head"/>
+<text x="1790" y="481" class="name">AudioPlayer</text>
+<line x1="1600" y1="490" x2="1980" y2="490" class="sep"/>
+<text x="1610" y="508" class="member">- currentTrack: Song</text>
+<text x="1610" y="526" class="member">- queue: Song[]</text>
+<text x="1610" y="544" class="member">- isPlaying: Boolean</text>
+<text x="1610" y="562" class="member">- positionMillis: Number</text>
+<text x="1610" y="580" class="member">- durationMillis: Number</text>
+<text x="1610" y="598" class="member">- isShuffle: Boolean</text>
+<text x="1610" y="616" class="member">- repeatMode: RepeatMode</text>
+<line x1="1600" y1="626" x2="1980" y2="626" class="sep"/>
+<text x="1610" y="644" class="member">+ playSong(song: Song, queue: Song[]): void</text>
+<text x="1610" y="662" class="member">+ togglePlayPause(): void</text>
+<text x="1610" y="680" class="member">+ playNext(): void</text>
+<text x="1610" y="698" class="member">+ playPrevious(): void</text>
+<text x="1610" y="716" class="member">+ seekTo(positionMillis: Number): void</text>
+<text x="1610" y="734" class="member">+ toggleShuffle(): void</text>
+<text x="1610" y="752" class="member">+ cycleRepeatMode(): void</text>
+<rect x="40" y="900" width="380" height="284" class="box"/>
+<rect x="40" y="900" width="380" height="30" class="head"/>
+<text x="230" y="921" class="name">Playlist</text>
+<line x1="40" y1="930" x2="420" y2="930" class="sep"/>
+<text x="50" y="948" class="member">- id: String</text>
+<text x="50" y="966" class="member">- ownerId: String</text>
+<text x="50" y="984" class="member">- title: String</text>
+<text x="50" y="1002" class="member">- description: String</text>
+<text x="50" y="1020" class="member">- coverImage: String</text>
+<text x="50" y="1038" class="member">- songIds: String[]</text>
+<line x1="40" y1="1048" x2="420" y2="1048" class="sep"/>
+<text x="50" y="1066" class="member static">+ getByUser(userId: String): Playlist[]</text>
+<text x="50" y="1084" class="member static">+ getById(id: String): Playlist</text>
+<text x="50" y="1102" class="member static">+ create(userId: String, title: String): Playlist</text>
+<text x="50" y="1120" class="member">+ addSong(songId: String): void</text>
+<text x="50" y="1138" class="member">+ removeSong(songId: String): void</text>
+<text x="50" y="1156" class="member">+ delete(): void</text>
+<text x="50" y="1174" class="member">+ getTracks(): Song[]</text>
+<rect x="560" y="900" width="380" height="248" class="box"/>
+<rect x="560" y="900" width="380" height="30" class="head"/>
+<text x="750" y="921" class="name">FeedPost</text>
+<line x1="560" y1="930" x2="940" y2="930" class="sep"/>
+<text x="570" y="948" class="member">- id: String</text>
+<text x="570" y="966" class="member">- authorName: String</text>
+<text x="570" y="984" class="member">- authorAvatar: String</text>
+<text x="570" y="1002" class="member">- timeAgo: String</text>
+<text x="570" y="1020" class="member">- songId: String</text>
+<text x="570" y="1038" class="member">- likes: Number</text>
+<text x="570" y="1056" class="member">- likedByUserIds: String[]</text>
+<text x="570" y="1074" class="member">- shares: Number</text>
+<line x1="560" y1="1084" x2="940" y2="1084" class="sep"/>
+<text x="570" y="1102" class="member static">+ getAll(): FeedPost[]</text>
+<text x="570" y="1120" class="member">+ toggleLike(userId: String): Boolean</text>
+<text x="570" y="1138" class="member">+ share(): Number</text>
+<rect x="1080" y="900" width="380" height="284" class="box"/>
+<rect x="1080" y="900" width="380" height="30" class="head"/>
+<text x="1270" y="921" class="name">Comment</text>
+<line x1="1080" y1="930" x2="1460" y2="930" class="sep"/>
+<text x="1090" y="948" class="member">- id: String</text>
+<text x="1090" y="966" class="member">- postId: String</text>
+<text x="1090" y="984" class="member">- userName: String</text>
+<text x="1090" y="1002" class="member">- userAvatar: String</text>
+<text x="1090" y="1020" class="member">- text: String</text>
+<text x="1090" y="1038" class="member">- timeAgo: String</text>
+<text x="1090" y="1056" class="member">- likes: Number</text>
+<text x="1090" y="1074" class="member">- likedByUserIds: String[]</text>
+<text x="1090" y="1092" class="member">- replies: Reply[]</text>
+<line x1="1080" y1="1102" x2="1460" y2="1102" class="sep"/>
+<text x="1090" y="1120" class="member static">+ getByPost(postId: String): Comment[]</text>
+<text x="1090" y="1138" class="member static">+ add(postId, userName, text): Comment</text>
+<text x="1090" y="1156" class="member">+ toggleLike(userId: String): Boolean</text>
+<text x="1090" y="1174" class="member">+ addReply(reply: Reply): void</text>
+<rect x="1600" y="900" width="380" height="248" class="box"/>
+<rect x="1600" y="900" width="380" height="30" class="head"/>
+<text x="1790" y="921" class="name">Reply</text>
+<line x1="1600" y1="930" x2="1980" y2="930" class="sep"/>
+<text x="1610" y="948" class="member">- id: String</text>
+<text x="1610" y="966" class="member">- postId: String</text>
+<text x="1610" y="984" class="member">- userName: String</text>
+<text x="1610" y="1002" class="member">- userAvatar: String</text>
+<text x="1610" y="1020" class="member">- text: String</text>
+<text x="1610" y="1038" class="member">- timeAgo: String</text>
+<text x="1610" y="1056" class="member">- likes: Number</text>
+<text x="1610" y="1074" class="member">- likedByUserIds: String[]</text>
+<text x="1610" y="1092" class="member">- replyToName: String</text>
+<text x="1610" y="1110" class="member">- createdAt: Date</text>
+<line x1="1600" y1="1120" x2="1980" y2="1120" class="sep"/>
+<text x="1610" y="1138" class="member">+ toggleLike(userId: String): Boolean</text>
+<polyline points="230,198 230,400" class="rel"/>
+<text x="238" y="218" class="mult" text-anchor="start">0..1</text>
+<text x="238" y="380" class="mult" text-anchor="start">0..*</text>
+<rect x="235" y="288" width="57.6" height="16" fill="#fff"/>
+<text x="240" y="300" class="relText" text-anchor="start">đăng ký</text>
+<polyline points="330,400 330,220 560,220" class="rel"/>
+<text x="338" y="380" class="mult" text-anchor="start">0..*</text>
+<text x="544" y="214" class="mult" text-anchor="end">0..*</text>
+<rect x="397.6" y="200" width="84.8" height="16" fill="#fff"/>
+<text x="440" y="212" class="relText" text-anchor="middle">thích album</text>
+<polyline points="400,400 400,375 1120,375 1120,342" class="rel"/>
+<text x="408" y="395" class="mult">0..*</text>
+<text x="1128" y="362" class="mult" text-anchor="start">0..*</text>
+<rect x="927.8" y="355" width="64.4" height="16" fill="#fff"/>
+<text x="960" y="367" class="relText" text-anchor="middle">theo dõi</text>
+<polyline points="940,120 1080,120" class="rel"/>
+<text x="956" y="114" class="mult" text-anchor="start">0..*</text>
+<text x="1064" y="114" class="mult" text-anchor="end">1</text>
+<rect x="974.4" y="100" width="71.19999999999999" height="16" fill="#fff"/>
+<text x="1010" y="112" class="relText" text-anchor="middle">phát hành</text>
+<polyline points="750,306 750,460" class="rel"/>
+<text x="758" y="326" class="mult" text-anchor="start">0..*</text>
+<text x="758" y="440" class="mult" text-anchor="start">1..*</text>
+<rect x="755" y="398" width="37.2" height="16" fill="#fff"/>
+<text x="760" y="410" class="relText" text-anchor="start">chứa</text>
+<polyline points="1250,342 1250,490 940,490" class="rel"/>
+<text x="1258" y="362" class="mult" text-anchor="start">1</text>
+<text x="956" y="484" class="mult" text-anchor="start">0..*</text>
+<rect x="1255" y="408" width="64.4" height="16" fill="#fff"/>
+<text x="1260" y="420" class="relText" text-anchor="start">thể hiện</text>
+<polyline points="420,560 560,560" class="rel"/>
+<text x="436" y="554" class="mult" text-anchor="start">0..*</text>
+<text x="544" y="554" class="mult" text-anchor="end">0..*</text>
+<rect x="468" y="540" width="44" height="16" fill="#fff"/>
+<text x="490" y="552" class="relText" text-anchor="middle">thích</text>
+<polyline points="420,640 560,640" class="rel"/>
+<text x="436" y="634" class="mult" text-anchor="start">0..*</text>
+<text x="544" y="634" class="mult" text-anchor="end">0..*</text>
+<rect x="464.6" y="620" width="50.8" height="16" fill="#fff"/>
+<text x="490" y="632" class="relText" text-anchor="middle">tải về</text>
+<polyline points="940,640 1080,640" class="rel"/>
+<text x="956" y="634" class="mult" text-anchor="start">0..*</text>
+<text x="1064" y="634" class="mult" text-anchor="end">0..*</text>
+<rect x="977.8" y="620" width="64.4" height="16" fill="#fff"/>
+<text x="1010" y="632" class="relText" text-anchor="middle">xếp hạng</text>
+<polyline points="230,828 230,900" class="rel"/>
+<text x="238" y="848" class="mult" text-anchor="start">1</text>
+<text x="238" y="880" class="mult" text-anchor="start">0..*</text>
+<rect x="235" y="854" width="50.8" height="16" fill="#fff"/>
+<text x="240" y="866" class="relText" text-anchor="start">sở hữu</text>
+<polyline points="420,940 480,940 480,720 560,720" class="rel"/>
+<text x="436" y="934" class="mult" text-anchor="start">0..*</text>
+<text x="544" y="714" class="mult" text-anchor="end">0..*</text>
+<rect x="483" y="818" width="37.2" height="16" fill="#fff"/>
+<text x="488" y="830" class="relText" text-anchor="start">chứa</text>
+<polyline points="750,900 750,744" class="rel"/>
+<text x="758" y="880" class="mult" text-anchor="start">0..*</text>
+<text x="758" y="764" class="mult" text-anchor="start">1</text>
+<rect x="755" y="848" width="78" height="16" fill="#fff"/>
+<text x="760" y="860" class="relText" text-anchor="start">giới thiệu</text>
+<polyline points="1080,990 940,990" class="rel"/>
+<text x="1064" y="984" class="mult" text-anchor="end">0..*</text>
+<text x="956" y="984" class="mult" text-anchor="start">1</text>
+<rect x="977.8" y="970" width="64.4" height="16" fill="#fff"/>
+<text x="1010" y="982" class="relText" text-anchor="middle">thuộc về</text>
+<polyline points="1460,990 1600,990" class="rel"/>
+<text x="1584" y="984" class="mult" text-anchor="end">0..*</text>
+<polygon points="1460,990 1471,997 1482,990 1471,983" fill="#1f2d3a"/>
+<rect x="1514.8" y="970" width="30.4" height="16" fill="#fff"/>
+<text x="1530" y="982" class="relText" text-anchor="middle">gồm</text>
+<polyline points="1650,762 1650,820 850,820 850,744" class="rel"/>
+<text x="1658" y="782" class="mult" text-anchor="start">1</text>
+<text x="858" y="764" class="mult" text-anchor="start">0..*</text>
+<rect x="1200.8" y="800" width="98.39999999999999" height="16" fill="#fff"/>
+<text x="1250" y="812" class="relText" text-anchor="middle">hàng đợi phát</text>
+<rect x="1600" y="40" width="380" height="380" rx="6" class="legend"/>
+<text x="1616" y="68" class="legendTitle">Chú thích</text>
+<text x="1616" y="90" class="legendText">- thuộc tính riêng (private)</text>
+<text x="1616" y="112" class="legendText">+ phương thức công khai (public)</text>
+<text x="1616" y="134" class="legendText static">Phương thức gạch chân: phương thức lớp</text>
+<text x="1616" y="156" class="legendText">(static), dùng để truy vấn dữ liệu.</text>
+<text x="1616" y="178" class="legendText"></text>
+<text x="1616" y="200" class="legendText">Hình thoi đặc: quan hệ hợp thành, Reply</text>
+<text x="1616" y="222" class="legendText">được lưu lồng trong Comment.</text>
+<text x="1616" y="244" class="legendText"></text>
+<text x="1616" y="266" class="legendText">SubscriptionPlan và AudioPlayer là lớp</text>
+<text x="1616" y="288" class="legendText">phía ứng dụng, không lưu trong cơ sở dữ liệu.</text>
+<text x="1616" y="310" class="legendText"></text>
+<text x="1616" y="332" class="legendText">likedByUserIds của FeedPost, Comment, Reply</text>
+<text x="1616" y="354" class="legendText">tham chiếu User (không vẽ đường cho gọn).</text>
+<text x="1616" y="376" class="legendText">Song.artist, Album.artist liên kết Artist.name.</text>
+</svg>

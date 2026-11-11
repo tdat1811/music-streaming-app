@@ -1,5 +1,10 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const { VALID_PLAN_IDS, isVipUser, VIP_REQUIRED_MESSAGE } = require('../config/plans');
+const { signToken } = require('../middleware/auth');
+const { makeId } = require('../utils/ids');
+
+// Các API cần đăng nhập lấy userId từ token (req.userId), không tin userId trong body.
 
 const SALT_ROUNDS = 10;
 
@@ -24,9 +29,8 @@ exports.register = async (req, res) => {
     // Hash mật khẩu bằng bcrypt
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const count = await User.countDocuments();
     const newUser = await User.create({
-      id: `u${count + 1}`,
+      id: makeId('u'),
       name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
@@ -45,6 +49,7 @@ exports.register = async (req, res) => {
       success: true,
       message: 'Đăng ký tài khoản thành công!',
       data: userObj,
+      token: signToken(newUser.id),
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -76,6 +81,7 @@ exports.login = async (req, res) => {
       success: true,
       message: 'Đăng nhập thành công!',
       data: userObj,
+      token: signToken(user.id),
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -99,7 +105,8 @@ exports.getProfile = async (req, res) => {
 // Cập nhật thông tin cá nhân (tên, email, số điện thoại)
 exports.updateProfile = async (req, res) => {
   try {
-    const { userId, name, email, phone } = req.body;
+    const userId = req.userId;
+    const { name, email, phone } = req.body;
     if (!userId) {
       return res.status(400).json({ success: false, message: 'Thiếu userId.' });
     }
@@ -140,7 +147,8 @@ exports.updateProfile = async (req, res) => {
 // Đổi mật khẩu (xác thực mật khẩu cũ bằng bcrypt, hash mật khẩu mới)
 exports.changePassword = async (req, res) => {
   try {
-    const { userId, currentPassword, newPassword } = req.body;
+    const userId = req.userId;
+    const { currentPassword, newPassword } = req.body;
     if (!userId || !currentPassword || !newPassword) {
       return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ thông tin.' });
     }
@@ -176,7 +184,14 @@ exports.changePassword = async (req, res) => {
 // Nâng cấp gói cước VIP Premium
 exports.subscribe = async (req, res) => {
   try {
-    const { userId, planId } = req.body;
+    const userId = req.userId;
+    const { planId } = req.body;
+    if (!VALID_PLAN_IDS.includes(planId)) {
+      return res.status(400).json({
+        success: false,
+        message: `Gói hội viên không hợp lệ. Chỉ chấp nhận: ${VALID_PLAN_IDS.join(', ')}.`,
+      });
+    }
     const user = await User.findOneAndUpdate(
       { id: userId },
       { planId: planId },
@@ -197,7 +212,8 @@ exports.subscribe = async (req, res) => {
 // Thả tim / Bỏ thích bài hát
 exports.toggleLikeSong = async (req, res) => {
   try {
-    const { userId, songId } = req.body;
+    const userId = req.userId;
+    const { songId } = req.body;
     const user = await User.findOne({ id: userId });
     if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
 
@@ -222,7 +238,8 @@ exports.toggleLikeSong = async (req, res) => {
 // Theo dõi / Bỏ theo dõi nghệ sĩ
 exports.toggleFollowArtist = async (req, res) => {
   try {
-    const { userId, artistId } = req.body;
+    const userId = req.userId;
+    const { artistId } = req.body;
     const user = await User.findOne({ id: userId });
     if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
 
@@ -247,7 +264,8 @@ exports.toggleFollowArtist = async (req, res) => {
 // Thả tim / Bỏ thích Album
 exports.toggleLikeAlbum = async (req, res) => {
   try {
-    const { userId, albumId } = req.body;
+    const userId = req.userId;
+    const { albumId } = req.body;
     const user = await User.findOne({ id: userId });
     if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
 
@@ -272,9 +290,13 @@ exports.toggleLikeAlbum = async (req, res) => {
 // Lưu bài hát đã tải về nghe ngoại tuyến
 exports.downloadSong = async (req, res) => {
   try {
-    const { userId, songId } = req.body;
+    const userId = req.userId;
+    const { songId } = req.body;
     const user = await User.findOne({ id: userId });
     if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
+    if (!isVipUser(user)) {
+      return res.status(403).json({ success: false, message: VIP_REQUIRED_MESSAGE });
+    }
 
     if (!user.downloadedSongIds.includes(songId)) {
       user.downloadedSongIds.push(songId);
