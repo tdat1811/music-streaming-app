@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   Image,
   ScrollView,
   TouchableOpacity,
@@ -20,12 +21,20 @@ import {
   CHARTS,
   TRENDING_ALBUMS,
   POPULAR_ARTISTS,
+  ALL_ALBUMS,
+  ARTISTS,
 } from '../../src/data/musicData';
+import { GroupedSearchResults } from '../../src/components/GroupedSearchResults';
+import { useSongSearch } from '../../src/hooks/useSongSearch';
+import { fuzzySearch } from '../../src/utils/fuzzySearch';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
 import { useAuth } from '../../src/context/AuthContext';
 import { useAccess } from '../../src/context/AccessContext';
 import { api } from '../../src/services/api';
+import { useNotifications } from '../../src/context/NotificationContext';
+import { useRefreshControl } from '../../src/context/RefreshContext';
+import { RefreshButton } from '../../src/components/RefreshButton';
 interface HomeScreenProps {
   onSeeAllCharts?: () => void;
   onSeeAllAlbums?: () => void;
@@ -42,6 +51,7 @@ interface HomeScreenProps {
   onNavigateToLogin?: () => void;
   onNavigateToProfile?: () => void;
   onNavigateToPlans?: () => void;
+  onNavigateToNotifications?: () => void;
   onLogout?: () => void;
   onTabPress?: (tab: TabName) => void;
 }
@@ -59,12 +69,28 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToLogin,
   onNavigateToProfile,
   onNavigateToPlans,
+  onNavigateToNotifications,
   onLogout,
   onTabPress,
 }) => {
   const {playSong, isPlaying, togglePlayPause} = useAudioPlayer();
   const { currentUser, activePlan, isVip, toggleFollowArtist } = useAuth();
   const { ensureMember } = useAccess();
+  const { unreadCount } = useNotifications();
+  const refreshControl = useRefreshControl();
+
+  // Tìm kiếm tương đối ngay tại Home (giống Library): gõ tới đâu hiện kết quả tới đó
+  const [searchQuery, setSearchQuery] = useState('');
+  const isSearching = searchQuery.trim() !== '';
+  const matchedSongs = useSongSearch(searchQuery);
+  const matchedAlbums = useMemo(
+    () => (isSearching ? fuzzySearch(ALL_ALBUMS, searchQuery, (a) => [a.title, a.artist]) : []),
+    [searchQuery, isSearching]
+  );
+  const matchedArtists = useMemo(
+    () => (isSearching ? fuzzySearch(ARTISTS, searchQuery, (a) => [a.name]) : []),
+    [searchQuery, isSearching]
+  );
   const [suggestions, setSuggestions] = useState<Song[]>(SUGGESTIONS);
   const [charts, setCharts] = useState(CHARTS);
   const [trendingAlbums, setTrendingAlbums] = useState<Album[]>(TRENDING_ALBUMS);
@@ -194,8 +220,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           fadeDuration={0}
         />
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerIconBtn} activeOpacity={0.7}>
-            <Ionicons name="notifications-outline" size={24} color={COLORS.textPrimary} />
+          <RefreshButton />
+          {/* Thông báo: có người trả lời bình luận của mình */}
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            activeOpacity={0.7}
+            onPress={onNavigateToNotifications}
+            accessibilityLabel={
+              unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'
+            }
+          >
+            <Ionicons
+              name={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
+              size={24}
+              color={COLORS.textPrimary}
+            />
+            {currentUser && unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onNavigateToProfile}
@@ -209,6 +253,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <ScrollView
         style={styles.mainScrollView}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={refreshControl}
         contentContainerStyle={styles.scrollContent}
       >
         {/* Greeting */}
@@ -247,20 +293,49 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           )}
         </View>
 
-        {/* Search Bar */}
-        <TouchableOpacity
-          style={styles.searchBar}
-          onPress={onNavigateToSearch}
-          activeOpacity={0.8}
-        >
+        {/* Search Bar: tìm kiếm tương đối ngay tại chỗ, không qua màn gợi ý */}
+        <View style={styles.searchBar}>
           <Ionicons
             name="search-outline"
             size={20}
             color={COLORS.textMuted}
             style={styles.searchIcon}
           />
-          <Text style={styles.searchPlaceholder}>What you want to listen to</Text>
-        </TouchableOpacity>
+          <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="What you want to listen to"
+            placeholderTextColor={COLORS.textMuted}
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Clear search"
+            >
+              <Ionicons name="close-circle" size={18} color="#111216" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {isSearching ? (
+          <GroupedSearchResults
+            query={searchQuery}
+            songs={matchedSongs}
+            albums={matchedAlbums}
+            artists={matchedArtists}
+            onPressSong={(song, queue) => {
+              playSong(song, queue);
+              if (onNavigateToPlay) onNavigateToPlay(song.id);
+            }}
+            onSelectAlbum={onNavigateToAlbum}
+            onSelectArtist={onNavigateToArtist}
+          />
+        ) : (
+        <>
 
           {/* Section 1: Suggestions for you */}
           <View style={styles.sectionHeader}>
@@ -427,6 +502,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             );
           })}
         </ScrollView>
+        </>
+        )}
       </ScrollView>
 
       {/* Bottom Tab Bar */}
@@ -461,6 +538,26 @@ const styles = StyleSheet.create({
   },
   headerIconBtn: {
     padding: 2,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    lineHeight: 12,
   },
   avatarImage: {
     width: 36,
@@ -549,9 +646,11 @@ const styles = StyleSheet.create({
   searchIcon: {
     marginRight: 10,
   },
-  searchPlaceholder: {
+  searchInput: {
+    flex: 1,
+    height: '100%',
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#111216',
   },
   sectionHeader: {
     paddingHorizontal: 16,

@@ -29,16 +29,23 @@ const CLOSE_DURATION_MS = 220;
 // Bản web không hỗ trợ native driver
 const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
+// Nháy sáng bình luận được trả lời khi mở từ thông báo
+const FLASH_COLOR = 'rgba(16, 199, 213, 0.28)';
+const FLASH_TIMES = 3;
+
 const formatCount = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
 interface FeedCommentsScreenProps {
   postId?: string | null;
+  // Mở từ thông báo: cuộn tới và nháy sáng các bình luận này
+  highlightCommentIds?: string[];
   onClose?: () => void;
   onRequireLogin?: () => void;
 }
 
 export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
   postId,
+  highlightCommentIds = [],
   onClose,
   onRequireLogin,
 }) => {
@@ -51,6 +58,14 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
   const shouldScrollToEnd = useRef(false);
   const { height: screenHeight } = useWindowDimensions();
   const sheetProgress = useRef(new Animated.Value(0)).current;
+
+  // ---- Nháy sáng bình luận từ thông báo ----
+  const flash = useRef(new Animated.Value(0)).current;
+  // Vị trí (y) của từng khối bình luận gốc trong ScrollView và của từng dòng trong khối
+  const blockY = useRef<Record<string, number>>({});
+  const rowY = useRef<Record<string, { rootId: string; y: number }>>({});
+  const highlightDone = useRef(false);
+  const highlightKey = highlightCommentIds.join('|');
 
   useEffect(() => {
     Animated.timing(sheetProgress, {
@@ -82,6 +97,34 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
   }, [post?.id]);
   const canSend = commentText.trim() !== '';
 
+  // Mỗi lần mở với danh sách nháy sáng mới thì làm lại từ đầu
+  useEffect(() => {
+    highlightDone.current = false;
+    flash.setValue(0);
+  }, [highlightKey, flash]);
+
+  // Khi đã đo được vị trí bình luận cần nháy sáng: cuộn tới đó rồi nháy vài lần
+  const tryHighlight = () => {
+    if (highlightDone.current || highlightCommentIds.length === 0) return;
+    // Ưu tiên bình luận được trả lời (phần tử đầu), chưa có thì dùng câu trả lời mới
+    const targetId = highlightCommentIds.find((id) => rowY.current[id]);
+    if (!targetId) return;
+    const row = rowY.current[targetId];
+    const top = blockY.current[row.rootId];
+    if (top === undefined) return;
+    highlightDone.current = true;
+    scrollRef.current?.scrollTo({ y: Math.max(0, top + row.y - 24), animated: true });
+    const pulse = [
+      Animated.timing(flash, { toValue: 1, duration: 260, useNativeDriver: USE_NATIVE_DRIVER }),
+      Animated.timing(flash, { toValue: 0.15, duration: 380, useNativeDriver: USE_NATIVE_DRIVER }),
+    ];
+    Animated.sequence([
+      Animated.delay(OPEN_DURATION_MS),
+      ...Array.from({ length: FLASH_TIMES }, () => pulse).flat(),
+      Animated.timing(flash, { toValue: 0, duration: 1200, delay: 1500, useNativeDriver: USE_NATIVE_DRIVER }),
+    ]).start();
+  };
+
   const handleLikeComment = (commentId: string) => {
     if (!currentUser) {
       if (onRequireLogin) onRequireLogin();
@@ -90,8 +133,9 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
     toggleCommentLike(commentId);
   };
 
-  const handleReply = (rootCommentId: string, userName: string) => {
-    setReplyTarget({ rootCommentId, userName });
+  const handleReply = (rootCommentId: string, comment: CommentItem) => {
+    // Gửi kèm id bình luận đang được trả lời để thông báo đúng người viết
+    setReplyTarget({ rootCommentId, userName: comment.userName, commentId: comment.id });
     inputRef.current?.focus();
   };
 
@@ -111,8 +155,23 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
   const renderComment = (comment: CommentItem, rootCommentId: string) => {
     const isReply = comment.id !== rootCommentId;
     const isLiked = !!currentUser && comment.likedByUserIds.includes(currentUser.id);
+    const isHighlighted = highlightCommentIds.includes(comment.id);
     return (
-      <View key={comment.id} style={isReply ? styles.replyRow : styles.commentRow}>
+      <View
+        key={comment.id}
+        style={isReply ? styles.replyRow : styles.commentRow}
+        onLayout={
+          isHighlighted
+            ? (e) => {
+                rowY.current[comment.id] = { rootId: rootCommentId, y: e.nativeEvent.layout.y };
+                tryHighlight();
+              }
+            : undefined
+        }
+      >
+        {isHighlighted && (
+          <Animated.View pointerEvents="none" style={[styles.flashBackground, { opacity: flash }]} />
+        )}
         <Image
           source={toImageSource(comment.userAvatar, IMAGES.homeAvatar)}
           style={isReply ? styles.replyAvatar : styles.userAvatar}
@@ -128,7 +187,7 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
           <View style={styles.metaRow}>
             <Text style={styles.metaText}>{comment.timeAgo}</Text>
             <Text style={styles.metaText}>{formatCount(comment.likes, 'like')}</Text>
-            <TouchableOpacity onPress={() => handleReply(rootCommentId, comment.userName)}>
+            <TouchableOpacity onPress={() => handleReply(rootCommentId, comment)}>
               <Text style={styles.replyButtonText}>Reply</Text>
             </TouchableOpacity>
           </View>
@@ -204,7 +263,14 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
           }}
         >
           {getComments(post.id).map((comment) => (
-            <View key={comment.id} style={styles.commentBlock}>
+            <View
+              key={comment.id}
+              style={styles.commentBlock}
+              onLayout={(e) => {
+                blockY.current[comment.id] = e.nativeEvent.layout.y;
+                tryHighlight();
+              }}
+            >
               {renderComment(comment, comment.id)}
               {comment.replies?.map((reply) => renderComment(reply, comment.id))}
             </View>
@@ -368,6 +434,15 @@ const styles = StyleSheet.create({
   },
   likeIconBtn: {
     padding: 6,
+  },
+  flashBackground: {
+    position: 'absolute',
+    top: -6,
+    bottom: -6,
+    left: -8,
+    right: -4,
+    borderRadius: 10,
+    backgroundColor: FLASH_COLOR,
   },
   replyRow: {
     flexDirection: 'row',

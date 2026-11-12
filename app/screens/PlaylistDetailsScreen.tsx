@@ -11,6 +11,7 @@ import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAuth } from '../../src/context/AuthContext';
 import { useAccess } from '../../src/context/AccessContext';
 import { api } from '../../src/services/api';
+import { sortByPlays } from '../../src/utils/plays';
 
 interface PlaylistDetailsScreenProps {
   playlist?: Playlist | null;
@@ -62,6 +63,11 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
     currentTracks = dbTracks.length > 0 ? dbTracks : localTracks;
   }
 
+  // Chi tiết bảng xếp hạng: xếp hạng bài hát theo số lượt nghe (trường "plays") giảm dần
+  // (playlist null là bảng xếp hạng mẫu "Top 50 - Canada")
+  const isChart = !playlist || playlist.ownerId === 'chart';
+  if (isChart) currentTracks = sortByPlays(currentTracks);
+
   const handleDelete = () => {
     if (!ownPlaylist) return;
     setConfirmDelete(false);
@@ -107,6 +113,7 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
           isLiked: currentUser?.likedSongIds.includes(song.id),
         }))}
         showExtraActions
+        showRank={isChart}
         emptyText="This playlist has no songs yet."
         onNavigateToPlay={onNavigateToPlay}
         onToggleLike={(songId) => ensureMember() && toggleLikeSong(songId)}
@@ -115,7 +122,7 @@ export const PlaylistDetailsScreen: React.FC<PlaylistDetailsScreenProps> = ({
 
       {/* Bottom Tab Bar */}
       <BottomTabBar
-        currentTab={playlist?.ownerId === 'chart' ? 'Home' : 'Library'}
+        currentTab={isChart ? 'Home' : 'Library'}
         onTabPress={(tab) => onTabPress && onTabPress(tab)}
       />
 

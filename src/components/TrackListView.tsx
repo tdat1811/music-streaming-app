@@ -9,6 +9,7 @@ import { SongItem } from './SongItem';
 import { SongActionModal } from './SongActionModal';
 import { AlbumActionModal } from './AlbumActionModal';
 import { toImageSource } from '../utils/imageSource';
+import { useRefreshControl } from '../context/RefreshContext';
 
 const formatTotalDuration = (tracks: Song[]) => {
   const totalSeconds = tracks.reduce((sum, track) => sum + parseDuration(track.duration) / 1000, 0);
@@ -32,6 +33,8 @@ interface TrackListViewProps {
   durationLabel?: string;
   emptyText?: string;
   showExtraActions?: boolean;
+  // Hiện số thứ tự xếp hạng bên trái mỗi bài (danh sách đã được sắp sẵn)
+  showRank?: boolean;
   onNavigateToPlay?: (trackId?: string) => void;
   onToggleLike?: (songId: string) => void;
   // Có giá trị khi đây là playlist của chính người dùng
@@ -49,6 +52,7 @@ export const TrackListView: React.FC<TrackListViewProps> = ({
   durationLabel,
   emptyText,
   showExtraActions = true,
+  showRank = false,
   onNavigateToPlay,
   onToggleLike,
   onRemoveSong,
@@ -59,6 +63,7 @@ export const TrackListView: React.FC<TrackListViewProps> = ({
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [songModalVisible, setSongModalVisible] = useState(false);
   const [albumModalVisible, setAlbumModalVisible] = useState(false);
+  const refreshControl = useRefreshControl();
 
   const likeKey = albumId ?? title;
   const isLiked = isAlbumLiked(likeKey);
@@ -96,9 +101,10 @@ export const TrackListView: React.FC<TrackListViewProps> = ({
   };
 
   const renderSongItem = useCallback(
-    ({ item }: { item: Song }) => (
+    ({ item, index }: { item: Song; index: number }) => (
       <SongItem
         song={item}
+        rank={showRank ? index + 1 : undefined}
         rightAction="dots"
         onPress={() => playFrom(item, tracks)}
         onRightActionPress={() => {
@@ -107,7 +113,7 @@ export const TrackListView: React.FC<TrackListViewProps> = ({
         }}
       />
     ),
-    [playFrom, tracks]
+    [playFrom, tracks, showRank]
   );
 
   return (
@@ -117,6 +123,7 @@ export const TrackListView: React.FC<TrackListViewProps> = ({
         keyExtractor={(item) => item.id}
         renderItem={renderSongItem}
         showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
         contentContainerStyle={styles.listContent}
         initialNumToRender={8}
         maxToRenderPerBatch={8}

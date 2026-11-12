@@ -1,5 +1,5 @@
 const Song = require('../models/Song');
-const { escapeRegex } = require('../utils/ids');
+const { fuzzySearch } = require('../utils/fuzzySearch');
 const fs = require('fs');
 const path = require('path');
 
@@ -67,12 +67,10 @@ exports.search = async (req, res) => {
       });
     }
 
-    // Tìm kiếm regex theo tên bài hát hoặc tên nghệ sĩ
-    // Escape để từ khoá như "(" hay "c++" không làm lỗi server
-    const regex = new RegExp(escapeRegex(query), 'i');
-    const matchedSongs = await Song.find({
-      $or: [{ title: regex }, { artist: regex }],
-    });
+    // Tìm kiếm tương đối theo tên bài hát và tên nghệ sĩ (bỏ dấu, không cần đúng thứ tự,
+    // chịu lỗi gõ sai), kết quả sắp theo độ liên quan. Kho nhạc nhỏ nên lọc trực tiếp trong bộ nhớ.
+    const allSongs = await Song.find();
+    const matchedSongs = fuzzySearch(allSongs, query, (s) => [s.title, s.artist]);
 
     const suggestions = Array.from(new Set(matchedSongs.map((s) => s.title)));
 

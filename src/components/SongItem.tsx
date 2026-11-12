@@ -7,6 +7,8 @@ import { Song } from '../data/musicData';
 interface SongItemProps {
   song: Song & { isPlaylist?: boolean; songCount?: number };
   rightAction?: 'dots' | 'heart' | 'chevron';
+  // Thứ hạng hiển thị bên trái (dùng trong chi tiết bảng xếp hạng)
+  rank?: number;
   onPress?: () => void;
   onRightActionPress?: () => void;
 }
@@ -14,12 +16,21 @@ interface SongItemProps {
 export const SongItem: React.FC<SongItemProps> = memo(({
   song,
   rightAction = 'dots',
+  rank,
   onPress,
   onRightActionPress,
 }) => {
   const imageSource = typeof song.coverImage === 'string' ? { uri: song.coverImage } : song.coverImage;
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+      {rank !== undefined && (
+        <Text
+          style={[styles.rank, rank <= 3 && styles.rankTop]}
+          accessibilityLabel={`Rank ${rank}`}
+        >
+          {rank}
+        </Text>
+      )}
       <Image source={imageSource} style={styles.coverImage} fadeDuration={0} />
 
       <View style={styles.infoContainer}>
@@ -73,6 +84,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 16,
+  },
+  rank: {
+    width: 28,
+    marginRight: 8,
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.textMuted,
+    textAlign: 'center',
+  },
+  rankTop: {
+    color: '#10C7D5',
+    fontSize: 18,
   },
   coverImage: {
     width: 52,
