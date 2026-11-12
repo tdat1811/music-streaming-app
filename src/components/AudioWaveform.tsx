@@ -15,6 +15,9 @@ interface AudioWaveformProps {
   isPlaying: boolean;
   onScrub: (ratio: number | null) => void; // null khi kết thúc thao tác
   onSeek: (ratio: number) => void;
+  // false: không cho tua (ví dụ tài khoản không phải VIP), chạm vào sẽ gọi onSeekBlocked
+  canSeek?: boolean;
+  onSeekBlocked?: () => void;
 }
 
 export const AudioWaveform: React.FC<AudioWaveformProps> = ({
@@ -22,15 +25,19 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
   isPlaying,
   onScrub,
   onSeek,
+  canSeek = true,
+  onSeekBlocked,
 }) => {
   const pulse = useRef(new Animated.Value(0)).current;
   const widthRef = useRef(1);
   const gestureStartX = useRef(0);
   const scrubRatio = useRef(0);
+  // Thao tác hiện tại bị chặn: bỏ qua mọi bước kéo và thả của lần chạm này
+  const blocked = useRef(false);
 
   // PanResponder chỉ tạo một lần nên cần ref để gọi callback mới nhất
-  const callbacks = useRef({ onScrub, onSeek });
-  callbacks.current = { onScrub, onSeek };
+  const callbacks = useRef({ onScrub, onSeek, canSeek, onSeekBlocked });
+  callbacks.current = { onScrub, onSeek, canSeek, onSeekBlocked };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -38,19 +45,31 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
       onMoveShouldSetPanResponder: () => true,
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (event) => {
+        if (!callbacks.current.canSeek) {
+          blocked.current = true;
+          callbacks.current.onSeekBlocked?.();
+          return;
+        }
+        blocked.current = false;
         gestureStartX.current = event.nativeEvent.locationX;
         scrubRatio.current = clampRatio(gestureStartX.current / widthRef.current);
         callbacks.current.onScrub(scrubRatio.current);
       },
       onPanResponderMove: (_, gesture) => {
+        if (blocked.current) return;
         scrubRatio.current = clampRatio((gestureStartX.current + gesture.dx) / widthRef.current);
         callbacks.current.onScrub(scrubRatio.current);
       },
       onPanResponderRelease: () => {
+        if (blocked.current) {
+          blocked.current = false;
+          return;
+        }
         callbacks.current.onSeek(scrubRatio.current);
         callbacks.current.onScrub(null);
       },
       onPanResponderTerminate: () => {
+        blocked.current = false;
         callbacks.current.onScrub(null);
       },
     })

@@ -15,26 +15,32 @@ import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { Song } from '../data/musicData';
 import { useAuth } from '../context/AuthContext';
+import { useAccess } from '../context/AccessContext';
 
 interface SongActionModalProps {
   visible: boolean;
   song: Song | null;
   onClose: () => void;
+  // Có giá trị khi mở menu từ playlist của chính người dùng
+  onRemoveFromPlaylist?: (songId: string) => void;
 }
 
 export const SongActionModal: React.FC<SongActionModalProps> = ({
   visible,
   song,
   onClose,
+  onRemoveFromPlaylist,
 }) => {
   const {
     currentUser,
+    isVip,
     userPlaylists,
     addSongToPlaylist,
     toggleLikeSong,
     downloadSong,
     isSongDownloaded,
   } = useAuth();
+  const { ensureMember, ensureVip } = useAccess();
 
   const [showPlaylistPicker, setShowPlaylistPicker] = useState(false);
 
@@ -48,7 +54,21 @@ export const SongActionModal: React.FC<SongActionModalProps> = ({
     onClose();
   };
 
+  // Đóng menu trước rồi mới chuyển sang Log In hoặc hộp thoại nâng cấp VIP
+  const memberOnly = () => {
+    if (currentUser) return true;
+    handleClose();
+    ensureMember();
+    return false;
+  };
+
+  const handleOpenPlaylistPicker = () => {
+    if (!memberOnly()) return;
+    setShowPlaylistPicker(true);
+  };
+
   const handleToggleLike = () => {
+    if (!memberOnly()) return;
     toggleLikeSong(song.id);
     Alert.alert(
       'Yêu thích',
@@ -69,6 +89,11 @@ export const SongActionModal: React.FC<SongActionModalProps> = ({
   };
 
   const handleDownload = () => {
+    if (!isVip) {
+      handleClose();
+      ensureVip('Tải bài hát nghe ngoại tuyến');
+      return;
+    }
     if (isDownloaded) {
       Alert.alert('Tải xuống', `Bài hát "${song.title}" đã có sẵn trong bộ nhớ ngoại tuyến của bạn.`);
     } else {
@@ -165,7 +190,7 @@ export const SongActionModal: React.FC<SongActionModalProps> = ({
                   {/* Option 1: Thêm vào playlist */}
                   <TouchableOpacity
                     style={styles.menuItem}
-                    onPress={() => setShowPlaylistPicker(true)}
+                    onPress={handleOpenPlaylistPicker}
                   >
                     <View style={styles.iconWrapper}>
                       <MaterialCommunityIcons name="playlist-plus" size={24} color="#111216" />
@@ -211,6 +236,21 @@ export const SongActionModal: React.FC<SongActionModalProps> = ({
                       {isDownloaded ? 'Đã tải xuống ngoại tuyến' : 'Tải bài hát về máy (Offline)'}
                     </Text>
                   </TouchableOpacity>
+
+                  {onRemoveFromPlaylist && (
+                    <TouchableOpacity
+                      style={styles.menuItem}
+                      onPress={() => {
+                        onRemoveFromPlaylist(song.id);
+                        handleClose();
+                      }}
+                    >
+                      <View style={styles.iconWrapper}>
+                        <MaterialCommunityIcons name="playlist-remove" size={24} color="#E11D48" />
+                      </View>
+                      <Text style={[styles.menuItemText, { color: '#E11D48' }]}>Xoá khỏi playlist</Text>
+                    </TouchableOpacity>
+                  )}
 
                   {/* Option 4: Chia sẻ */}
                   <TouchableOpacity style={styles.menuItem} onPress={handleShare}>

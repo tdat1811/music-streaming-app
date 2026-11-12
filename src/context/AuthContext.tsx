@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useRef, useState } from 'react';
 import {
   DEFAULT_PLAYLIST_COVER,
   Playlist,
@@ -8,9 +8,10 @@ import {
   User,
   USER_PLAYLISTS,
 } from '../data/musicData';
-import { api } from '../services/api';
+import { api, isApiError, setAuthToken } from '../services/api';
 
 export const MIN_PASSWORD_LENGTH = 6;
+export const FREE_PLAN_ID = 'free';
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface ProfileUpdates {
@@ -22,6 +23,8 @@ interface ProfileUpdates {
 interface AuthContextType {
   currentUser: User | null;
   activePlan: SubscriptionPlan | null;
+  // Đang dùng gói VIP (không tính gói Free)
+  isVip: boolean;
   userPlaylists: Playlist[];
   likedAlbumIds: string[];
   downloadedSongIds: string[];
@@ -33,8 +36,11 @@ interface AuthContextType {
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   toggleLikeSong: (songId: string) => void;
   toggleFollowArtist: (artistId: string) => void;
-  createPlaylist: (title: string) => boolean;
+  // Trả về null nếu tạo được, ngược lại là thông báo lỗi để hiển thị
+  createPlaylist: (title: string) => Promise<string | null>;
   addSongToPlaylist: (playlistId: string, songId: string) => boolean;
+  removeSongFromPlaylist: (playlistId: string, songId: string) => void;
+  deletePlaylist: (playlistId: string) => void;
   toggleLikeAlbum: (albumId: string) => void;
   isAlbumLiked: (albumId: string) => boolean;
   downloadSong: (songId: string) => void;
@@ -50,56 +56,110 @@ const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const toggleId = (ids: string[], id: string) =>
   ids.includes(id) ? ids.filter((item) => item !== id) : [id, ...ids];
 
-// Dữ liệu bắt đầu từ file mẫu. Mọi thay đổi (tài khoản, gói, playlist...) chỉ lưu trong bộ nhớ:
-// app đang chạy không ghi được vào file nguồn, nên tải lại app sẽ về dữ liệu mẫu.
+// Dữ liệu tài khoản từ máy chủ (không giữ mật khẩu ở client)
+const mapDbUser = (dbUser: any): User => ({
+  id: dbUser.id,
+  name: dbUser.name,
+  email: dbUser.email,
+  phone: dbUser.phone || '',
+  password: '***',
+  planId: dbUser.planId || null,
+  likedSongIds: dbUser.likedSongIds || [],
+  followedArtistIds: dbUser.followedArtistIds || [],
+  likedAlbumIds: dbUser.likedAlbumIds || [],
+  downloadedSongIds: dbUser.downloadedSongIds || [],
+});
+
+const mapDbPlaylist = (p: any): Playlist => ({
+  id: p.id,
+  ownerId: p.ownerId,
+  title: p.title,
+  description: p.description || 'Your new playlist',
+  coverImage: p.coverImage || DEFAULT_PLAYLIST_COVER,
+  songIds: p.songIds ?? [],
+});
+
+const DUPLICATE_PLAYLIST_MESSAGE = 'You already have a playlist with this name.';
+
+// Gọi API ngay sau khi đã cập nhật giao diện. Nếu máy chủ từ chối thì hoàn tác;
+// nếu chỉ mất kết nối thì giữ thay đổi trên máy (chế độ dự phòng).
+const syncOrRevert = (request: Promise<unknown>, revert: () => void) => {
+  request.catch((err) => {
+    if (isApiError(err)) {
+      console.log('Máy chủ từ chối, hoàn tác:', err.message);
+      revert();
+    }
+  });
+};
+
+// Dữ liệu bắt đầu từ file mẫu và được đồng bộ với máy chủ khi đăng nhập.
+// Khi máy chủ không chạy, các thay đổi chỉ lưu trong bộ nhớ của ứng dụng.
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>(SAMPLE_USERS);
   const [playlists, setPlaylists] = useState<Playlist[]>(USER_PLAYLISTS);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [likedAlbumIds, setLikedAlbumIds] = useState<string[]>(['ta1']);
-  const [downloadedSongIds, setDownloadedSongIds] = useState<string[]>(['pdt1']);
+  // Đăng nhập qua máy chủ: playlist được đọc và ghi trên máy chủ
+  const onlineSession = useRef(false);
 
   const currentUser = users.find((user) => user.id === currentUserId) ?? null;
   const activePlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === currentUser?.planId) ?? null;
+  // Gói "free" vẫn là thành viên thường; các gói còn lại (hiện là "premium") là VIP
+  const isVip = activePlan !== null && activePlan.id !== FREE_PLAN_ID;
   const userPlaylists = playlists.filter((playlist) => playlist.ownerId === currentUserId);
+  const likedAlbumIds = currentUser?.likedAlbumIds ?? [];
+  const downloadedSongIds = currentUser?.downloadedSongIds ?? [];
+
+  // Cập nhật một phần thông tin của tài khoản đang đăng nhập
+  const updateCurrentUser = (change: (user: User) => Partial<User>) => {
+    setUsers((prev) => prev.map((u) => (u.id === currentUserId ? { ...u, ...change(u) } : u)));
+  };
+
+  const saveUser = (user: User) => {
+    setUsers((prev) =>
+      prev.some((u) => u.id === user.id)
+        ? prev.map((u) => (u.id === user.id ? user : u))
+        : [...prev, user]
+    );
+    setCurrentUserId(user.id);
+    onlineSession.current = true;
+    loadPlaylists(user.id);
+  };
+
+  // Thay playlist của tài khoản bằng dữ liệu trên máy chủ
+  const loadPlaylists = (userId: string) => {
+    api.playlists
+      .getUserPlaylists(userId)
+      .then((res: any) => {
+        const list: Playlist[] = (res?.data ?? []).map(mapDbPlaylist);
+        setPlaylists((prev) => [...list, ...prev.filter((p) => p.ownerId !== userId)]);
+      })
+      .catch((err) => console.log('Không tải được playlist:', err));
+  };
+
+  const updatePlaylist = (playlistId: string, change: (playlist: Playlist) => Playlist) =>
+    setPlaylists((prev) => prev.map((pl) => (pl.id === playlistId ? change(pl) : pl)));
 
   // Đăng nhập qua Backend API (mật khẩu được xác thực bằng bcrypt trên server)
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       const response: any = await api.auth.login({ email, password });
       if (response?.success && response?.data) {
-        const dbUser = response.data;
-        // Cập nhật user vào state local (không lưu password)
-        const mappedUser: User = {
-          id: dbUser.id,
-          name: dbUser.name,
-          email: dbUser.email,
-          phone: dbUser.phone || '',
-          password: '***', // Không lưu password ở client
-          planId: dbUser.planId || null,
-          likedSongIds: dbUser.likedSongIds || [],
-          followedArtistIds: dbUser.followedArtistIds || [],
-        };
-        setUsers((prev) => {
-          const exists = prev.some((u) => u.id === mappedUser.id);
-          return exists
-            ? prev.map((u) => (u.id === mappedUser.id ? mappedUser : u))
-            : [...prev, mappedUser];
-        });
-        setCurrentUserId(mappedUser.id);
-        // Đồng bộ likedAlbumIds và downloadedSongIds từ server
-        if (dbUser.likedAlbumIds) setLikedAlbumIds(dbUser.likedAlbumIds);
-        if (dbUser.downloadedSongIds) setDownloadedSongIds(dbUser.downloadedSongIds);
+        // Token dùng cho các yêu cầu cần đăng nhập (thả tim, playlist, bình luận...)
+        setAuthToken(response.token ?? null);
+        saveUser(mapDbUser(response.data));
         return true;
       }
       return false;
     } catch (err) {
-      console.log('Login error:', err);
-      // Fallback: thử đăng nhập local (cho trường hợp server offline)
+      // Máy chủ đã trả lời là sai thông tin: không được đăng nhập bằng dữ liệu trên máy
+      if (isApiError(err)) return false;
+      console.log('Login offline:', err);
       const user = users.find(
         (u) => u.email === normalizeEmail(email) && u.password === password
       );
       if (!user) return false;
+      setAuthToken(null);
+      onlineSession.current = false;
       setCurrentUserId(user.id);
       return true;
     }
@@ -110,25 +170,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response: any = await api.auth.register({ name, email, password });
       if (response?.success && response?.data) {
-        const dbUser = response.data;
-        const mappedUser: User = {
-          id: dbUser.id,
-          name: dbUser.name,
-          email: dbUser.email,
-          phone: dbUser.phone || '',
-          password: '***', // Không lưu password ở client
-          planId: null,
-          likedSongIds: [],
-          followedArtistIds: [],
-        };
-        setUsers((prev) => [...prev, mappedUser]);
-        setCurrentUserId(mappedUser.id);
+        setAuthToken(response.token ?? null);
+        saveUser(mapDbUser(response.data));
         return true;
       }
       return false;
     } catch (err) {
-      console.log('SignUp error:', err);
-      // Fallback local
+      // Ví dụ email đã được đăng ký trên máy chủ
+      if (isApiError(err)) return false;
+      console.log('SignUp offline:', err);
       const normalizedEmail = normalizeEmail(email);
       if (users.some((u) => u.email === normalizedEmail)) return false;
       const newUser: User = {
@@ -140,23 +190,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         planId: null,
         likedSongIds: [],
         followedArtistIds: [],
+        likedAlbumIds: [],
+        downloadedSongIds: [],
       };
       setUsers((prev) => [...prev, newUser]);
+      setAuthToken(null);
+      onlineSession.current = false;
       setCurrentUserId(newUser.id);
       return true;
     }
   };
 
-  const logout = () => setCurrentUserId(null);
+  const logout = () => {
+    setAuthToken(null);
+    onlineSession.current = false;
+    setCurrentUserId(null);
+  };
 
   const subscribe = (plan: SubscriptionPlan) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === currentUserId ? { ...u, planId: plan.id } : u))
+    if (!currentUserId) return;
+    const previousPlanId = currentUser?.planId ?? null;
+    updateCurrentUser(() => ({ planId: plan.id }));
+    syncOrRevert(api.auth.subscribe(currentUserId, plan.id), () =>
+      updateCurrentUser(() => ({ planId: previousPlanId }))
     );
-    // Đồng bộ lên server
-    if (currentUserId) {
-      api.auth.subscribe(currentUserId, plan.id).catch(() => {});
-    }
   };
 
   // Cập nhật thông tin cá nhân qua Backend API
@@ -171,28 +228,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       if (response?.success && response?.data) {
         const dbUser = response.data;
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.id === currentUserId
-              ? { ...u, name: dbUser.name, email: dbUser.email, phone: dbUser.phone || '' }
-              : u
-          )
-        );
+        updateCurrentUser(() => ({ name: dbUser.name, email: dbUser.email, phone: dbUser.phone || '' }));
         return true;
       }
       return false;
     } catch (err) {
-      console.log('UpdateProfile error:', err);
-      // Fallback: cập nhật local
+      // Ví dụ email đã thuộc về tài khoản khác
+      if (isApiError(err)) return false;
+      console.log('UpdateProfile offline:', err);
       const normalizedEmail = normalizeEmail(email);
       if (users.some((u) => u.id !== currentUserId && u.email === normalizedEmail)) return false;
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === currentUserId
-            ? { ...u, name: name.trim(), email: normalizedEmail, phone: phone.trim() }
-            : u
-        )
-      );
+      updateCurrentUser(() => ({ name: name.trim(), email: normalizedEmail, phone: phone.trim() }));
       return true;
     }
   };
@@ -206,109 +252,124 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentPassword,
         newPassword,
       });
-      if (response?.success) {
-        return true;
-      }
-      return false;
+      return !!response?.success;
     } catch (err) {
-      console.log('ChangePassword error:', err);
-      // Fallback local
+      // Mật khẩu hiện tại sai
+      if (isApiError(err)) return false;
+      console.log('ChangePassword offline:', err);
       if (currentUser?.password !== currentPassword) return false;
-      setUsers((prev) =>
-        prev.map((u) => (u.id === currentUserId ? { ...u, password: newPassword } : u))
-      );
+      updateCurrentUser(() => ({ password: newPassword }));
       return true;
     }
   };
 
   const toggleLikeSong = (songId: string) => {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === currentUserId ? { ...u, likedSongIds: toggleId(u.likedSongIds, songId) } : u
-      )
-    );
-    // Đồng bộ lên server
-    if (currentUserId) {
-      api.auth.toggleLikeSong(currentUserId, songId).catch(() => {});
-    }
+    if (!currentUserId) return;
+    const flip = () => updateCurrentUser((u) => ({ likedSongIds: toggleId(u.likedSongIds, songId) }));
+    flip();
+    syncOrRevert(api.auth.toggleLikeSong(currentUserId, songId), flip);
   };
 
   const toggleFollowArtist = (artistId: string) => {
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === currentUserId
-          ? { ...u, followedArtistIds: toggleId(u.followedArtistIds, artistId) }
-          : u
-      )
-    );
-    // Đồng bộ lên server
-    if (currentUserId) {
-      api.auth.toggleFollowArtist(currentUserId, artistId).catch(() => {});
-    }
+    if (!currentUserId) return;
+    const flip = () =>
+      updateCurrentUser((u) => ({ followedArtistIds: toggleId(u.followedArtistIds, artistId) }));
+    flip();
+    syncOrRevert(api.auth.toggleFollowArtist(currentUserId, artistId), flip);
   };
 
-  // Trả về false nếu tài khoản đã có playlist cùng tên
-  const createPlaylist = (title: string) => {
-    if (!currentUserId) return false;
-    const trimmedTitle = title.trim();
-    const isDuplicate = userPlaylists.some(
-      (playlist) => playlist.title.toLowerCase() === trimmedTitle.toLowerCase()
-    );
-    if (isDuplicate) return false;
+  const createLocalPlaylist = (ownerId: string, title: string) => {
     const newPlaylist: Playlist = {
-      id: `p${playlists.length + 1}`,
-      ownerId: currentUserId,
-      title: trimmedTitle,
+      id: `local-p${Date.now()}`,
+      ownerId,
+      title,
       description: 'Your new playlist',
       coverImage: DEFAULT_PLAYLIST_COVER,
       songIds: [],
     };
     setPlaylists((prev) => [newPlaylist, ...prev]);
+  };
+
+  const createPlaylist = async (title: string): Promise<string | null> => {
+    if (!currentUserId) return 'Please log in to create a playlist.';
+    const trimmedTitle = title.trim();
+    const isDuplicate = userPlaylists.some(
+      (playlist) => playlist.title.toLowerCase() === trimmedTitle.toLowerCase()
+    );
+    if (isDuplicate) return DUPLICATE_PLAYLIST_MESSAGE;
+    if (!onlineSession.current) {
+      createLocalPlaylist(currentUserId, trimmedTitle);
+      return null;
+    }
+    try {
+      const res: any = await api.playlists.create({ userId: currentUserId, title: trimmedTitle });
+      if (!res?.data) return 'Could not create the playlist.';
+      setPlaylists((prev) => [mapDbPlaylist(res.data), ...prev]);
+      return null;
+    } catch (err) {
+      // Máy chủ từ chối (trùng tên, chưa phải VIP...): hiện đúng thông báo của máy chủ
+      if (isApiError(err)) return err.message;
+      createLocalPlaylist(currentUserId, trimmedTitle);
+      return null;
+    }
+  };
+
+  // Trả về false nếu bài đã có trong playlist
+  const addSongToPlaylist = (playlistId: string, songId: string): boolean => {
+    const playlist = playlists.find((pl) => pl.id === playlistId);
+    if (!playlist || playlist.songIds.includes(songId)) return false;
+    updatePlaylist(playlistId, (pl) => ({ ...pl, songIds: [...pl.songIds, songId] }));
+    if (onlineSession.current) {
+      syncOrRevert(api.playlists.addSong(playlistId, songId), () =>
+        updatePlaylist(playlistId, (pl) => ({ ...pl, songIds: pl.songIds.filter((id) => id !== songId) }))
+      );
+    }
     return true;
   };
 
-  const addSongToPlaylist = (playlistId: string, songId: string): boolean => {
-    let added = false;
-    setPlaylists((prev) =>
-      prev.map((pl) => {
-        if (pl.id === playlistId) {
-          if (!pl.songIds.includes(songId)) {
-            added = true;
-            return { ...pl, songIds: [...pl.songIds, songId] };
-          }
-        }
-        return pl;
-      })
-    );
-    return added;
+  const removeSongFromPlaylist = (playlistId: string, songId: string) => {
+    const playlist = playlists.find((pl) => pl.id === playlistId);
+    if (!playlist || !playlist.songIds.includes(songId)) return;
+    const previous = playlist.songIds;
+    updatePlaylist(playlistId, (pl) => ({ ...pl, songIds: pl.songIds.filter((id) => id !== songId) }));
+    if (onlineSession.current) {
+      syncOrRevert(api.playlists.removeSong(playlistId, songId), () =>
+        updatePlaylist(playlistId, (pl) => ({ ...pl, songIds: previous }))
+      );
+    }
+  };
+
+  const deletePlaylist = (playlistId: string) => {
+    const playlist = playlists.find((pl) => pl.id === playlistId);
+    if (!playlist) return;
+    setPlaylists((prev) => prev.filter((pl) => pl.id !== playlistId));
+    if (onlineSession.current) {
+      syncOrRevert(api.playlists.delete(playlistId), () => setPlaylists((prev) => [playlist, ...prev]));
+    }
   };
 
   const toggleLikeAlbum = (albumId: string) => {
-    setLikedAlbumIds((prev) =>
-      prev.includes(albumId) ? prev.filter((id) => id !== albumId) : [...prev, albumId]
-    );
-    // Đồng bộ lên server
-    if (currentUserId) {
-      api.auth.toggleLikeAlbum(currentUserId, albumId).catch(() => {});
-    }
+    if (!currentUserId) return;
+    const flip = () =>
+      updateCurrentUser((u) => ({ likedAlbumIds: toggleId(u.likedAlbumIds ?? [], albumId) }));
+    flip();
+    syncOrRevert(api.auth.toggleLikeAlbum(currentUserId, albumId), flip);
   };
 
   const isAlbumLiked = (albumId: string) => likedAlbumIds.includes(albumId);
 
   const downloadSong = (songId: string) => {
-    setDownloadedSongIds((prev) =>
-      prev.includes(songId) ? prev : [...prev, songId]
+    if (!currentUserId || downloadedSongIds.includes(songId)) return;
+    updateCurrentUser((u) => ({ downloadedSongIds: [...(u.downloadedSongIds ?? []), songId] }));
+    syncOrRevert(api.auth.downloadSong(currentUserId, songId), () =>
+      updateCurrentUser((u) => ({
+        downloadedSongIds: (u.downloadedSongIds ?? []).filter((id) => id !== songId),
+      }))
     );
-    if (currentUserId) {
-      api.auth.downloadSong(currentUserId, songId).catch(() => {});
-    }
   };
 
   const downloadAllSongs = (songIds: string[]) => {
-    setDownloadedSongIds((prev) => {
-      const set = new Set([...prev, ...songIds]);
-      return Array.from(set);
-    });
+    songIds.forEach(downloadSong);
   };
 
   const isSongDownloaded = (songId: string) => downloadedSongIds.includes(songId);
@@ -318,11 +379,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         currentUser,
         activePlan,
+        isVip,
         userPlaylists,
         likedAlbumIds,
         downloadedSongIds,
         createPlaylist,
         addSongToPlaylist,
+        removeSongFromPlaylist,
+        deletePlaylist,
         toggleLikeAlbum,
         isAlbumLiked,
         downloadSong,

@@ -4,9 +4,11 @@ import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Song } from '../data/musicData';
 import { parseDuration, shuffleTracks, useAudioPlayer } from '../context/AudioPlayerContext';
 import { useAuth } from '../context/AuthContext';
+import { useAccess } from '../context/AccessContext';
 import { SongItem } from './SongItem';
 import { SongActionModal } from './SongActionModal';
 import { AlbumActionModal } from './AlbumActionModal';
+import { toImageSource } from '../utils/imageSource';
 
 const formatTotalDuration = (tracks: Song[]) => {
   const totalSeconds = tracks.reduce((sum, track) => sum + parseDuration(track.duration) / 1000, 0);
@@ -21,6 +23,8 @@ const formatTotalDuration = (tracks: Song[]) => {
 
 interface TrackListViewProps {
   title: string;
+  // Id album dùng để thích album (bỏ trống nếu không phải album)
+  albumId?: string;
   description: string;
   coverImage: any;
   tracks: Song[];
@@ -30,11 +34,14 @@ interface TrackListViewProps {
   showExtraActions?: boolean;
   onNavigateToPlay?: (trackId?: string) => void;
   onToggleLike?: (songId: string) => void;
+  // Có giá trị khi đây là playlist của chính người dùng
+  onRemoveSong?: (songId: string) => void;
 }
 
 // Banner, nút phát và danh sách bài hát dùng chung cho Playlist Details và các danh sách của user
 export const TrackListView: React.FC<TrackListViewProps> = ({
   title,
+  albumId,
   description,
   coverImage,
   tracks,
@@ -44,17 +51,21 @@ export const TrackListView: React.FC<TrackListViewProps> = ({
   showExtraActions = true,
   onNavigateToPlay,
   onToggleLike,
+  onRemoveSong,
 }) => {
   const { playSong } = useAudioPlayer();
   const { toggleLikeAlbum, isAlbumLiked } = useAuth();
+  const { ensureMember } = useAccess();
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [songModalVisible, setSongModalVisible] = useState(false);
   const [albumModalVisible, setAlbumModalVisible] = useState(false);
 
-  const isLiked = isAlbumLiked(title);
+  const likeKey = albumId ?? title;
+  const isLiked = isAlbumLiked(likeKey);
 
   const handleToggleAlbumLike = () => {
-    toggleLikeAlbum(title);
+    if (!ensureMember()) return;
+    toggleLikeAlbum(likeKey);
     Alert.alert(
       'Yêu thích',
       !isLiked
@@ -116,7 +127,7 @@ export const TrackListView: React.FC<TrackListViewProps> = ({
           <>
             {/* Banner */}
             <View style={styles.bannerContainer}>
-              <Image source={coverImage} style={styles.coverImage} fadeDuration={0} />
+              <Image source={toImageSource(coverImage)} style={styles.coverImage} fadeDuration={0} />
 
               <View style={styles.bannerInfo}>
                 <Text style={styles.playlistTitle}>{title}</Text>
@@ -193,6 +204,7 @@ export const TrackListView: React.FC<TrackListViewProps> = ({
       <SongActionModal
         visible={songModalVisible}
         song={selectedSong}
+        onRemoveFromPlaylist={onRemoveSong}
         onClose={() => {
           setSongModalVisible(false);
           setSelectedSong(null);

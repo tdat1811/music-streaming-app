@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { ScreenSwitcher, ScreenId } from '../src/components/ScreenSwitcher';
 import { TabName } from '../src/components/BottomTabBar';
@@ -24,6 +24,8 @@ import { SignUpScreen } from './screens/SignUpScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import {MiniPlayer} from "../src/components/MiniPlayer";
 import { useAuth } from '../src/context/AuthContext';
+import { AccessProvider } from '../src/context/AccessContext';
+import { setSessionExpiredHandler } from '../src/services/api';
 import { Album, Artist, ARTISTS, CHARTS, getAlbumSongIds, getChartSongIds, Playlist } from '../src/data/musicData';
 export const Navigation: React.FC = () => {
   const { currentUser, logout } = useAuth();
@@ -42,6 +44,8 @@ export const Navigation: React.FC = () => {
   const [artistStack, setArtistStack] = useState<string[]>([]);
   const [artistCache, setArtistCache] = useState<Record<string, any>>({});
   const [searchFilter, setSearchFilter] = useState<'All' | 'Tracks' | 'Albums' | 'Artists'>('All');
+  // Mở trang chọn gói từ hộp thoại "Nâng cấp VIP": mua xong thì quay lại màn hình đang dùng
+  const [returnAfterPlans, setReturnAfterPlans] = useState(false);
 
   const seeAllArtists = () => {
     setSearchQuery('');
@@ -154,13 +158,40 @@ export const Navigation: React.FC = () => {
     navigateTo('Login');
   };
 
+  const openPlansThenReturn = () => {
+    setReturnAfterPlans(true);
+    navigateTo('SubscriptionPlans');
+  };
+
+  const leavePlans = () => {
+    if (returnAfterPlans) {
+      setReturnAfterPlans(false);
+      goBack();
+    } else {
+      navigateTo('Home');
+    }
+  };
+
   const handleLogout = () => {
+    setReturnAfterPlans(false);
     logout();
     setArtistStack([]);
     setLibraryTag('Playlists');
     setHistory(['Launch']);
     setCurrentScreen('Launch');
   };
+
+  // Máy chủ báo token hết hạn / không hợp lệ: đăng xuất rồi mở Log In kèm thông báo
+  const [loginNotice, setLoginNotice] = useState('');
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      handleLogout();
+      setLoginNotice('Your session has expired. Please log in again.');
+      setHistory(['Launch', 'Login']);
+      setCurrentScreen('Login');
+    });
+    return () => setSessionExpiredHandler(null);
+  });
 
   const goBack = () => {
     if (history.length > 1) {
@@ -208,11 +239,16 @@ export const Navigation: React.FC = () => {
       case 'Login':
         return (
           <LoginScreen
+            notice={loginNotice}
             onBack={() => {
               setAfterAuth(null);
+              setLoginNotice('');
               goBack();
             }}
-            onLoginSuccess={() => finishAuth('Home')}
+            onLoginSuccess={() => {
+              setLoginNotice('');
+              finishAuth('Home');
+            }}
             onNavigateToSignUp={() => navigateTo('SignUp')}
           />
         );
@@ -236,8 +272,8 @@ export const Navigation: React.FC = () => {
       case 'SubscriptionPlans':
         return (
           <SubscriptionPlansScreen
-            onBackHome={() => navigateTo('Home')}
-            onSubscribe={() => navigateTo('Home')}
+            onBackHome={leavePlans}
+            onSubscribe={leavePlans}
             onRequireLogin={() => {
               setAfterAuth('SubscriptionPlans');
               navigateTo('Login');
@@ -409,6 +445,10 @@ export const Navigation: React.FC = () => {
 
   const hiddenMiniPLayer = visibleScreen === 'Login' || visibleScreen === 'SignUp' || visibleScreen === 'Profile' || visibleScreen === 'Launch' || visibleScreen === 'LaunchPremium' || visibleScreen === 'SubscriptionPlans'||visibleScreen === "PlayAudio" || visibleScreen === 'SearchAudio';;
   return (
+    <AccessProvider
+      onRequireLogin={() => openLoginThenReturn(currentScreen)}
+      onOpenPlans={openPlansThenReturn}
+    >
     <View style={styles.container}>
       {renderScreen()}
 
@@ -436,6 +476,7 @@ export const Navigation: React.FC = () => {
         }}
       />
     </View>
+    </AccessProvider>
   );
 };
 

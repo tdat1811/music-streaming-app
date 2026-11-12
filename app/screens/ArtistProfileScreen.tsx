@@ -17,6 +17,7 @@ import { SongItem } from '../../src/components/SongItem';
 import { SongActionModal } from '../../src/components/SongActionModal';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAuth } from '../../src/context/AuthContext';
+import { useAccess } from '../../src/context/AccessContext';
 import { shuffleTracks, useAudioPlayer } from '../../src/context/AudioPlayerContext';
 import { api } from '../../src/services/api';
 
@@ -42,6 +43,7 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
   onTabPress,
 }) => {
   const { currentUser, toggleFollowArtist } = useAuth();
+  const { ensureMember } = useAccess();
   const currentId = artistId ?? (initialArtist?.id || DEFAULT_ARTIST_ID);
 
   // Chỉ lấy localArtist nếu khớp đúng ID hiện tại, tuyệt đối không fallback sang Ryan Young nếu đang mở nghệ sĩ khác
@@ -180,7 +182,7 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={[styles.followButton, isFollowing && styles.followingButton]}
-              onPress={() => toggleFollowArtist(activeArtist.id)}
+              onPress={() => ensureMember() && toggleFollowArtist(activeArtist.id)}
               activeOpacity={0.8}
             >
               <Text

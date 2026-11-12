@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "node --watch src/app.js",
-    "seed": "node src/seed/seedData.js"
+    "seed": "node src/seed/seedData.js",
+    "hash-passwords": "node src/seed/hashPasswords.js"
   },
   "dependencies": {
     "@distube/ytdl-core": "^5.2.1",
@@ -14,6 +15,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.9.5",
     "play-dl": "^1.9.7"
   },
