@@ -18,6 +18,7 @@ import { SongActionModal } from '../../src/components/SongActionModal';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
 import { useAuth } from '../../src/context/AuthContext';
+import { useAccess } from '../../src/context/AccessContext';
 import { api } from '../../src/services/api';
 interface SearchResultsScreenProps {
   searchQuery?: string;
@@ -39,6 +40,7 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
   const { playSong } = useAudioPlayer();
   const [activeFilter, setActiveFilter] = useState<'All' | 'Tracks' | 'Albums' | 'Artists'>('All');
   const { currentUser, toggleFollowArtist } = useAuth();
+  const { ensureMember } = useAccess();
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [songModalVisible, setSongModalVisible] = useState(false);
 
@@ -138,7 +140,7 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
         </View>
         <TouchableOpacity
           style={[styles.followButton, isFollowing && styles.followingButton]}
-          onPress={() => toggleFollowArtist(artist.id)}
+          onPress={() => ensureMember() && toggleFollowArtist(artist.id)}
           activeOpacity={0.7}
         >
           <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>

@@ -24,6 +24,7 @@ import {
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
 import { useAuth } from '../../src/context/AuthContext';
+import { useAccess } from '../../src/context/AccessContext';
 import { api } from '../../src/services/api';
 interface HomeScreenProps {
   onSeeAllCharts?: () => void;
@@ -62,7 +63,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onTabPress,
 }) => {
   const {playSong, isPlaying, togglePlayPause} = useAudioPlayer();
-  const { currentUser, activePlan } = useAuth();
+  const { currentUser, activePlan, isVip, toggleFollowArtist } = useAuth();
+  const { ensureMember } = useAccess();
   const [suggestions, setSuggestions] = useState<Song[]>(SUGGESTIONS);
   const [charts, setCharts] = useState(CHARTS);
   const [trendingAlbums, setTrendingAlbums] = useState<Album[]>(TRENDING_ALBUMS);
@@ -223,8 +225,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <Text style={styles.accountAction}>{currentUser ? 'Log out' : 'Log in'}</Text>
             </TouchableOpacity>
           </View>
-          {/* Badge thành viên: Thành viên Thường hoặc Thành viên VIP (Premium) */}
-          {activePlan && activePlan.id === 'premium' ? (
+          {/* Badge thành viên: Gói VIP hiện huy hiệu VIP, chưa có gói hoặc gói Free là thành viên thường */}
+          {activePlan && isVip ? (
             <TouchableOpacity
               style={styles.vipBadge}
               onPress={onNavigateToPlans}
@@ -395,7 +397,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalScroll}
         >
-          {popularArtists.map((artist) => (
+          {popularArtists.map((artist) => {
+            const isFollowing = !!currentUser?.followedArtistIds.includes(artist.id);
+            return (
             <TouchableOpacity
               key={artist.id}
               style={styles.artistCard}
@@ -411,13 +415,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 {artist.name}
               </Text>
               <TouchableOpacity
-                style={styles.followButton}
+                style={[styles.followButton, isFollowing && styles.followingButton]}
                 activeOpacity={0.8}
+                onPress={() => ensureMember() && toggleFollowArtist(artist.id)}
               >
-                <Text style={styles.followButtonText}>Follow</Text>
+                <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Text>
               </TouchableOpacity>
             </TouchableOpacity>
-          ))}
+            );
+          })}
         </ScrollView>
       </ScrollView>
 
@@ -642,6 +650,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
+  },
+  followingButton: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#121316',
+    paddingVertical: 5,
+    paddingHorizontal: 19,
+  },
+  followingButtonText: {
+    color: '#121316',
   },
   suggestionOverlay: {
   position: 'absolute',

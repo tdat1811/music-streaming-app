@@ -1,5 +1,25 @@
 const Playlist = require('../models/Playlist');
 const Song = require('../models/Song');
+const User = require('../models/User');
+const { isVipUser, VIP_REQUIRED_MESSAGE } = require('../config/plans');
+const { makeId, escapeRegex } = require('../utils/ids');
+
+const NOT_OWNER_MESSAGE = 'Bạn chỉ được chỉnh sửa playlist của chính mình.';
+
+// Tìm playlist và kiểm tra người gọi (theo token) là chủ sở hữu.
+// Trả về playlist, hoặc null sau khi đã gửi phản hồi lỗi.
+const findOwnedPlaylist = async (req, res, playlistId) => {
+  const playlist = await Playlist.findOne({ id: playlistId });
+  if (!playlist) {
+    res.status(404).json({ success: false, message: 'Không tìm thấy Playlist.' });
+    return null;
+  }
+  if (playlist.ownerId !== req.userId) {
+    res.status(403).json({ success: false, message: NOT_OWNER_MESSAGE });
+    return null;
+  }
+  return playlist;
+};
 
 // Lấy danh sách Playlist của một User
 exports.getUserPlaylists = async (req, res) => {
@@ -36,23 +56,31 @@ exports.getPlaylistById = async (req, res) => {
 // Tạo Playlist mới
 exports.createPlaylist = async (req, res) => {
   try {
-    const { userId, title, description, coverImage } = req.body;
+    const userId = req.userId;
+    const { title, description, coverImage } = req.body;
     if (!userId || !title) {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp userId và tiêu đề playlist.' });
+    }
+
+    // Tạo playlist là tính năng dành cho thành viên VIP
+    const owner = await User.findOne({ id: userId });
+    if (!owner) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
+    if (!isVipUser(owner)) {
+      return res.status(403).json({ success: false, message: VIP_REQUIRED_MESSAGE });
     }
 
     const trimmedTitle = title.trim();
     const existing = await Playlist.findOne({
       ownerId: userId,
-      title: new RegExp(`^${trimmedTitle}$`, 'i'),
+      // Thoát ký tự đặc biệt để tên như "Chill (2024)" không làm hỏng biểu thức
+      title: new RegExp(`^${escapeRegex(trimmedTitle)}$`, 'i'),
     });
     if (existing) {
       return res.status(400).json({ success: false, message: 'Bạn đã có playlist với tên này.' });
     }
 
-    const count = await Playlist.countDocuments();
     const newPlaylist = await Playlist.create({
-      id: `p${count + 1}`,
+      id: makeId('p'),
       ownerId: userId,
       title: trimmedTitle,
       description: description || 'Custom playlist',
@@ -74,15 +102,20 @@ exports.createPlaylist = async (req, res) => {
 exports.addSongToPlaylist = async (req, res) => {
   try {
     const { playlistId, songId } = req.body;
-    const playlist = await Playlist.findOne({ id: playlistId });
-    if (!playlist) return res.status(404).json({ success: false, message: 'Không tìm thấy Playlist.' });
+    if (!(await findOwnedPlaylist(req, res, playlistId))) return;
 
-    if (playlist.songIds.includes(songId)) {
-      return res.status(400).json({ success: false, message: 'Bài hát đã có trong Playlist này.' });
+    // Cập nhật nguyên tử: thêm nhiều bài cùng lúc (cả album) không làm mất bài nào
+    const playlist = await Playlist.findOneAndUpdate(
+      { id: playlistId, songIds: { $ne: songId } },
+      { $push: { songIds: songId } },
+      { new: true }
+    );
+    if (!playlist) {
+      const exists = await Playlist.exists({ id: playlistId });
+      return exists
+        ? res.status(400).json({ success: false, message: 'Bài hát đã có trong Playlist này.' })
+        : res.status(404).json({ success: false, message: 'Không tìm thấy Playlist.' });
     }
-
-    playlist.songIds.push(songId);
-    await playlist.save();
 
     res.status(200).json({
       success: true,
@@ -98,11 +131,14 @@ exports.addSongToPlaylist = async (req, res) => {
 exports.removeSongFromPlaylist = async (req, res) => {
   try {
     const { playlistId, songId } = req.body;
-    const playlist = await Playlist.findOne({ id: playlistId });
-    if (!playlist) return res.status(404).json({ success: false, message: 'Không tìm thấy Playlist.' });
+    if (!(await findOwnedPlaylist(req, res, playlistId))) return;
 
-    playlist.songIds = playlist.songIds.filter((id) => id !== songId);
-    await playlist.save();
+    const playlist = await Playlist.findOneAndUpdate(
+      { id: playlistId },
+      { $pull: { songIds: songId } },
+      { new: true }
+    );
+    if (!playlist) return res.status(404).json({ success: false, message: 'Không tìm thấy Playlist.' });
 
     res.status(200).json({
       success: true,
@@ -118,7 +154,8 @@ exports.removeSongFromPlaylist = async (req, res) => {
 exports.deletePlaylist = async (req, res) => {
   try {
     const { id } = req.params;
-    await Playlist.findOneAndDelete({ id });
+    if (!(await findOwnedPlaylist(req, res, id))) return;
+    await Playlist.deleteOne({ id });
     res.status(200).json({ success: true, message: 'Đã xóa playlist thành công.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

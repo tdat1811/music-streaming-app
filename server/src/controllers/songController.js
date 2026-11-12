@@ -1,4 +1,5 @@
 const Song = require('../models/Song');
+const { escapeRegex } = require('../utils/ids');
 const fs = require('fs');
 const path = require('path');
 
@@ -67,7 +68,8 @@ exports.search = async (req, res) => {
     }
 
     // Tìm kiếm regex theo tên bài hát hoặc tên nghệ sĩ
-    const regex = new RegExp(query, 'i');
+    // Escape để từ khoá như "(" hay "c++" không làm lỗi server
+    const regex = new RegExp(escapeRegex(query), 'i');
     const matchedSongs = await Song.find({
       $or: [{ title: regex }, { artist: regex }],
     });

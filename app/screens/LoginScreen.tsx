@@ -22,17 +22,20 @@ interface LoginScreenProps {
   onBack?: () => void;
   onLoginSuccess?: () => void;
   onNavigateToSignUp?: () => void;
+  // Thông báo hiện sẵn khi mở màn hình (VD: phiên đăng nhập đã hết hạn)
+  notice?: string;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onBack,
   onLoginSuccess,
   onNavigateToSignUp,
+  notice,
 }) => {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(notice ?? '');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {

@@ -86,6 +86,9 @@ export interface User {
   planId: string | null;
   likedSongIds: string[];
   followedArtistIds: string[];
+  // Riêng từng tài khoản (trước đây dùng chung cho mọi tài khoản)
+  likedAlbumIds?: string[];
+  downloadedSongIds?: string[];
 }
 
 // Tài khoản mẫu, chưa có backend nên mật khẩu để dạng chữ thường. Không dùng dữ liệu thật.
@@ -1052,6 +1055,8 @@ export const SAMPLE_USERS: User[] = [
     planId: null,
     likedSongIds: ['pdt1', 'sr2', 's1', 'apt1'],
     followedArtistIds: ['pa1', 'pa3', 'sa1'],
+    likedAlbumIds: ['alb1', 'alb2'],
+    downloadedSongIds: ['s1', 's2'],
   },
   {
     id: 'u2',
@@ -1062,6 +1067,8 @@ export const SAMPLE_USERS: User[] = [
     planId: 'premium',
     likedSongIds: ['pdt4', 'pdt5'],
     followedArtistIds: ['pa2', 'ar1'],
+    likedAlbumIds: ['alb3', 'alb4'],
+    downloadedSongIds: ['s5', 's8'],
   },
 ];
 

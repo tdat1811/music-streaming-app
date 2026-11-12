@@ -1,4 +1,5 @@
 const Artist = require('../models/Artist');
+const { escapeRegex } = require('../utils/ids');
 const Song = require('../models/Song');
 const Album = require('../models/Album');
 
@@ -29,9 +30,9 @@ exports.getArtistById = async (req, res) => {
     if (!artist) return res.status(404).json({ success: false, message: 'Không tìm thấy nghệ sĩ.' });
 
     // Lấy các bài hát của nghệ sĩ
-    const tracks = await Song.find({ artist: new RegExp(`^${artist.name}$`, 'i') });
+    const tracks = await Song.find({ artist: new RegExp(`^${escapeRegex(artist.name)}$`, 'i') });
     // Lấy các Album của nghệ sĩ
-    const albums = await Album.find({ artist: new RegExp(`^${artist.name}$`, 'i') });
+    const albums = await Album.find({ artist: new RegExp(`^${escapeRegex(artist.name)}$`, 'i') });
     // Lấy gợi ý nghệ sĩ tương tự (Fans also like)
     const relatedArtists = await Artist.find({ id: { $ne: artist.id } }).limit(4);
 

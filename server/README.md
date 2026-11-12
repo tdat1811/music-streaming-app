@@ -29,6 +29,12 @@ Mở file `.env` trong thư mục `server/`:
   PORT=5000
   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.abcde.mongodb.net/music_streaming_db?retryWrites=true&w=majority
   ```
+* **Khoá ký token đăng nhập (JWT)** — thêm vào cùng file `.env`, mỗi máy tự đặt một chuỗi ngẫu nhiên và không đưa lên git:
+  ```env
+  JWT_SECRET=<chuỗi ngẫu nhiên, VD tạo bằng: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))">
+  JWT_EXPIRES_IN=7d   # (tuỳ chọn) thời hạn token, mặc định 7 ngày
+  ```
+  Nếu thiếu `JWT_SECRET`, server vẫn chạy với khoá tạm thời, nhưng mỗi lần khởi động lại server mọi người phải đăng nhập lại.
 
 ### Bước 4: Nạp toàn bộ dữ liệu mẫu (Seed Data)
 Chạy lệnh sau để tự động khởi tạo dữ liệu ban đầu (Bài hát, Ca sĩ, Album, Playlist, Bình luận, Người dùng):

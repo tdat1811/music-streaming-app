@@ -22,6 +22,7 @@ import { IMAGES } from '../../src/constants/images';
 import { CommentItem, getSongsByIds } from '../../src/data/musicData';
 import { useAuth } from '../../src/context/AuthContext';
 import { ReplyTarget, useFeed } from '../../src/context/FeedContext';
+import { toImageSource } from '../../src/utils/imageSource';
 
 const OPEN_DURATION_MS = 280;
 const CLOSE_DURATION_MS = 220;
@@ -42,7 +43,7 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
   onRequireLogin,
 }) => {
   const { currentUser } = useAuth();
-  const { posts, getComments, getCommentCount, addComment, toggleCommentLike } = useFeed();
+  const { posts, getComments, getCommentCount, addComment, toggleCommentLike, refreshComments } = useFeed();
   const [commentText, setCommentText] = useState('');
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
@@ -72,7 +73,13 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
   };
 
   const post = posts.find((item) => item.id === postId) ?? posts[0];
-  const song = getSongsByIds([post.songId])[0];
+  const song = post ? getSongsByIds([post.songId])[0] : undefined;
+
+  // Mở bảng thì tải lại bình luận mới nhất từ máy chủ
+  useEffect(() => {
+    if (post) refreshComments(post.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post?.id]);
   const canSend = commentText.trim() !== '';
 
   const handleLikeComment = (commentId: string) => {
@@ -107,7 +114,7 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
     return (
       <View key={comment.id} style={isReply ? styles.replyRow : styles.commentRow}>
         <Image
-          source={comment.userAvatar}
+          source={toImageSource(comment.userAvatar, IMAGES.homeAvatar)}
           style={isReply ? styles.replyAvatar : styles.userAvatar}
         />
         <View style={styles.commentBody}>
@@ -172,7 +179,7 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
           <View style={styles.sheetHeading}>
             <Text style={styles.sheetTitle}>{formatCount(getCommentCount(post.id), 'comment')}</Text>
             <Text style={styles.sheetSubtitle} numberOfLines={1}>
-              {song.title} • {song.artist}
+              {song ? `${song.title} • ${song.artist}` : post.authorName}
             </Text>
           </View>
           <TouchableOpacity

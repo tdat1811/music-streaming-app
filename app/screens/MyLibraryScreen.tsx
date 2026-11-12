@@ -23,6 +23,7 @@ import { SongItem } from '../../src/components/SongItem';
 import { TrackListView } from '../../src/components/TrackListView';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAuth } from '../../src/context/AuthContext';
+import { useAccess } from '../../src/context/AccessContext';
 
 export type LibraryTag = 'Playlists' | 'Songs' | 'Albums' | 'Artists';
 
@@ -52,6 +53,7 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
   onTabPress,
 }) => {
   const { currentUser, userPlaylists, createPlaylist, toggleLikeSong, toggleFollowArtist, likedAlbumIds } = useAuth();
+  const { ensureVip } = useAccess();
   const [artistQuery, setArtistQuery] = useState('');
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
@@ -63,13 +65,19 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
     setNewPlaylistError('');
   };
 
-  const handleCreatePlaylist = () => {
+  const [creating, setCreating] = useState(false);
+
+  const handleCreatePlaylist = async () => {
+    if (creating) return;
     if (newPlaylistName.trim() === '') {
       setNewPlaylistError('Please enter a playlist name.');
       return;
     }
-    if (!createPlaylist(newPlaylistName)) {
-      setNewPlaylistError('You already have a playlist with this name.');
+    setCreating(true);
+    const error = await createPlaylist(newPlaylistName);
+    setCreating(false);
+    if (error) {
+      setNewPlaylistError(error);
       return;
     }
     closeCreateModal();
@@ -251,7 +259,8 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
             {renderPlaylists()}
             <TouchableOpacity
               style={styles.fab}
-              onPress={() => setCreateModalVisible(true)}
+              onPress={() => ensureVip('Tạo playlist mới') && setCreateModalVisible(true)}
+              accessibilityLabel="Create playlist"
               activeOpacity={0.85}
             >
               <Ionicons name="add" size={32} color="#FFFFFF" />
@@ -263,7 +272,7 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
       case 'Artists':
         return renderArtists();
       case 'Albums':
-        return null; // Tạm để trống
+        return renderAlbums();
     }
   };
 
@@ -351,9 +360,10 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
             <TouchableOpacity
               style={styles.modalCreateButton}
               onPress={handleCreatePlaylist}
+              disabled={creating}
               activeOpacity={0.85}
             >
-              <Text style={styles.modalCreateText}>Create</Text>
+              <Text style={styles.modalCreateText}>{creating ? 'Creating...' : 'Create'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.modalCancel} onPress={closeCreateModal}>
               <Text style={styles.modalCancelText}>Cancel</Text>

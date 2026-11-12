@@ -15,6 +15,7 @@ import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
 import { Song } from '../data/musicData';
 import { useAuth } from '../context/AuthContext';
+import { useAccess } from '../context/AccessContext';
 
 interface AlbumActionModalProps {
   visible: boolean;
@@ -37,12 +38,22 @@ export const AlbumActionModal: React.FC<AlbumActionModalProps> = ({
   onToggleLike,
   onClose,
 }) => {
-  const { userPlaylists, addSongToPlaylist, downloadAllSongs } = useAuth();
+  const { currentUser, isVip, userPlaylists, addSongToPlaylist, downloadAllSongs } = useAuth();
+  const { ensureMember, ensureVip } = useAccess();
   const [showPlaylistPicker, setShowPlaylistPicker] = useState(false);
 
   const handleClose = () => {
     setShowPlaylistPicker(false);
     onClose();
+  };
+
+  const handleOpenPlaylistPicker = () => {
+    if (!currentUser) {
+      handleClose();
+      ensureMember();
+      return;
+    }
+    setShowPlaylistPicker(true);
   };
 
   const handleShare = async () => {
@@ -55,6 +66,11 @@ export const AlbumActionModal: React.FC<AlbumActionModalProps> = ({
   };
 
   const handleDownloadAll = () => {
+    if (!isVip) {
+      handleClose();
+      ensureVip('Tải album nghe ngoại tuyến');
+      return;
+    }
     if (tracks.length === 0) {
       Alert.alert('Thông báo', 'Danh sách này chưa có bài hát nào để tải.');
       return;
@@ -188,7 +204,7 @@ export const AlbumActionModal: React.FC<AlbumActionModalProps> = ({
                   {/* Option 2: Thêm tất cả vào playlist */}
                   <TouchableOpacity
                     style={styles.menuItem}
-                    onPress={() => setShowPlaylistPicker(true)}
+                    onPress={handleOpenPlaylistPicker}
                   >
                     <View style={styles.iconWrapper}>
                       <MaterialCommunityIcons name="playlist-plus" size={24} color="#111216" />

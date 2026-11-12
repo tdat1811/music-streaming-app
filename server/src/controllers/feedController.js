@@ -1,5 +1,9 @@
 const FeedPost = require('../models/FeedPost');
 const Comment = require('../models/Comment');
+const User = require('../models/User');
+const { makeId } = require('../utils/ids');
+
+// userId lấy từ token đăng nhập (req.userId), không tin dữ liệu client gửi lên.
 
 // Lấy danh sách bài post trên Feed
 exports.getFeedPosts = async (req, res) => {
@@ -14,7 +18,8 @@ exports.getFeedPosts = async (req, res) => {
 // Thả tim / Bỏ thích bài post trên Feed
 exports.togglePostLike = async (req, res) => {
   try {
-    const { postId, userId } = req.body;
+    const userId = req.userId;
+    const { postId } = req.body;
     const post = await FeedPost.findOne({ id: postId });
     if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết.' });
 
@@ -80,13 +85,18 @@ exports.getComments = async (req, res) => {
 // Thêm bình luận mới (hỗ trợ cả bình luận gốc và trả lời lồng nhau)
 exports.addComment = async (req, res) => {
   try {
-    const { postId, userName, userAvatar, text, replyTarget } = req.body;
+    const { postId, userAvatar, text, replyTarget } = req.body;
     if (!postId || !text || !text.trim()) {
       return res.status(400).json({ success: false, message: 'Nội dung bình luận không được rỗng.' });
     }
 
+    // Tên người bình luận lấy từ tài khoản đăng nhập để không giả mạo được tên người khác
+    const author = await User.findOne({ id: req.userId }).select('name');
+    if (!author) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
+    const userName = author.name;
+
     const trimmedText = text.trim();
-    const commentId = `c_${Date.now()}`;
+    const commentId = makeId('c');
 
     // Nếu là câu trả lời cho bình luận con (nested reply)
     if (replyTarget && replyTarget.rootCommentId) {
@@ -144,7 +154,8 @@ exports.addComment = async (req, res) => {
 // Thả tim bình luận hoặc phản hồi
 exports.toggleCommentLike = async (req, res) => {
   try {
-    const { commentId, userId } = req.body;
+    const userId = req.userId;
+    const { commentId } = req.body;
 
     // Tìm trong bình luận gốc
     let comment = await Comment.findOne({ id: commentId });

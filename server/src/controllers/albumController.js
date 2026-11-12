@@ -1,4 +1,5 @@
 const Album = require('../models/Album');
+const { escapeRegex } = require('../utils/ids');
 const Song = require('../models/Song');
 
 // Lấy tất cả Album
@@ -47,7 +48,7 @@ exports.getAlbumById = async (req, res) => {
 exports.getAlbumsByArtist = async (req, res) => {
   try {
     const { artistName } = req.params;
-    const albums = await Album.find({ artist: new RegExp(`^${artistName}$`, 'i') });
+    const albums = await Album.find({ artist: new RegExp(`^${escapeRegex(artistName)}$`, 'i') });
     res.status(200).json({ success: true, count: albums.length, data: albums });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

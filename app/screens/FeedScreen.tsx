@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,10 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
-import { FEED_SONGS, getSongsByIds, Song } from '../../src/data/musicData';
+import { getSongsByIds, Song } from '../../src/data/musicData';
+import { SongActionModal } from '../../src/components/SongActionModal';
+import { toImageSource } from '../../src/utils/imageSource';
+import { IMAGES } from '../../src/constants/images';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
 import { useAuth } from '../../src/context/AuthContext';
@@ -35,9 +38,14 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
   const { playSong } = useAudioPlayer();
   const { currentUser } = useAuth();
   const { posts, togglePostLike, addShare, getCommentCount } = useFeed();
+  // Bài hát của bài đăng đang mở menu "..."
+  const [menuSong, setMenuSong] = useState<Song | null>(null);
+
+  // Hàng đợi phát là các bài hát có trong bảng tin
+  const feedSongs = posts.flatMap((post) => getSongsByIds([post.songId]));
 
   const handlePlay = (song: Song) => {
-    playSong(song, FEED_SONGS);
+    playSong(song, feedSongs);
     if (onNavigateToPlay) onNavigateToPlay(song.id);
   };
 
@@ -79,13 +87,15 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
       >
         {posts.map((post) => {
           const song = getSongsByIds([post.songId])[0];
+          // Bài đăng trỏ tới bài hát không có trong dữ liệu thì bỏ qua thay vì làm lỗi màn hình
+          if (!song) return null;
           const isLiked = !!currentUser && post.likedByUserIds.includes(currentUser.id);
           return (
           <View key={post.id} style={styles.postCard}>
             {/* Post Header */}
             <View style={styles.authorRow}>
               <View style={styles.avatarWrapper}>
-                <Image source={post.authorAvatar} style={styles.authorAvatar} />
+                <Image source={toImageSource(post.authorAvatar, IMAGES.homeAvatar)} style={styles.authorAvatar} />
                 <View style={styles.onlineBadge} />
               </View>
               <View style={styles.authorInfo}>
@@ -110,7 +120,7 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
               onPress={() => handlePlay(song)}
               activeOpacity={0.9}
             >
-              <Image source={song.coverImage} style={styles.trackImage} />
+              <Image source={toImageSource(song.coverImage)} style={styles.trackImage} />
 
               {/* Bottom Track Banner Overlay */}
               <View style={styles.trackBanner}>
@@ -162,7 +172,12 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.moreButton} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.moreButton}
+                activeOpacity={0.7}
+                onPress={() => setMenuSong(song)}
+                accessibilityLabel="Post options"
+              >
                 <MaterialCommunityIcons
                   name="dots-horizontal"
                   size={22}
@@ -174,6 +189,9 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
           );
         })}
       </ScrollView>
+
+      {/* Menu thao tác với bài hát của bài đăng */}
+      <SongActionModal visible={menuSong !== null} song={menuSong} onClose={() => setMenuSong(null)} />
 
       {/* Bottom Tab Bar */}
       <BottomTabBar
