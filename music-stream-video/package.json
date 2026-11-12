@@ -1,0 +1,22 @@
+{
+  "name": "music-stream-video",
+  "private": true,
+  "scripts": {
+    "start": "remotion studio src/index.ts",
+    "studio": "remotion studio src/index.ts",
+    "preview": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts MusicStreamPromo out/music-stream-promo.mp4 --codec=h264",
+    "still": "remotion still src/index.ts MusicStreamPromo"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.484",
+    "@remotion/transitions": "^4.0.484",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "remotion": "4.0.484"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "typescript": "6.0.3"
+  }
+}
