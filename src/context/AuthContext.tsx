@@ -10,9 +10,9 @@ import {
 } from '../data/musicData';
 import { api, isApiError, setAuthToken } from '../services/api';
 
-export const MIN_PASSWORD_LENGTH = 6;
+// Quy tắc kiểm tra dữ liệu nhập nằm ở utils/validation.ts; export lại để các màn hình cũ vẫn dùng được
+export { MIN_PASSWORD_LENGTH, EMAIL_PATTERN } from '../utils/validation';
 export const FREE_PLAN_ID = 'free';
-export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface ProfileUpdates {
   name: string;

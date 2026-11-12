@@ -62,3 +62,5 @@ Thumbs.db
 *.xlsx
 ~$*.docx
 ~$*.doc
+# Báo cáo độ phủ do Jest sinh ra
+coverage/

@@ -16,9 +16,10 @@ import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
 import { IMAGES } from '../../src/constants/images';
 import { AuthInput } from '../../src/components/AuthInput';
-import { useAuth, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from '../../src/context/AuthContext';
+import { useAuth } from '../../src/context/AuthContext';
+import { SignUpField, validateSignUp } from '../../src/utils/validation';
 
-type Field = 'name' | 'email' | 'password' | 'confirmPassword';
+type Field = SignUpField;
 
 interface SignUpScreenProps {
   onBack?: () => void;
@@ -47,19 +48,8 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({
   };
 
   const handleSignUp = async () => {
-    const nextErrors: Partial<Record<Field, string>> = {};
-    if (values.name.trim() === '') {
-      nextErrors.name = 'Please enter your name.';
-    }
-    if (!EMAIL_PATTERN.test(values.email.trim())) {
-      nextErrors.email = 'Please enter a valid email.';
-    }
-    if (values.password.length < MIN_PASSWORD_LENGTH) {
-      nextErrors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
-    }
-    if (values.confirmPassword !== values.password) {
-      nextErrors.confirmPassword = 'Passwords do not match.';
-    }
+    // Quy tắc kiểm tra nằm ở utils/validation.ts (có kiểm thử đơn vị UT09)
+    const nextErrors = validateSignUp(values);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 

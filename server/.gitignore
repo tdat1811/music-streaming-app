@@ -6,3 +6,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .DS_Store
+
+# Báo cáo độ phủ do Jest sinh ra
+coverage/
+
+# Kết quả thực tế do test tích hợp ghi ra
+tests/output/
