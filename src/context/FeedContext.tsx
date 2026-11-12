@@ -28,15 +28,8 @@ interface FeedContextType {
 
 const FeedContext = createContext<FeedContextType | undefined>(undefined);
 
-// Áp dụng like/unlike của một user lên post hoặc bình luận
-const toggleLike = <T extends { likes: number; likedByUserIds: string[] }>(item: T, userId: string): T =>
-  item.likedByUserIds.includes(userId)
-    ? {
-        ...item,
-        likes: Math.max(0, item.likes - 1),
-        likedByUserIds: item.likedByUserIds.filter((id) => id !== userId),
-      }
-    : { ...item, likes: item.likes + 1, likedByUserIds: [...item.likedByUserIds, userId] };
+// Áp dụng like/unlike của một user lên post hoặc bình luận (utils/likes.ts)
+import { toggleLike } from '../utils/likes';
 
 const mapPost = (p: any): FeedPost => ({
   id: p.id,

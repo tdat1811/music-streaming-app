@@ -2,13 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const connectDB = require('./config/db');
 
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
+// app.js chỉ tạo và cấu hình Express (để kiểm thử import được mà không kết nối CSDL,
+// không mở cổng). Kết nối MongoDB và lắng nghe cổng nằm ở src/server.js.
 
 const app = express();
 
@@ -52,12 +51,6 @@ app.use((err, req, res, next) => {
     message: 'Internal Server Error',
     error: err.message,
   });
-});
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Music Streaming API Server is running on port ${PORT}`);
-  console.log(`🔗 Local URL: http://localhost:${PORT}/api/health`);
 });
 
 module.exports = app;

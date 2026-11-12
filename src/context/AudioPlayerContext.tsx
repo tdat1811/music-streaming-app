@@ -3,21 +3,9 @@ import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from "expo-audio";
 import { PLAYLIST_DETAILS_TRACKS, Song } from "../data/musicData";
 import { resolveServerUrl, SERVER_ORIGIN } from "../services/api";
 
-// "03:36" | "1:02:10" -> millis
-export const parseDuration = (d?: string): number => {
-  if (!d) return 0;
-  const secs = d.split(":").map(Number).reduce((acc, p) => acc * 60 + p, 0);
-  return secs * 1000;
-};
-
-export const shuffleTracks = (tracks: Song[]): Song[] => {
-  const result = [...tracks];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
-};
+import { parseDuration, shuffleTracks } from "../utils/player";
+// Hàm xử lý thuần nằm ở utils/player.ts (để kiểm thử đơn vị); export lại cho các màn hình đang dùng
+export { parseDuration, shuffleTracks };
 
 // Bài đang phát đứng đầu, các bài còn lại xáo ngẫu nhiên
 const buildShuffledQueue = (current: Song | null, tracks: Song[]): Song[] => {

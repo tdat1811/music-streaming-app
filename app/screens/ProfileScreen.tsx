@@ -17,8 +17,8 @@ import { COLORS } from '../../src/constants/theme';
 import { IMAGES } from '../../src/constants/images';
 import { AuthInput } from '../../src/components/AuthInput';
 import { useAuth, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from '../../src/context/AuthContext';
+import { isValidPhone } from '../../src/utils/validation';
 
-const PHONE_PATTERN = /^\+?[0-9]{8,15}$/;
 
 type InfoField = 'name' | 'email' | 'phone';
 type PasswordField = 'current' | 'next' | 'confirm';
@@ -72,7 +72,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
     if (!EMAIL_PATTERN.test(info.email.trim())) {
       nextErrors.email = 'Please enter a valid email.';
     }
-    if (info.phone.trim() !== '' && !PHONE_PATTERN.test(info.phone.trim())) {
+    if (info.phone.trim() !== '' && !isValidPhone(info.phone.trim())) {
       nextErrors.phone = 'Please enter a valid phone number.';
     }
     setInfoErrors(nextErrors);

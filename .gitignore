@@ -62,17 +62,5 @@ Thumbs.db
 *.xlsx
 ~$*.docx
 ~$*.doc
-
-# Video & Media Builds (Bỏ qua file video nặng và thư mục render)
-*.mp4
-*.m4v
-*.mov
-*.avi
-*.mkv
-*.webm
-*.wav
-music-stream-video/out/
-music-stream-video/node_modules/
-music-stream-video/public/audio_adam/
-music-stream-video/.remotion/
-out/
+# Báo cáo độ phủ do Jest sinh ra
+coverage/

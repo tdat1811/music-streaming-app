@@ -1,4 +1,4 @@
-import { Song } from '../data/musicData';
+import type { Song } from '../data/musicData';
 
 const MULTIPLIERS: Record<string, number> = { K: 1e3, M: 1e6, B: 1e9 };
 
