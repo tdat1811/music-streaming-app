@@ -26,11 +26,8 @@
   },
   "scripts": {
     "start": "expo start",
-<<<<<<< HEAD
     "tunnel": "expo start --tunnel ngrok",
-=======
     "mobile": "node scripts/start-mobile.js",
->>>>>>> edf775865abe2f704030f2d878e4de6334781204
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"
