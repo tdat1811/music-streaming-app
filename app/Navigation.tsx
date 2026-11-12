@@ -8,7 +8,6 @@ import { LaunchScreen } from './screens/LaunchScreen';
 import { LaunchScreenPremium } from './screens/LaunchScreenPremium';
 import { SubscriptionPlansScreen } from './screens/SubscriptionPlansScreen';
 import { HomeScreen } from './screens/HomeScreen';
-import { SearchAudioScreen } from './screens/SearchAudioScreen';
 import { SearchResultsScreen } from './screens/SearchResultsScreen';
 import { FeedScreen } from './screens/FeedScreen';
 import { FeedCommentsScreen } from './screens/FeedCommentsScreen';
@@ -22,6 +21,9 @@ import { PlayAudioScreen } from './screens/PlayAudioScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { SignUpScreen } from './screens/SignUpScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
+import { NotificationsScreen } from './screens/NotificationsScreen';
+import { useAppRefresh } from '../src/context/RefreshContext';
+import { AppNotification } from '../src/context/NotificationContext';
 import {MiniPlayer} from "../src/components/MiniPlayer";
 import { useAuth } from '../src/context/AuthContext';
 import { AccessProvider } from '../src/context/AccessContext';
@@ -29,6 +31,12 @@ import { setSessionExpiredHandler } from '../src/services/api';
 import { Album, Artist, ARTISTS, CHARTS, getAlbumSongIds, getChartSongIds, Playlist } from '../src/data/musicData';
 export const Navigation: React.FC = () => {
   const { currentUser, logout } = useAuth();
+  // Tăng sau mỗi lần làm mới ứng dụng -> dựng lại màn hình hiện tại để tải lại dữ liệu
+  const { refreshKey } = useAppRefresh();
+  // Bài đăng cần cuộn tới trên Feed khi mở từ thông báo
+  const [focusPostId, setFocusPostId] = useState<string | null>(null);
+  // Bình luận cần nháy sáng khi mở bảng bình luận từ một thông báo
+  const [highlightCommentIds, setHighlightCommentIds] = useState<string[]>([]);
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('Launch');
   const [history, setHistory] = useState<ScreenId[]>(['Launch']);
    const [searchQuery, setSearchQuery] = useState<string>('');
@@ -139,7 +147,20 @@ export const Navigation: React.FC = () => {
 
   const openComments = (postId: string) => {
     setSelectedPostId(postId);
+    setHighlightCommentIds([]);
     navigateTo('FeedComments');
+  };
+
+  // Bấm thông báo: chuyển tới trang Feed, cuộn tới bài đăng, mở bảng bình luận của bài đó
+  // và nháy sáng bình luận được trả lời cùng câu trả lời mới (không phát nhạc)
+  const openNotification = (notification: AppNotification) => {
+    setSelectedPostId(notification.postId);
+    setFocusPostId(notification.postId);
+    setHighlightCommentIds(
+      [notification.targetCommentId, notification.replyId].filter((id, i, arr) => !!id && arr.indexOf(id) === i)
+    );
+    setHistory((prev) => [...prev, 'Feed', 'FeedComments']);
+    setCurrentScreen('FeedComments');
   };
 
   // Màn nằm dưới sheet bình luận: màn gần nhất trong lịch sử, bỏ qua sheet và các màn đăng nhập
@@ -284,7 +305,7 @@ export const Navigation: React.FC = () => {
       case 'Home':
         return (
           <HomeScreen
-            onNavigateToSearch={() => navigateTo('SearchAudio')}
+            onNavigateToSearch={() => navigateTo('SearchResults')}
             onNavigateToPlaylist={() => openPlaylist(null)}
             onNavigateToChartsList={() => navigateTo('ChartsList')}
             onNavigateToAlbumsList={() => navigateTo('AlbumsList')}
@@ -296,8 +317,19 @@ export const Navigation: React.FC = () => {
             onNavigateToLogin={() => navigateTo('Login')}
             onNavigateToProfile={() => (currentUser ? navigateTo('Profile') : openLoginThenProfile())}
             onNavigateToPlans={() => navigateTo('SubscriptionPlans')}
+            onNavigateToNotifications={() =>
+              currentUser ? navigateTo('Notifications') : openLoginThenReturn('Notifications')
+            }
             onLogout={handleLogout}
             onTabPress={handleTabPress}
+          />
+        );
+
+      case 'Notifications':
+        return (
+          <NotificationsScreen
+            onBack={goBack}
+            onOpenNotification={openNotification}
           />
         );
 
@@ -310,22 +342,11 @@ export const Navigation: React.FC = () => {
           />
         );
 
-      case 'SearchAudio':
-      return (
-      <SearchAudioScreen
-         onSelectSuggestion={(selectedText) => {
-        setSearchQuery(selectedText); 
-        navigateTo('SearchResults');  
-      }}
-      onBack={goBack}
-    />
-  );
-
       case 'SearchResults':
   return (
     <SearchResultsScreen
-      searchQuery={searchQuery} // Truyền từ khóa sang!
-      onBackToSuggestions={() => navigateTo('SearchAudio')}
+      searchQuery={searchQuery}
+      onChangeQuery={setSearchQuery}
       onNavigateToArtist={openArtist}
       onNavigateToPlay={() => navigateTo('PlayAudio')}
       onNavigateToAlbum={openAlbum}
@@ -336,6 +357,8 @@ export const Navigation: React.FC = () => {
       case 'Feed':
         return (
           <FeedScreen
+            focusPostId={focusPostId}
+            onFocusHandled={() => setFocusPostId(null)}
             onOpenComments={openComments}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
             onRequireLogin={() => openLoginThenReturn('Feed')}
@@ -352,7 +375,7 @@ export const Navigation: React.FC = () => {
             onSelectAlbum={openAlbum}
             onSelectArtist={openArtist}
             onNavigateToPlay={() => navigateTo('PlayAudio')}
-            onNavigateToSearch={() => navigateTo('SearchAudio')}
+            onNavigateToSearch={() => navigateTo('SearchResults')}
             onNavigateToLogin={() => {
               setAfterAuth('MyLibrary');
               navigateTo('Login');
@@ -428,7 +451,7 @@ export const Navigation: React.FC = () => {
       default:
         return (
           <HomeScreen
-            onNavigateToSearch={() => navigateTo('SearchAudio')}
+            onNavigateToSearch={() => navigateTo('SearchResults')}
             onNavigateToPlaylist={() => openPlaylist(null)}
             onNavigateToChartsList={() => navigateTo('ChartsList')}
             onNavigateToAlbumsList={() => navigateTo('AlbumsList')}
@@ -443,14 +466,14 @@ export const Navigation: React.FC = () => {
     }
   };
 
-  const hiddenMiniPLayer = visibleScreen === 'Login' || visibleScreen === 'SignUp' || visibleScreen === 'Profile' || visibleScreen === 'Launch' || visibleScreen === 'LaunchPremium' || visibleScreen === 'SubscriptionPlans'||visibleScreen === "PlayAudio" || visibleScreen === 'SearchAudio';;
+  const hiddenMiniPLayer = visibleScreen === 'Login' || visibleScreen === 'SignUp' || visibleScreen === 'Profile' || visibleScreen === 'Launch' || visibleScreen === 'LaunchPremium' || visibleScreen === 'SubscriptionPlans'||visibleScreen === "PlayAudio";
   return (
     <AccessProvider
       onRequireLogin={() => openLoginThenReturn(currentScreen)}
       onOpenPlans={openPlansThenReturn}
     >
     <View style={styles.container}>
-      {renderScreen()}
+      <React.Fragment key={refreshKey}>{renderScreen()}</React.Fragment>
 
       {!hiddenMiniPLayer && (
         <MiniPlayer onPress={() => navigateTo('PlayAudio')} />
@@ -459,7 +482,11 @@ export const Navigation: React.FC = () => {
       {isCommentsOpen && (
         <FeedCommentsScreen
           postId={selectedPostId}
-          onClose={closeComments}
+          highlightCommentIds={highlightCommentIds}
+          onClose={() => {
+            setHighlightCommentIds([]);
+            closeComments();
+          }}
           onRequireLogin={() => openLoginThenReturn('FeedComments')}
         />
       )}
@@ -469,7 +496,10 @@ export const Navigation: React.FC = () => {
         currentScreen={currentScreen}
         onSelectScreen={(screenId) => {
           if (screenId === 'PlaylistDetails') setSelectedPlaylist(null);
-          if (screenId === 'FeedComments') setSelectedPostId(null);
+          if (screenId === 'FeedComments') {
+            setSelectedPostId(null);
+            setHighlightCommentIds([]);
+          }
           if (screenId === 'ArtistProfile') setArtistStack([]);
           setHistory((prev) => [...prev, screenId]);
           setCurrentScreen(screenId);

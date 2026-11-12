@@ -1,282 +1,136 @@
-import React, { useState, useCallback, useMemo ,useEffect} from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Image,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons, Feather } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
-import { Album, ALL_ALBUMS, ALL_SONGS, Artist, ARTISTS, SEARCH_RESULTS, Song } from '../../src/data/musicData';
-import { SongItem } from '../../src/components/SongItem';
-import { SongActionModal } from '../../src/components/SongActionModal';
+import { Album, ALL_ALBUMS, ARTISTS } from '../../src/data/musicData';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
+import { GroupedSearchResults } from '../../src/components/GroupedSearchResults';
 import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
-import { useAuth } from '../../src/context/AuthContext';
-import { useAccess } from '../../src/context/AccessContext';
-import { api } from '../../src/services/api';
+import { useRefreshControl } from '../../src/context/RefreshContext';
+import { useSongSearch } from '../../src/hooks/useSongSearch';
+import { fuzzySearch } from '../../src/utils/fuzzySearch';
+
+type SearchFilter = 'All' | 'Tracks' | 'Albums' | 'Artists';
+const FILTERS: SearchFilter[] = ['All', 'Tracks', 'Albums', 'Artists'];
+
 interface SearchResultsScreenProps {
+  // Từ khoá giữ ở Navigation để quay lại màn Search vẫn còn kết quả cũ
   searchQuery?: string;
-  onBackToSuggestions?: () => void;
+  onChangeQuery?: (query: string) => void;
   onNavigateToArtist?: (artist?: any) => void;
   onNavigateToPlay?: (trackId?: string) => void;
   onNavigateToAlbum?: (album: Album) => void;
   onTabPress?: (tab: TabName) => void;
 }
 
+// Tab Search: tìm kiếm tương đối ngay tại chỗ giống Home (không còn màn gợi ý),
+// thêm bộ lọc All / Tracks / Albums / Artists
 export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
   searchQuery = '',
-  onBackToSuggestions,
+  onChangeQuery,
   onNavigateToArtist,
   onNavigateToPlay,
   onNavigateToAlbum,
   onTabPress,
 }) => {
   const { playSong } = useAudioPlayer();
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Tracks' | 'Albums' | 'Artists'>('All');
-  const { currentUser, toggleFollowArtist } = useAuth();
-  const { ensureMember } = useAccess();
-  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
-  const [songModalVisible, setSongModalVisible] = useState(false);
+  const refreshControl = useRefreshControl();
+  const [query, setQuery] = useState(searchQuery);
+  const [activeFilter, setActiveFilter] = useState<SearchFilter>('All');
 
-  const shouldShowSongs = activeFilter === 'All' || activeFilter === 'Tracks';
-  const shouldShowArtists = activeFilter === 'All' || activeFilter === 'Artists';
-  const shouldShowAlbums = activeFilter === 'All' || activeFilter === 'Albums';
-  const [dbSongs, setDbSongs] = useState<Song[]>([]);
-  const [dbArtists, setDbArtists] = useState<Artist[]>([]);
-  const [dbAlbums, setDbAlbums] = useState<Album[]>([]);
-  const filters: ('All' | 'Tracks' | 'Albums' | 'Artists')[] = [
-    'All',
-    'Tracks',
-    'Albums',
-    'Artists',
-  ];
-
-  useEffect(() => {
-    let isMounted = true;
-    async function searchFromDB() {
-      try {
-        const [songRes, artistRes, albumRes] = await Promise.all([
-          api.songs.search(searchQuery).catch(() => null),
-          api.artists.getAll().catch(() => null),
-          api.albums.getAll().catch(() => null),
-        ]);
-
-        if (!isMounted) return;
-
-        if (songRes && (songRes as any).songs) {
-          setDbSongs((songRes as any).songs);
-        }
-        const artList = Array.isArray(artistRes) ? artistRes : (artistRes as any)?.data;
-        if (Array.isArray(artList) && artList.length > 0) {
-          setDbArtists(artList);
-        }
-        const albList = Array.isArray(albumRes) ? albumRes : (albumRes as any)?.data;
-        if (Array.isArray(albList) && albList.length > 0) {
-          setDbAlbums(albList);
-        }
-      } catch (error) {
-        console.log('Using local fallback for search:', error);
-      }
-    }
-    searchFromDB();
-    return () => {
-      isMounted = false;
-    };
-  }, [searchQuery]);
-
-  // Lọc kho nhạc theo từ khóa (bài hát theo tên hoặc ca sĩ, album theo tên hoặc nghệ sĩ)
-  const q = searchQuery.toLowerCase().trim();
-  const matches = (text: string) => text.toLowerCase().includes(q);
-
-    const displaySongs = useMemo(() => {
-    // NẾU DATABASE CÓ KẾT QUẢ THÌ ƯU TIÊN HIỂN THỊ TỪ DATABASE:
-    if (dbSongs && dbSongs.length > 0) return dbSongs;
-
-    // Dự phòng khi server offline:
-    if (q === '') return SEARCH_RESULTS;
-    return ALL_SONGS.filter((song) => matches(song.title) || matches(song.artist)).filter(
-      (song, index, self) =>
-        index === self.findIndex((s) => s.title === song.title && s.artist === song.artist)
-    );
-  }, [q, dbSongs]);
-
-  const displayArtists = useMemo(() => {
-    const source = dbArtists.length > 0 ? dbArtists : ARTISTS;
-    return source.filter((artist) => matches(artist.name));
-  }, [q, dbArtists]);
-
-  const displayAlbums = useMemo(
-    () => ALL_ALBUMS.filter((album) => matches(album.title) || matches(album.artist)),
-    [q]
-  );
-
-  const hasResults =
-    (shouldShowSongs && displaySongs.length > 0) ||
-    (shouldShowArtists && displayArtists.length > 0) ||
-    (shouldShowAlbums && displayAlbums.length > 0);
-
-  const renderArtist = (artist: Artist) => {
-    const isFollowing = !!currentUser?.followedArtistIds.includes(artist.id);
-    return (
-      <TouchableOpacity
-        key={artist.id}
-        style={styles.artistCardContainer}
-        onPress={() => onNavigateToArtist && onNavigateToArtist(artist)}
-        activeOpacity={0.7}
-      >
-        <Image source={typeof artist.avatarImage === 'string' ? { uri: artist.avatarImage } : artist.avatarImage} style={styles.artistAvatar} fadeDuration={0} />
-        <View style={styles.artistInfo}>
-          <Text style={styles.artistName}>{artist.name}</Text>
-          <View style={styles.followersRow}>
-            <Ionicons name="person-outline" size={13} color={COLORS.textSecondary} style={{ marginRight: 4 }} />
-            <Text style={styles.followersText}>{artist.followers}</Text>
-          </View>
-        </View>
-        <TouchableOpacity
-          style={[styles.followButton, isFollowing && styles.followingButton]}
-          onPress={() => ensureMember() && toggleFollowArtist(artist.id)}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-            {isFollowing ? 'Following' : 'Follow'}
-          </Text>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    );
+  const changeQuery = (text: string) => {
+    setQuery(text);
+    if (onChangeQuery) onChangeQuery(text);
   };
 
-  const renderAlbum = (album: Album) => (
-    <TouchableOpacity
-      key={album.id}
-      style={styles.albumRow}
-      onPress={() => onNavigateToAlbum && onNavigateToAlbum(album)}
-      activeOpacity={0.7}
-    >
-      <Image source={album.coverImage} style={styles.albumCover} fadeDuration={0} />
-      <View style={styles.artistInfo}>
-        <Text style={styles.albumTitle} numberOfLines={1}>{album.title}</Text>
-        <Text style={styles.followersText} numberOfLines={1}>{album.artist}</Text>
-      </View>
-      <Feather name="chevron-right" size={20} color={COLORS.textPrimary} />
-    </TouchableOpacity>
+  const isSearching = query.trim() !== '';
+  const songs = useSongSearch(query);
+  const albums = useMemo(
+    () => (isSearching ? fuzzySearch(ALL_ALBUMS, query, (a) => [a.title, a.artist]) : []),
+    [query, isSearching]
+  );
+  const artists = useMemo(
+    () => (isSearching ? fuzzySearch(ARTISTS, query, (a) => [a.name]) : []),
+    [query, isSearching]
   );
 
-  const renderSongItem = useCallback(({ item }: { item: Song }) => (
-    <SongItem
-      song={item}
-      rightAction="dots"
-      onPress={() => {
-        playSong(item, displaySongs);
-        if (onNavigateToPlay) {
-          onNavigateToPlay(item.id);
-        }
-      }}
-      onRightActionPress={() => {
-        setSelectedSong(item);
-        setSongModalVisible(true);
-      }}
-    />
-  ), [displaySongs, playSong, onNavigateToPlay]);
-
-  const keyExtractor = useCallback((item: Song) => item.id, []);
+  const show = (filter: SearchFilter) => activeFilter === 'All' || activeFilter === filter;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar style="dark" />
 
-      {/* Top Search Pill */}
-      <View style={styles.header}>
-        <View style={styles.searchPill}>
-          <TextInput
-            style={styles.input}
-            value={searchQuery}
-            onFocus={onBackToSuggestions}
-            placeholder="Search"
-            placeholderTextColor={COLORS.textMuted}
-            editable={false}
-          />
+      {/* Thanh tìm kiếm giống Home */}
+      <View style={styles.searchBar}>
+        <Ionicons name="search-outline" size={20} color={COLORS.textMuted} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          value={query}
+          onChangeText={changeQuery}
+          placeholder="What you want to listen to"
+          placeholderTextColor={COLORS.textMuted}
+          autoCorrect={false}
+          autoFocus={!searchQuery}
+          returnKeyType="search"
+        />
+        {query.length > 0 && (
           <TouchableOpacity
-            onPress={onBackToSuggestions}
-            style={styles.clearButton}
+            onPress={() => changeQuery('')}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Clear search"
           >
             <Ionicons name="close-circle" size={18} color="#111216" />
           </TouchableOpacity>
-        </View>
+        )}
       </View>
 
       {/* Filter Tabs */}
       <View style={styles.filterTabsRow}>
-        {filters.map((filter) => {
+        {FILTERS.map((filter) => {
           const isActive = activeFilter === filter;
           return (
             <TouchableOpacity
               key={filter}
-              style={[styles.filterTab, isActive && styles.filterTabActive]}
+              style={styles.filterTab}
               onPress={() => setActiveFilter(filter)}
             >
-              <Text
-                style={[
-                  styles.filterTabText,
-                  isActive && styles.filterTabTextActive,
-                ]}
-              >
-                {filter}
-              </Text>
+              <Text style={[styles.filterTabText, isActive && styles.filterTabTextActive]}>{filter}</Text>
               {isActive && <View style={styles.activeIndicator} />}
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* Results List */}
-      <FlatList
-        data={shouldShowSongs ? displaySongs : []}
-        keyExtractor={keyExtractor}
-        renderItem={renderSongItem}
+      <ScrollView
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={styles.listContent}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={5}
-        removeClippedSubviews={true}
-        ListHeaderComponent={shouldShowArtists ? <>{displayArtists.map(renderArtist)}</> : undefined}
-        ListFooterComponent={
-          shouldShowAlbums && displayAlbums.length > 0 ? (
-            <>
-              {activeFilter === 'All' && <Text style={styles.sectionTitle}>Albums</Text>}
-              {displayAlbums.map(renderAlbum)}
-            </>
-          ) : undefined
-        }
-        ListEmptyComponent={
-          hasResults ? undefined : (
-            <Text style={styles.emptyText}>No results for "{searchQuery}"</Text>
-          )
-        }
-      />
+        refreshControl={refreshControl}
+      >
+        {isSearching ? (
+          <GroupedSearchResults
+            query={query}
+            songs={show('Tracks') ? songs : []}
+            albums={show('Albums') ? albums : []}
+            artists={show('Artists') ? artists : []}
+            onPressSong={(song, queue) => {
+              playSong(song, queue);
+              if (onNavigateToPlay) onNavigateToPlay(song.id);
+            }}
+            onSelectAlbum={onNavigateToAlbum}
+            onSelectArtist={onNavigateToArtist}
+          />
+        ) : (
+          <View style={styles.hint}>
+            <Ionicons name="search" size={40} color={COLORS.textMuted} />
+            <Text style={styles.hintText}>Search for songs, albums or artists</Text>
+          </View>
+        )}
+      </ScrollView>
 
-      {/* Song Action Modal */}
-      <SongActionModal
-        visible={songModalVisible}
-        song={selectedSong}
-        onClose={() => {
-          setSongModalVisible(false);
-          setSelectedSong(null);
-        }}
-      />
-
-      {/* Bottom Tab Bar */}
-      <BottomTabBar
-        currentTab="Search"
-        onTabPress={(tab) => onTabPress && onTabPress(tab)}
-      />
+      <BottomTabBar currentTab="Search" onTabPress={(tab) => onTabPress && onTabPress(tab)} />
     </SafeAreaView>
   );
 };
@@ -286,27 +140,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  searchPill: {
+  // Cùng kiểu với thanh tìm kiếm ở Home
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 44,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E8ECF2',
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    height: 44,
+    marginHorizontal: 16,
+    marginTop: 10,
+    paddingHorizontal: 14,
   },
-  input: {
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
     flex: 1,
-    fontSize: 16,
+    height: '100%',
+    fontSize: 14,
     color: '#111216',
-  },
-  clearButton: {
-    padding: 2,
   },
   filterTabsRow: {
     flexDirection: 'row',
@@ -314,22 +168,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
     marginTop: 6,
-    marginBottom: 8,
   },
   filterTab: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
-    position: 'relative',
   },
-  filterTabActive: {},
   filterTabText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#686A70',
   },
   filterTabTextActive: {
-    color: '#10C7D5',
+    color: COLORS.primary,
   },
   activeIndicator: {
     position: 'absolute',
@@ -337,90 +188,24 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     height: 2.5,
-    backgroundColor: '#F97316',
+    backgroundColor: COLORS.primary,
     borderRadius: 2,
   },
   listContent: {
-    paddingBottom: 76, // Chừa chỗ cho MiniPlayer
+    paddingBottom: 90, // Chừa chỗ cho MiniPlayer
+    flexGrow: 1,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111216',
-    paddingHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 6,
-  },
-  albumRow: {
-    flexDirection: 'row',
+  hint: {
+    flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    justifyContent: 'center',
+    paddingTop: 80,
+    paddingHorizontal: 32,
   },
-  albumCover: {
-    width: 52,
-    height: 52,
-    borderRadius: 8,
-  },
-  albumTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111216',
-    marginBottom: 2,
-  },
-  emptyText: {
+  hintText: {
     fontSize: 14,
     color: '#686A70',
     textAlign: 'center',
-    marginTop: 24,
-    paddingHorizontal: 24,
-  },
-  artistCardContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  artistAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-  },
-  artistInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  artistName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111216',
-    marginBottom: 3,
-  },
-  followersRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  followersText: {
-    fontSize: 12,
-    color: '#686A70',
-  },
-  followButton: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 18,
-    paddingVertical: 6,
-    paddingHorizontal: 20,
-  },
-  followingButton: {
-    backgroundColor: '#121316',
-    borderColor: '#121316',
-  },
-  followButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#111216',
-  },
-  followingButtonText: {
-    color: '#FFFFFF',
+    marginTop: 12,
   },
 });

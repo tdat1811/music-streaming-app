@@ -16,6 +16,7 @@ import { COLORS } from '../constants/theme';
 import { Song } from '../data/musicData';
 import { useAuth } from '../context/AuthContext';
 import { useAccess } from '../context/AccessContext';
+import { toImageSource } from '../utils/imageSource';
 
 interface SongActionModalProps {
   visible: boolean;
@@ -109,11 +110,11 @@ export const SongActionModal: React.FC<SongActionModalProps> = ({
   const handleSelectPlaylist = (playlistId: string, playlistTitle: string) => {
     const success = addSongToPlaylist(playlistId, song.id);
     if (success) {
+      // Giữ bảng chọn mở để người dùng thấy nút "+" đổi thành dấu tích
       Alert.alert('Thành công', `Đã thêm "${song.title}" vào playlist "${playlistTitle}"!`);
     } else {
       Alert.alert('Thông báo', `Bài hát "${song.title}" đã có sẵn trong playlist "${playlistTitle}".`);
     }
-    handleClose();
   };
 
   return (
@@ -163,24 +164,38 @@ export const SongActionModal: React.FC<SongActionModalProps> = ({
                         Bạn chưa có playlist cá nhân nào. Hãy tạo playlist mới trong Thư viện!
                       </Text>
                     ) : (
-                      userPlaylists.map((pl) => (
-                        <TouchableOpacity
-                          key={pl.id}
-                          style={styles.playlistItem}
-                          onPress={() => handleSelectPlaylist(pl.id, pl.title)}
-                        >
-                          <Image source={pl.coverImage} style={styles.playlistThumb} />
-                          <View style={styles.playlistInfo}>
-                            <Text style={styles.playlistItemTitle} numberOfLines={1}>
-                              {pl.title}
-                            </Text>
-                            <Text style={styles.playlistItemCount}>
-                              {pl.songIds.length} bài hát
-                            </Text>
-                          </View>
-                          <Feather name="plus-circle" size={20} color="#10C7D5" />
-                        </TouchableOpacity>
-                      ))
+                      userPlaylists.map((pl) => {
+                        // Bài đã có trong playlist: hiện dấu tích và không cho thêm lần nữa
+                        const alreadyAdded = pl.songIds.includes(song.id);
+                        return (
+                          <TouchableOpacity
+                            key={pl.id}
+                            style={styles.playlistItem}
+                            onPress={() => handleSelectPlaylist(pl.id, pl.title)}
+                            disabled={alreadyAdded}
+                            accessibilityState={{ disabled: alreadyAdded }}
+                            accessibilityLabel={
+                              alreadyAdded ? `Đã có trong playlist ${pl.title}` : `Thêm vào playlist ${pl.title}`
+                            }
+                          >
+                            <Image source={toImageSource(pl.coverImage)} style={styles.playlistThumb} />
+                            <View style={styles.playlistInfo}>
+                              <Text style={styles.playlistItemTitle} numberOfLines={1}>
+                                {pl.title}
+                              </Text>
+                              <Text style={styles.playlistItemCount}>
+                                {alreadyAdded ? 'Đã thêm • ' : ''}
+                                {pl.songIds.length} bài hát
+                              </Text>
+                            </View>
+                            {alreadyAdded ? (
+                              <Ionicons name="checkmark-circle" size={22} color="#10C7D5" />
+                            ) : (
+                              <Feather name="plus-circle" size={20} color="#10C7D5" />
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })
                     )}
                   </ScrollView>
                 </View>

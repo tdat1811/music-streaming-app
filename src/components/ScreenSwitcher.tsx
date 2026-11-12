@@ -18,7 +18,6 @@ export type ScreenId =
   | 'LaunchPremium'
   | 'SubscriptionPlans'
   | 'Home'
-  | 'SearchAudio'
   | 'SearchResults'
   | 'Feed'
   | 'FeedComments'
@@ -29,6 +28,7 @@ export type ScreenId =
   | 'Login'
   | 'SignUp'
   | 'Profile'
+  | 'Notifications'
   | 'ChartsList'
   | 'AlbumsList'
   | 'ArtistsList'
@@ -44,8 +44,7 @@ export const SCREEN_LIST: { id: ScreenId; title: string; category: string }[] = 
   { id: 'LaunchPremium', title: '2. Launch Screen - Premium', category: 'Onboarding' },
   { id: 'SubscriptionPlans', title: '3. Subscription Plans', category: 'Subscription' },
   { id: 'Home', title: '4. Home - Audio Listing', category: 'Main' },
-  { id: 'SearchAudio', title: '5. Search Audio (Suggestions)', category: 'Search' },
-  { id: 'SearchResults', title: '6. Audio Listing - Search Results', category: 'Search' },
+  { id: 'SearchResults', title: '5-6. Search', category: 'Search' },
   { id: 'Feed', title: '7. Feed - Audio Listing', category: 'Feed' },
   { id: 'FeedComments', title: '8. Feed - Comment on an Audio', category: 'Feed' },
   { id: 'MyLibrary', title: '9. My Library', category: 'Library' },
@@ -55,6 +54,7 @@ export const SCREEN_LIST: { id: ScreenId; title: string; category: string }[] = 
   { id: 'Login', title: '13. Log In', category: 'Account' },
   { id: 'SignUp', title: '14. Sign Up', category: 'Account' },
   { id: 'Profile', title: '15. Profile', category: 'Account' },
+  { id: 'Notifications', title: '16. Notifications', category: 'Account' },
 ];
 
 export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({

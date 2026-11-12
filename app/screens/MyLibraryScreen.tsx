@@ -17,13 +17,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
 import { IMAGES } from '../../src/constants/images';
-import { ARTISTS, ALL_ALBUMS, Album, getSongsByIds, Playlist } from '../../src/data/musicData';
+import { ARTISTS, ALL_ALBUMS, Album, Artist, getSongsByIds, Playlist } from '../../src/data/musicData';
+import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
+import { fuzzySearch } from '../../src/utils/fuzzySearch';
+import { toImageSource } from '../../src/utils/imageSource';
 import { AuthInput } from '../../src/components/AuthInput';
 import { SongItem } from '../../src/components/SongItem';
 import { TrackListView } from '../../src/components/TrackListView';
+import { GroupedSearchResults } from '../../src/components/GroupedSearchResults';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAuth } from '../../src/context/AuthContext';
 import { useAccess } from '../../src/context/AccessContext';
+import { useRefreshControl } from '../../src/context/RefreshContext';
+import { RefreshButton } from '../../src/components/RefreshButton';
 
 export type LibraryTag = 'Playlists' | 'Songs' | 'Albums' | 'Artists';
 
@@ -54,7 +60,10 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
 }) => {
   const { currentUser, userPlaylists, createPlaylist, toggleLikeSong, toggleFollowArtist, likedAlbumIds } = useAuth();
   const { ensureVip } = useAccess();
-  const [artistQuery, setArtistQuery] = useState('');
+  const { playSong } = useAudioPlayer();
+  const refreshControl = useRefreshControl();
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [newPlaylistError, setNewPlaylistError] = useState('');
@@ -97,14 +106,38 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
     [currentUser?.followedArtistIds]
   );
 
-  const q = artistQuery.trim().toLowerCase();
-  const matchedArtists = followedArtists.filter((artist) => artist.name.toLowerCase().includes(q));
+  const likedAlbums = useMemo(
+    () => ALL_ALBUMS.filter((album) => likedAlbumIds.includes(album.id)),
+    [likedAlbumIds]
+  );
+
+  // Tìm kiếm tương đối, chỉ trong thư viện của người dùng:
+  // bài hát đã thích, album đã thích và nghệ sĩ đang theo dõi
+  const isSearching = searchQuery.trim() !== '';
+  const matchedSongs = useMemo(
+    () => fuzzySearch(likedSongs, searchQuery, (song) => [song.title, song.artist]),
+    [likedSongs, searchQuery]
+  );
+  const matchedAlbums = useMemo(
+    () => fuzzySearch(likedAlbums, searchQuery, (album) => [album.title, album.artist]),
+    [likedAlbums, searchQuery]
+  );
+  const matchedArtists = useMemo(
+    () => fuzzySearch(followedArtists, searchQuery, (artist) => [artist.name]),
+    [followedArtists, searchQuery]
+  );
+
+  const closeSearch = () => {
+    setSearchVisible(false);
+    setSearchQuery('');
+  };
 
   const renderPlaylists = () => (
     <FlatList
       data={userPlaylists}
       keyExtractor={(item) => item.id}
       showsVerticalScrollIndicator={false}
+      refreshControl={refreshControl}
       contentContainerStyle={styles.playlistsContent}
       ListEmptyComponent={<Text style={styles.emptyText}>You have no playlists yet.</Text>}
       renderItem={({ item }) => {
@@ -128,16 +161,12 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
     />
   );
 
-  const likedAlbums = useMemo(
-    () => ALL_ALBUMS.filter((album) => likedAlbumIds.includes(album.id)),
-    [likedAlbumIds]
-  );
-
   const renderAlbums = () => (
     <FlatList
       data={likedAlbums}
       keyExtractor={(item) => item.id}
       showsVerticalScrollIndicator={false}
+      refreshControl={refreshControl}
       contentContainerStyle={styles.playlistsContent}
       ListEmptyComponent={
         <Text style={styles.emptyText}>You haven\'t liked any albums yet.</Text>
@@ -171,70 +200,74 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
     />
   );
 
+  const renderArtistRow = (item: Artist) => (
+    <TouchableOpacity
+      key={item.id}
+      style={styles.artistRow}
+      onPress={() => onSelectArtist && onSelectArtist(item.id)}
+      activeOpacity={0.7}
+    >
+      <Image source={toImageSource(item.avatarImage)} style={styles.artistAvatar} />
+      <View style={styles.artistInfo}>
+        <Text style={styles.artistName} numberOfLines={1}>{item.name}</Text>
+        <View style={styles.followersRow}>
+          <Ionicons
+            name="person-outline"
+            size={13}
+            color={COLORS.textSecondary}
+            style={{ marginRight: 4 }}
+          />
+          <Text style={styles.followersText}>{item.followers}</Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        style={styles.followingButton}
+        onPress={() => toggleFollowArtist(item.id)}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.followingButtonText}>Following</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
   const renderArtists = () => (
     <FlatList
-      data={matchedArtists}
+      data={followedArtists}
       keyExtractor={(item) => item.id}
+      showsVerticalScrollIndicator={false}
+      refreshControl={refreshControl}
+      contentContainerStyle={styles.listContent}
+      ListEmptyComponent={
+        <Text style={styles.emptyText}>You are not following any artists yet.</Text>
+      }
+      renderItem={({ item }) => renderArtistRow(item)}
+    />
+  );
+
+  // Kết quả tìm trong thư viện, chia theo nhóm Songs / Albums / Artists
+  const renderSearchResults = () => (
+    <ScrollView
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={styles.listContent}
-      ListHeaderComponent={
-        <View style={styles.searchPill}>
-          <Ionicons name="search-outline" size={20} color={COLORS.textMuted} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            value={artistQuery}
-            onChangeText={setArtistQuery}
-            placeholder="Search artists"
-            placeholderTextColor={COLORS.textMuted}
-            autoCorrect={false}
-          />
-          {artistQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setArtistQuery('')}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="close-circle" size={18} color="#111216" />
-            </TouchableOpacity>
-          )}
-        </View>
-      }
-      ListEmptyComponent={
-        <Text style={styles.emptyText}>
-          {followedArtists.length === 0
-            ? 'You are not following any artists yet.'
-            : 'No artists match your search.'}
-        </Text>
-      }
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          style={styles.artistRow}
-          onPress={() => onSelectArtist && onSelectArtist(item.id)}
-          activeOpacity={0.7}
-        >
-          <Image source={item.avatarImage} style={styles.artistAvatar} />
-          <View style={styles.artistInfo}>
-            <Text style={styles.artistName} numberOfLines={1}>{item.name}</Text>
-            <View style={styles.followersRow}>
-              <Ionicons
-                name="person-outline"
-                size={13}
-                color={COLORS.textSecondary}
-                style={{ marginRight: 4 }}
-              />
-              <Text style={styles.followersText}>{item.followers}</Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.followingButton}
-            onPress={() => toggleFollowArtist(item.id)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.followingButtonText}>Following</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
-    />
+    >
+      <GroupedSearchResults
+        query={searchQuery}
+        songs={matchedSongs}
+        albums={matchedAlbums}
+        artists={matchedArtists}
+        labels={{ songs: 'Liked songs', albums: 'Liked albums', artists: 'Followed artists' }}
+        emptyText={`No liked songs, liked albums or followed artists match "${searchQuery.trim()}".`}
+        songAction="heart"
+        onToggleLikeSong={toggleLikeSong}
+        onPressSong={(song, queue) => {
+          playSong(song, queue);
+          if (onNavigateToPlay) onNavigateToPlay(song.id);
+        }}
+        onSelectAlbum={onSelectAlbum}
+        onSelectArtist={(artist) => onSelectArtist && onSelectArtist(artist.id)}
+      />
+    </ScrollView>
   );
 
   const renderContent = () => {
@@ -252,6 +285,7 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
         </View>
       );
     }
+    if (isSearching) return renderSearchResults();
     switch (selectedTag) {
       case 'Playlists':
         return (
@@ -283,16 +317,45 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Your Library</Text>
+        <View style={styles.headerActions}>
+        <RefreshButton />
         <TouchableOpacity
-          onPress={onNavigateToSearch}
+          onPress={() => (searchVisible ? closeSearch() : setSearchVisible(true))}
           style={styles.searchIconBtn}
           activeOpacity={0.7}
+          accessibilityLabel={searchVisible ? 'Close library search' : 'Search your library'}
         >
-          <Feather name="search" size={22} color={COLORS.textPrimary} />
+          <Feather name={searchVisible ? 'x' : 'search'} size={22} color={COLORS.textPrimary} />
         </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Filter Tags */}
+      {/* Ô tìm kiếm trong thư viện (chỉ bài hát/album đã thích và nghệ sĩ đang theo dõi) */}
+      {searchVisible && currentUser && (
+        <View style={styles.searchPill}>
+          <Ionicons name="search-outline" size={20} color={COLORS.textMuted} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search liked songs, albums, artists"
+            placeholderTextColor={COLORS.textMuted}
+            autoCorrect={false}
+            autoFocus
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-circle" size={18} color="#111216" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Filter Tags (ẩn khi đang hiển thị kết quả tìm kiếm) */}
+      {!isSearching && (
       <View style={styles.tagsContainer}>
         <ScrollView
           horizontal
@@ -320,6 +383,7 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
           })}
         </ScrollView>
       </View>
+      )}
 
       {/* Library Content */}
       <View style={styles.flex}>{renderContent()}</View>
@@ -397,6 +461,11 @@ const styles = StyleSheet.create({
   },
   searchIconBtn: {
     padding: 4,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
   },
   tagsContainer: {
     marginVertical: 10,

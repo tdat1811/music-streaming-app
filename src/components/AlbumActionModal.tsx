@@ -16,6 +16,7 @@ import { COLORS } from '../constants/theme';
 import { Song } from '../data/musicData';
 import { useAuth } from '../context/AuthContext';
 import { useAccess } from '../context/AccessContext';
+import { toImageSource } from '../utils/imageSource';
 
 interface AlbumActionModalProps {
   visible: boolean;
@@ -97,7 +98,7 @@ export const AlbumActionModal: React.FC<AlbumActionModalProps> = ({
         ? `Đã thêm ${count} bài hát vào playlist "${playlistTitle}"!`
         : `Tất cả bài hát đã có sẵn trong playlist "${playlistTitle}".`
     );
-    handleClose();
+    // Giữ bảng chọn mở để thấy nút "+" đổi thành dấu tích
   };
 
   return (
@@ -150,24 +151,36 @@ export const AlbumActionModal: React.FC<AlbumActionModalProps> = ({
                         Bạn chưa có playlist cá nhân nào. Hãy tạo playlist mới trong Thư viện!
                       </Text>
                     ) : (
-                      userPlaylists.map((pl) => (
-                        <TouchableOpacity
-                          key={pl.id}
-                          style={styles.playlistItem}
-                          onPress={() => handleAddAllToPlaylist(pl.id, pl.title)}
-                        >
-                          <Image source={pl.coverImage} style={styles.playlistThumb} />
-                          <View style={styles.playlistInfo}>
-                            <Text style={styles.playlistItemTitle} numberOfLines={1}>
-                              {pl.title}
-                            </Text>
-                            <Text style={styles.playlistItemCount}>
-                              {pl.songIds.length} bài hát
-                            </Text>
-                          </View>
-                          <Feather name="plus-circle" size={20} color="#10C7D5" />
-                        </TouchableOpacity>
-                      ))
+                      userPlaylists.map((pl) => {
+                        // Mọi bài của album/danh sách đã có trong playlist: hiện dấu tích
+                        const allAdded =
+                          tracks.length > 0 && tracks.every((track) => pl.songIds.includes(track.id));
+                        return (
+                          <TouchableOpacity
+                            key={pl.id}
+                            style={styles.playlistItem}
+                            onPress={() => handleAddAllToPlaylist(pl.id, pl.title)}
+                            disabled={allAdded}
+                            accessibilityState={{ disabled: allAdded }}
+                          >
+                            <Image source={toImageSource(pl.coverImage)} style={styles.playlistThumb} />
+                            <View style={styles.playlistInfo}>
+                              <Text style={styles.playlistItemTitle} numberOfLines={1}>
+                                {pl.title}
+                              </Text>
+                              <Text style={styles.playlistItemCount}>
+                                {allAdded ? 'Đã thêm • ' : ''}
+                                {pl.songIds.length} bài hát
+                              </Text>
+                            </View>
+                            {allAdded ? (
+                              <Ionicons name="checkmark-circle" size={22} color="#10C7D5" />
+                            ) : (
+                              <Feather name="plus-circle" size={20} color="#10C7D5" />
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })
                     )}
                   </ScrollView>
                 </View>

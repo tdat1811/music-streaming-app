@@ -1,9 +1,37 @@
 const FeedPost = require('../models/FeedPost');
 const Comment = require('../models/Comment');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const { makeId } = require('../utils/ids');
 
 // userId lấy từ token đăng nhập (req.userId), không tin dữ liệu client gửi lên.
+
+// Tìm tài khoản tác giả của bình luận. Bình luận mới lưu userId; dữ liệu mẫu cũ chỉ có tên
+// nên thử tìm theo tên, và chỉ nhận khi đúng một tài khoản mang tên đó (tránh gửi nhầm người).
+const findCommentAuthorId = async (comment) => {
+  if (comment.userId) return comment.userId;
+  if (!comment.userName) return null;
+  const users = await User.find({ name: comment.userName }).select('id').limit(2);
+  return users.length === 1 ? users[0].id : null;
+};
+
+// Tạo thông báo "X đã trả lời bình luận của bạn" (không tự thông báo cho chính mình)
+const notifyCommentReply = async ({ targetComment, rootCommentId, reply, actorId }) => {
+  const recipientId = await findCommentAuthorId(targetComment);
+  if (!recipientId || recipientId === actorId) return;
+  await Notification.create({
+    id: makeId('n'),
+    userId: recipientId,
+    type: 'comment_reply',
+    actorId,
+    actorName: reply.userName,
+    postId: reply.postId,
+    commentId: rootCommentId,
+    targetCommentId: targetComment.id,
+    replyId: reply.id,
+    text: reply.text,
+  });
+};
 
 // Lấy danh sách bài post trên Feed
 exports.getFeedPosts = async (req, res) => {
@@ -105,9 +133,16 @@ exports.addComment = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Không tìm thấy bình luận gốc.' });
       }
 
+      // Bình luận đang được trả lời: chính bình luận gốc hoặc một câu trả lời trong thread
+      const targetComment =
+        (replyTarget.commentId &&
+          parentComment.replies.find((r) => r.id === replyTarget.commentId)) ||
+        parentComment;
+
       const newReply = {
         id: commentId,
         postId,
+        userId: req.userId,
         userName: userName || 'User',
         userAvatar: userAvatar || '',
         text: trimmedText,
@@ -121,6 +156,18 @@ exports.addComment = async (req, res) => {
       parentComment.replies.push(newReply);
       await parentComment.save();
 
+      // Gửi thông báo cho tác giả bình luận được trả lời (lỗi ở đây không làm hỏng việc gửi bình luận)
+      try {
+        await notifyCommentReply({
+          targetComment,
+          rootCommentId: parentComment.id,
+          reply: newReply,
+          actorId: req.userId,
+        });
+      } catch (notifyErr) {
+        console.error('Không tạo được thông báo trả lời bình luận:', notifyErr.message);
+      }
+
       return res.status(201).json({
         success: true,
         message: 'Gửi phản hồi thành công!',
@@ -132,6 +179,7 @@ exports.addComment = async (req, res) => {
     const newComment = await Comment.create({
       id: commentId,
       postId,
+      userId: req.userId,
       userName: userName || 'User',
       userAvatar: userAvatar || '',
       text: trimmedText,

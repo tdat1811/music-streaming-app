@@ -1,0 +1,9 @@
+Task fix bug 12/11/2026 mobile 
++bỏ hiển thị gói thường ở giao diện chọn gọi chỉ có chọn gọi VIP, nếu người dung không chọn, mặc định là gói thường.
++chỉnh lại thanh search thành search tương đối
++thêm cơ chế refesh lại app ở dạng web và cả mobile
++bổ sung cho tôi chức thông báo khi có người rep comment của mình và xem ác thông báo bang icon thông báo ở home
++bổ sung thêm ở phần giao diện chi tiết của 1 chart sẽ có thêm số thứ tự xếp hang các bài hát, xếp hang theo số lượt Nghe bang trường "plays"
++fix lại nút ở thêm vào playlist ở giao diện thêm nhạc vào playlist, khi đã có bài hát muốn thêm nằm trong playlist thì nút đó đổi thành dấu tích chứng tỏ đã thêm vào playlist rồi, nếu chưa có thì dầu + bình thường để người dùng thêm vào
++fix thanh search ở library thành search tương đối, và chỉ search theo những tracks, albums yêu thích, artist yêu thích của người dùng
+

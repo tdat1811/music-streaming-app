@@ -16,7 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { IMAGES } from '../../src/constants/images';
 import { SUBSCRIPTION_PLANS, SubscriptionPlan } from '../../src/data/musicData';
-import { useAuth } from '../../src/context/AuthContext';
+import { FREE_PLAN_ID, useAuth } from '../../src/context/AuthContext';
+
+// Chỉ cho chọn các gói VIP. Người dùng không mua gói nào thì mặc định là thành viên thường.
+const VIP_PLANS = SUBSCRIPTION_PLANS.filter((plan) => plan.id !== FREE_PLAN_ID);
 
 const CARD_WIDTH = 295;
 const CARD_GAP = 16;
@@ -56,7 +59,7 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(event.nativeEvent.contentOffset.x / CARD_INTERVAL);
-    setSelectedIndex(Math.min(index, SUBSCRIPTION_PLANS.length - 1));
+    setSelectedIndex(Math.min(index, VIP_PLANS.length - 1));
   };
 
   const startPayment = (plan: SubscriptionPlan, index: number) => {
@@ -115,7 +118,7 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
               onScroll={handleScroll}
               scrollEventThrottle={16}
             >
-              {SUBSCRIPTION_PLANS.map((plan, index) => {
+              {VIP_PLANS.map((plan, index) => {
                 const isCurrent = activePlan?.id === plan.id;
                 return (
                   <TouchableOpacity
@@ -174,7 +177,7 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
 
           {/* Pagination dots */}
           <View style={styles.dotsRow}>
-            {SUBSCRIPTION_PLANS.map((plan, index) => (
+            {VIP_PLANS.map((plan, index) => (
               <View
                 key={plan.id}
                 style={[

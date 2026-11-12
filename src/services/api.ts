@@ -201,9 +201,18 @@ export const api = {
       userName: string;
       userAvatar?: string;
       text: string;
-      replyTarget?: { rootCommentId: string; userName: string };
+      // commentId: bình luận đang được trả lời (gốc hoặc một câu trả lời) để gửi thông báo đúng người
+      replyTarget?: { rootCommentId: string; userName: string; commentId?: string };
     }) => authRequest('/feed/comments', { method: 'POST', body: JSON.stringify(data) }),
     toggleCommentLike: (commentId: string, userId: string) =>
       authRequest('/feed/comments/like', { method: 'POST', body: JSON.stringify({ commentId, userId }) }),
+  },
+
+  // 9. Thông báo (có người trả lời bình luận của mình)
+  notifications: {
+    getMine: () => authRequest('/notifications'),
+    markRead: (notificationId: string) =>
+      authRequest(`/notifications/${notificationId}/read`, { method: 'POST' }),
+    markAllRead: () => authRequest('/notifications/read-all', { method: 'POST' }),
   },
 };

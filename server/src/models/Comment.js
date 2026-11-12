@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const replySchema = new mongoose.Schema({
   id: { type: String, required: true },
   postId: { type: String, required: true },
+  // Tác giả (để gửi thông báo khi có người trả lời). Dữ liệu mẫu cũ có thể để trống.
+  userId: { type: String, default: '' },
   userName: { type: String, required: true },
   userAvatar: { type: String, default: '' },
   text: { type: String, required: true },
@@ -17,6 +19,7 @@ const commentSchema = new mongoose.Schema(
   {
     id: { type: String, required: true, unique: true },
     postId: { type: String, required: true, index: true },
+    userId: { type: String, default: '' },
     userName: { type: String, required: true },
     userAvatar: { type: String, default: '' },
     text: { type: String, required: true },

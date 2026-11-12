@@ -67,6 +67,8 @@ export interface FeedPost {
 export interface CommentItem {
   id: string;
   postId: string;
+  // Tác giả bình luận (dữ liệu mẫu có thể không có, khi đó dò theo userName)
+  userId?: string;
   userName: string;
   userAvatar: any;
   text: string;

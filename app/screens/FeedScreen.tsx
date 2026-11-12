@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   Image,
   ScrollView,
   TouchableOpacity,
+  Animated,
+  Platform,
   Share,
   Alert,
   StyleSheet,
@@ -21,8 +23,13 @@ import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
 import { useAuth } from '../../src/context/AuthContext';
 import { useFeed } from '../../src/context/FeedContext';
+import { useRefreshControl } from '../../src/context/RefreshContext';
+import { RefreshButton } from '../../src/components/RefreshButton';
 
 interface FeedScreenProps {
+  // Mở từ thông báo: cuộn tới bài đăng này và nháy sáng nhẹ
+  focusPostId?: string | null;
+  onFocusHandled?: () => void;
   onOpenComments?: (postId: string) => void;
   onNavigateToPlay?: (trackId?: string) => void;
   onRequireLogin?: () => void;
@@ -30,6 +37,8 @@ interface FeedScreenProps {
 }
 
 export const FeedScreen: React.FC<FeedScreenProps> = ({
+  focusPostId,
+  onFocusHandled,
   onOpenComments,
   onNavigateToPlay,
   onRequireLogin,
@@ -40,6 +49,40 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
   const { posts, togglePostLike, addShare, getCommentCount } = useFeed();
   // Bài hát của bài đăng đang mở menu "..."
   const [menuSong, setMenuSong] = useState<Song | null>(null);
+  const refreshControl = useRefreshControl();
+
+  // ---- Cuộn tới bài đăng khi mở từ thông báo ----
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const postY = useRef<Record<string, number>>({});
+  const focusFlash = useRef(new Animated.Value(0)).current;
+  // Giữ id đang nháy sáng sau khi Navigation đã xoá focusPostId
+  const [flashPostId, setFlashPostId] = useState<string | null>(null);
+
+  const tryFocus = () => {
+    if (!focusPostId) return;
+    const y = postY.current[focusPostId];
+    if (y === undefined) return;
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: false });
+    setFlashPostId(focusPostId);
+    if (onFocusHandled) onFocusHandled();
+  };
+
+  useEffect(() => {
+    tryFocus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusPostId]);
+
+  useEffect(() => {
+    if (!flashPostId) return;
+    const useNativeDriver = Platform.OS !== 'web';
+    focusFlash.setValue(0);
+    const anim = Animated.sequence([
+      Animated.timing(focusFlash, { toValue: 1, duration: 300, useNativeDriver }),
+      Animated.timing(focusFlash, { toValue: 0, duration: 1600, delay: 800, useNativeDriver }),
+    ]);
+    anim.start(({ finished }) => finished && setFlashPostId(null));
+    return () => anim.stop();
+  }, [flashPostId, focusFlash]);
 
   // Hàng đợi phát là các bài hát có trong bảng tin
   const feedSongs = posts.flatMap((post) => getSongsByIds([post.songId]));
@@ -77,13 +120,15 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Feed</Text>
-        
+        <RefreshButton />
       </View>
 
       {/* Feed Posts List */}
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={refreshControl}
       >
         {posts.map((post) => {
           const song = getSongsByIds([post.songId])[0];
@@ -91,7 +136,17 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
           if (!song) return null;
           const isLiked = !!currentUser && post.likedByUserIds.includes(currentUser.id);
           return (
-          <View key={post.id} style={styles.postCard}>
+          <View
+            key={post.id}
+            style={styles.postCard}
+            onLayout={(e) => {
+              postY.current[post.id] = e.nativeEvent.layout.y;
+              if (post.id === focusPostId) tryFocus();
+            }}
+          >
+            {flashPostId === post.id && (
+              <Animated.View pointerEvents="none" style={[styles.focusFlash, { opacity: focusFlash }]} />
+            )}
             {/* Post Header */}
             <View style={styles.authorRow}>
               <View style={styles.avatarWrapper}>
@@ -203,6 +258,15 @@ export const FeedScreen: React.FC<FeedScreenProps> = ({
 };
 
 const styles = StyleSheet.create({
+  focusFlash: {
+    position: 'absolute',
+    top: -6,
+    bottom: -6,
+    left: 8,
+    right: 8,
+    borderRadius: 14,
+    backgroundColor: 'rgba(16, 199, 213, 0.18)',
+  },
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',

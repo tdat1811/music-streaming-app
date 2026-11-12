@@ -3,10 +3,13 @@ import { IMAGES } from '../constants/images';
 import { CommentItem, FEED_COMMENTS, FEED_POSTS, FeedPost } from '../data/musicData';
 import { api, isApiError } from '../services/api';
 import { useAuth } from './AuthContext';
+import { useNotifications } from './NotificationContext';
 
 export interface ReplyTarget {
   rootCommentId: string;
   userName: string;
+  // Bình luận đang được trả lời (bình luận gốc hoặc một câu trả lời trong thread)
+  commentId?: string;
 }
 
 interface FeedContextType {
@@ -19,6 +22,8 @@ interface FeedContextType {
   toggleCommentLike: (commentId: string) => void;
   // Tải lại bình luận mới nhất của một bài đăng từ máy chủ
   refreshComments: (postId: string) => void;
+  // Tải lại toàn bộ bảng tin và bình luận (dùng khi làm mới ứng dụng)
+  reloadFeed: () => Promise<void>;
 }
 
 const FeedContext = createContext<FeedContextType | undefined>(undefined);
@@ -47,6 +52,7 @@ const mapPost = (p: any): FeedPost => ({
 const mapComment = (c: any): CommentItem => ({
   id: c.id,
   postId: c.postId,
+  userId: c.userId || undefined,
   userName: c.userName,
   userAvatar: c.userAvatar,
   text: c.text,
@@ -60,7 +66,8 @@ const mapComment = (c: any): CommentItem => ({
 // Dữ liệu được tải từ máy chủ khi mở app. Nếu máy chủ không chạy thì dùng dữ liệu mẫu
 // và mọi thay đổi chỉ lưu trong bộ nhớ của ứng dụng.
 export const FeedProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, findUserIdByName } = useAuth();
+  const { addLocalNotification } = useNotifications();
   const [posts, setPosts] = useState<FeedPost[]>(FEED_POSTS);
   const [comments, setComments] = useState<CommentItem[]>(FEED_COMMENTS);
   const nextCommentNumber = useRef(1);
@@ -70,31 +77,36 @@ export const FeedProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const replacePostComments = (postId: string, list: CommentItem[]) =>
     setComments((prev) => [...prev.filter((c) => c.postId !== postId), ...list]);
 
+  const mounted = useRef(true);
+
+  const reloadFeed = async () => {
+    try {
+      const res: any = await api.feed.getPosts();
+      const list: any[] = res?.data ?? [];
+      if (!mounted.current || list.length === 0) return;
+      online.current = true;
+      setPosts(list.map(mapPost));
+      const all = await Promise.all(
+        list.map((p) =>
+          api.feed
+            .getComments(p.id)
+            .then((r: any) => (r?.data ?? []).map(mapComment))
+            .catch(() => [] as CommentItem[])
+        )
+      );
+      if (mounted.current) setComments(all.flat());
+    } catch (err) {
+      console.log('Feed offline, dùng dữ liệu mẫu:', err);
+    }
+  };
+
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const res: any = await api.feed.getPosts();
-        const list: any[] = res?.data ?? [];
-        if (!mounted || list.length === 0) return;
-        online.current = true;
-        setPosts(list.map(mapPost));
-        const all = await Promise.all(
-          list.map((p) =>
-            api.feed
-              .getComments(p.id)
-              .then((r: any) => (r?.data ?? []).map(mapComment))
-              .catch(() => [] as CommentItem[])
-          )
-        );
-        if (mounted) setComments(all.flat());
-      } catch (err) {
-        console.log('Feed offline, dùng dữ liệu mẫu:', err);
-      }
-    })();
+    mounted.current = true;
+    reloadFeed();
     return () => {
-      mounted = false;
+      mounted.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const refreshComments = (postId: string) => {
@@ -151,6 +163,7 @@ export const FeedProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newComment: CommentItem = {
       id: `new-${nextCommentNumber.current++}`,
       postId,
+      userId: currentUser.id,
       userName: currentUser.name,
       userAvatar: IMAGES.homeAvatar,
       text: text.trim(),
@@ -168,6 +181,26 @@ export const FeedProvider: React.FC<{ children: React.ReactNode }> = ({ children
           )
         : [...prev, newComment]
     );
+
+    // Offline: thông báo cho tác giả bình luận được trả lời (nếu không phải chính mình)
+    if (replyTarget) {
+      const root = comments.find((c) => c.id === replyTarget.rootCommentId);
+      const target =
+        (replyTarget.commentId && root?.replies?.find((r) => r.id === replyTarget.commentId)) || root;
+      const recipientId = target ? target.userId ?? findUserIdByName(target.userName) : null;
+      if (recipientId && recipientId !== currentUser.id) {
+        addLocalNotification({
+          userId: recipientId,
+          type: 'comment_reply',
+          actorName: currentUser.name,
+          postId,
+          commentId: replyTarget.rootCommentId,
+          targetCommentId: target?.id ?? replyTarget.rootCommentId,
+          replyId: newComment.id,
+          text: newComment.text,
+        });
+      }
+    }
   };
 
   const addComment = (postId: string, text: string, replyTarget?: ReplyTarget | null) => {
@@ -227,6 +260,7 @@ export const FeedProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addComment,
         toggleCommentLike,
         refreshComments,
+        reloadFeed,
       }}
     >
       {children}

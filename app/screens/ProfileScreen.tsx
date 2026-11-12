@@ -36,7 +36,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onNavigateToPlans,
   onNavigateToLogin,
 }) => {
-  const { currentUser, activePlan, updateProfile, changePassword } = useAuth();
+  const { currentUser, activePlan, isVip, updateProfile, changePassword } = useAuth();
 
   const [info, setInfo] = useState<Record<InfoField, string>>({
     name: currentUser?.name ?? '',
@@ -167,7 +167,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <View style={styles.planCard}>
               <View style={styles.planInfo}>
                 <Text style={styles.planLabel}>Membership</Text>
-                {activePlan ? (
+                {activePlan && isVip ? (
                   <View style={styles.vipBadge}>
                     <Ionicons name="diamond" size={12} color="#FFFFFF" />
                     <Text style={styles.vipBadgeText}>VIP • {activePlan.name}</Text>
@@ -177,7 +177,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 )}
               </View>
               <TouchableOpacity onPress={onNavigateToPlans} activeOpacity={0.7}>
-                <Text style={styles.linkText}>{activePlan ? 'Change plan' : 'View plans'}</Text>
+                <Text style={styles.linkText}>{isVip ? 'Change plan' : 'View plans'}</Text>
               </TouchableOpacity>
             </View>
 

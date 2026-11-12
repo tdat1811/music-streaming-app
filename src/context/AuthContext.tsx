@@ -46,6 +46,10 @@ interface AuthContextType {
   downloadSong: (songId: string) => void;
   downloadAllSongs: (songIds: string[]) => void;
   isSongDownloaded: (songId: string) => boolean;
+  // Tải lại thông tin tài khoản và playlist từ máy chủ (dùng khi làm mới ứng dụng)
+  reloadAccount: () => Promise<void>;
+  // Tìm id tài khoản theo tên (chỉ khi đúng một tài khoản mang tên đó), dùng cho dữ liệu mẫu
+  findUserIdByName: (name: string) => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,6 +102,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [users, setUsers] = useState<User[]>(SAMPLE_USERS);
   const [playlists, setPlaylists] = useState<Playlist[]>(USER_PLAYLISTS);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // Bản mới nhất của currentUserId cho các yêu cầu bất đồng bộ (bỏ kết quả nếu đã đổi tài khoản)
+  const currentUserIdRef = useRef<string | null>(null);
+  currentUserIdRef.current = currentUserId;
   // Đăng nhập qua máy chủ: playlist được đọc và ghi trên máy chủ
   const onlineSession = useRef(false);
 
@@ -126,7 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Thay playlist của tài khoản bằng dữ liệu trên máy chủ
-  const loadPlaylists = (userId: string) => {
+  const loadPlaylists = (userId: string) =>
     api.playlists
       .getUserPlaylists(userId)
       .then((res: any) => {
@@ -134,7 +141,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setPlaylists((prev) => [...list, ...prev.filter((p) => p.ownerId !== userId)]);
       })
       .catch((err) => console.log('Không tải được playlist:', err));
-  };
 
   const updatePlaylist = (playlistId: string, change: (playlist: Playlist) => Playlist) =>
     setPlaylists((prev) => prev.map((pl) => (pl.id === playlistId ? change(pl) : pl)));
@@ -374,6 +380,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isSongDownloaded = (songId: string) => downloadedSongIds.includes(songId);
 
+  const reloadAccount = async () => {
+    const userId = currentUserId;
+    if (!userId || !onlineSession.current) return;
+    try {
+      const res: any = await api.auth.getProfile(userId);
+      if (res?.data && userId === currentUserIdRef.current) {
+        const fresh = mapDbUser(res.data);
+        setUsers((prev) => prev.map((u) => (u.id === userId ? fresh : u)));
+      }
+    } catch (err) {
+      console.log('Không tải lại được tài khoản:', err);
+    }
+    await loadPlaylists(userId);
+  };
+
+  const findUserIdByName = (name: string) => {
+    const matched = users.filter((u) => u.name === name);
+    return matched.length === 1 ? matched[0].id : null;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -392,6 +418,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         downloadSong,
         downloadAllSongs,
         isSongDownloaded,
+        reloadAccount,
+        findUserIdByName,
         login,
         signUp,
         logout,
