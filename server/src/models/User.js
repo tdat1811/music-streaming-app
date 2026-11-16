@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, default: '' },
     password: { type: String, required: true },
     planId: { type: String, default: null }, // null | 'premium' | 'family' | 'student'
+    balance: { type: Number, default: 0 },
     likedSongIds: [{ type: String }],
     followedArtistIds: [{ type: String }],
     likedAlbumIds: [{ type: String }],

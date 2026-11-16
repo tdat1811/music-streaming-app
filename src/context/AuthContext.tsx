@@ -34,6 +34,7 @@ interface AuthContextType {
   subscribe: (plan: SubscriptionPlan) => void;
   updateProfile: (updates: ProfileUpdates) => Promise<boolean>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
+  forgotPassword: (email: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   toggleLikeSong: (songId: string) => void;
   toggleFollowArtist: (artistId: string) => void;
   // Trả về null nếu tạo được, ngược lại là thông báo lỗi để hiển thị
@@ -269,6 +270,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Đặt lại mật khẩu khi quên (không cần đăng nhập trước)
+  const forgotPassword = async (
+    email: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await api.auth.forgotPassword({ email, newPassword });
+      if (response?.success) {
+        return { success: true, message: response.message || 'Đặt lại mật khẩu thành công!' };
+      }
+      return { success: false, message: 'Không thể đặt lại mật khẩu. Vui lòng thử lại.' };
+    } catch (err: any) {
+      if (isApiError(err)) {
+        return { success: false, message: err.message };
+      }
+      // Chế độ dự phòng offline nếu server chưa bật
+      const normalizedEmail = normalizeEmail(email);
+      const userIndex = users.findIndex((u) => u.email === normalizedEmail);
+      if (userIndex !== -1) {
+        setUsers((prev) => {
+          const next = [...prev];
+          next[userIndex] = { ...next[userIndex], password: newPassword };
+          return next;
+        });
+        return { success: true, message: 'Đặt lại mật khẩu thành công (offline)!' };
+      }
+      return { success: false, message: 'Không tìm thấy tài khoản với email này.' };
+    }
+  };
+
   const toggleLikeSong = (songId: string) => {
     if (!currentUserId) return;
     const flip = () => updateCurrentUser((u) => ({ likedSongIds: toggleId(u.likedSongIds, songId) }));
@@ -426,6 +457,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subscribe,
         updateProfile,
         changePassword,
+        forgotPassword,
         toggleLikeSong,
         toggleFollowArtist,
       }}

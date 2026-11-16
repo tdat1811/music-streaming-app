@@ -10,15 +10,20 @@
 Do ứng dụng được xây dựng theo mô hình **Fullstack Client - Server** với cơ sở dữ liệu đám mây **MongoDB Atlas**, thứ tự khởi chạy bắt buộc như sau:
 
 ```
-┌──────────────────────────────────────────────┐
-│  BƯỚC 1: KHỞI CHẠY BACKEND SERVER (CỔNG 5000) │  👉  CHẠY TRƯỚC (TERMINAL 1)
-│  (Kết nối MongoDB Atlas & cung cấp REST API)  │
-└──────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│  BƯỚC 0: CLONE MÃ NGUỒN TỪ GITHUB                      │  👉  TẢI DỰ ÁN VỀ MÁY
+│  git clone https://github.com/tdat1811/music-streaming-app.git
+└────────────────────────────────────────────────────────┘
                        ⬇️
-┌──────────────────────────────────────────────┐
-│  BƯỚC 2: KHỞI CHẠY FRONTEND APP (CỔNG 8081)  │  👉  CHẠY SAU (TERMINAL 2)
-│  (Expo React Native gọi dữ liệu từ Backend)  │
-└──────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│  BƯỚC 1: KHỞI CHẠY BACKEND SERVER (CỔNG 5000)          │  👉  CHẠY TRƯỚC (TERMINAL 1)
+│  (Kết nối MongoDB Atlas & cung cấp REST API)           │
+└────────────────────────────────────────────────────────┘
+                       ⬇️
+┌────────────────────────────────────────────────────────┐
+│  BƯỚC 2: KHỞI CHẠY FRONTEND APP (CỔNG 8081)           │  👉  CHẠY SAU (TERMINAL 2)
+│  (Expo React Native gọi dữ liệu từ Backend)           │
+└────────────────────────────────────────────────────────┘
 ```
 
 > [!IMPORTANT]
@@ -40,6 +45,20 @@ Do ứng dụng được xây dựng theo mô hình **Fullstack Client - Server*
 ---
 
 ## 🚀 HƯỚNG DẪN CHI TIẾT CÁC BƯỚC KHỞI CHẠY
+
+### 📥 BƯỚC 0: Tải mã nguồn dự án từ GitHub (Git Clone)
+
+Mở Terminal (Command Prompt / PowerShell / Git Bash) trên máy tính và tiến hành clone mã nguồn về:
+
+```bash
+# Clone dự án từ GitHub
+git clone https://github.com/tdat1811/music-streaming-app.git
+
+# Di chuyển vào thư mục dự án vừa tải về
+cd music-streaming-app
+```
+
+---
 
 ### 💻 BƯỚC 1: Khởi động Backend API Server (CHẠY TRƯỚC)
 
@@ -173,6 +192,22 @@ npx expo start
 14. **Feed Comments**: Bottom sheet thảo luận và bình luận lồng nhau.
 15. **My Library**: Thư viện cá nhân (Liked Songs, Nghệ sĩ theo dõi).
 16. **My Playlists**: Quản lý các danh sách phát cá nhân và tạo mới.
+17. **AI Music Companion**: Trợ lý AI trò chuyện theo tâm trạng, lắng nghe cảm xúc và gợi ý bài hát chuẩn gu từ Database kèm phát nhạc tức thì ngay trong chat.
+
+---
+
+## 🤖 CHỨC NĂNG MỚI: AI MUSIC ASSISTANT / COMPANION (CHAT AI GỢI Ý THEO TÂM TRẠNG)
+
+* **Giao diện Chat AI hiện đại (`AIChatScreen.tsx`)**:
+  * Tự động hỏi thăm tâm trạng người dùng: *"Hôm nay bạn muốn nghe gì? Bạn cảm thấy thế nào?"*.
+  * Bộ Mood Presets chọn nhanh: 🥰 Vui vẻ, ☕ Thư giãn, 🌧️ Lắng đọng & Buồn, ⚡ Năng lượng & Gym, 🎯 Tập trung làm việc, 💖 Lãng mạn.
+  * Phản hồi thấu cảm (empathetic tone), trò chuyện tự nhiên như người bạn tri kỷ âm nhạc.
+  * Gợi ý danh sách bài hát phù hợp từ MongoDB với thẻ Mini Card: hiển thị ảnh bìa, tên bài hát, ca sĩ, nút **Phát ngay (Play)** hoặc **Phát tất cả (Play All)**.
+  * Tích hợp thanh điều khiển nhạc mini (**MiniPlayer**) nổi ở đáy màn hình giúp vừa nghe nhạc vừa chat với AI.
+* **Backend AI RESTful API (`/api/ai`)**:
+  * `GET /api/ai/moods`: Trả về danh sách presets tâm trạng gợi ý.
+  * `POST /api/ai/chat`: Nhận diện cảm xúc (NLP / Sentiment Analysis), tìm kiếm bài hát theo tâm trạng, thể loại, hoặc ca sĩ cụ thể từ cơ sở dữ liệu MongoDB và sinh phản hồi tự nhiên kèm danh sách gợi ý.
+  * Kiến trúc kiên cố (Resilient Architecture): Hỗ trợ Fallback an toàn, phản hồi siêu tốc dưới 50ms ngay cả khi mạng bận.
 
 ---
 

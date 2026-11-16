@@ -40,6 +40,7 @@ interface HomeScreenProps {
   onSeeAllAlbums?: () => void;
   onSeeAllArtists?: () => void;
   onNavigateToSearch?: () => void;
+  onNavigateToAIChat?: () => void;
   onNavigateToPlaylist?: (playlistId?: string) => void;
   onNavigateToChartsList?: () => void;
   onNavigateToAlbumsList?: () => void;
@@ -58,6 +59,7 @@ interface HomeScreenProps {
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onNavigateToSearch,
+  onNavigateToAIChat,
   onNavigateToPlaylist,
   onNavigateToChartsList,
   onNavigateToAlbumsList,
@@ -220,6 +222,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           fadeDuration={0}
         />
         <View style={styles.headerRight}>
+          {/* Nút Chat AI Music Assistant */}
+          <TouchableOpacity
+            style={styles.aiHeaderBtn}
+            activeOpacity={0.8}
+            onPress={onNavigateToAIChat}
+            accessibilityLabel="AI Music Assistant"
+          >
+            <Ionicons name="sparkles" size={16} color="#7C3AED" />
+            <Text style={styles.aiHeaderBtnText}>AI</Text>
+          </TouchableOpacity>
           <RefreshButton />
           {/* Thông báo: có người trả lời bình luận của mình */}
           <TouchableOpacity
@@ -292,6 +304,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </TouchableOpacity>
           )}
         </View>
+
+        {/* AI Music Mood Companion Banner */}
+        <TouchableOpacity
+          style={styles.aiMoodBanner}
+          activeOpacity={0.85}
+          onPress={onNavigateToAIChat}
+        >
+          <View style={styles.aiMoodIconWrap}>
+            <Ionicons name="sparkles" size={18} color="#FFFFFF" />
+          </View>
+          <View style={styles.aiMoodContent}>
+            <View style={styles.aiMoodTitleRow}>
+              <Text style={styles.aiMoodTitle}>Hôm nay bạn muốn nghe gì? ✨</Text>
+              <View style={styles.aiTag}>
+                <Text style={styles.aiTagText}>AI Chat</Text>
+              </View>
+            </View>
+            <Text style={styles.aiMoodSubtitle} numberOfLines={1}>
+              Chia sẻ tâm trạng để AI gợi ý bản nhạc chuẩn gu nhất!
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+        </TouchableOpacity>
 
         {/* Search Bar: tìm kiếm tương đối ngay tại chỗ, không qua màn gợi ý */}
         <View style={styles.searchBar}>
@@ -779,4 +814,75 @@ suggestionArtist: {
   fontSize: 13,
   marginTop: 2,
 },
+  aiHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#D8B4FE',
+    marginRight: 6,
+  },
+  aiHeaderBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#7C3AED',
+    marginLeft: 3,
+  },
+  aiMoodBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F3FF',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E9D5FF',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  aiMoodIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#7C3AED',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  aiMoodContent: {
+    flex: 1,
+    marginRight: 6,
+  },
+  aiMoodTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  aiMoodTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  aiTag: {
+    backgroundColor: '#EDE9FE',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    marginLeft: 6,
+  },
+  aiTagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#7C3AED',
+  },
+  aiMoodSubtitle: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
 });

@@ -1,9 +1,8 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
-const { VALID_PLAN_IDS, isVipUser, VIP_REQUIRED_MESSAGE } = require('../config/plans');
+const { VALID_PLAN_IDS, PLAN_PRICES, isVipUser, VIP_REQUIRED_MESSAGE } = require('../config/plans');
 const { signToken } = require('../middleware/auth');
 const { makeId } = require('../utils/ids');
-
 // Các API cần đăng nhập lấy userId từ token (req.userId), không tin userId trong body.
 
 const SALT_ROUNDS = 10;
@@ -181,7 +180,39 @@ exports.changePassword = async (req, res) => {
   }
 };
 
+// Quên mật khẩu / Đặt lại mật khẩu theo email (không cần đăng nhập trước)
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập đầy đủ email và mật khẩu mới.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản với email này.' });
+    }
+
+    // Hash mật khẩu mới bằng bcrypt
+    user.password = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.',
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // Nâng cấp gói cước VIP Premium
+// Kích hoạt / Đổi gói cước có kiểm tra và trừ số dư
 exports.subscribe = async (req, res) => {
   try {
     const userId = req.userId;
@@ -192,16 +223,32 @@ exports.subscribe = async (req, res) => {
         message: `Gói hội viên không hợp lệ. Chỉ chấp nhận: ${VALID_PLAN_IDS.join(', ')}.`,
       });
     }
-    const user = await User.findOneAndUpdate(
-      { id: userId },
-      { planId: planId },
-      { new: true }
-    ).select('-password');
+
+    const user = await User.findOne({ id: userId });
     if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
+
+    const price = PLAN_PRICES[planId] || 0;
+
+    // Kiểm tra số dư ví nếu mua gói mất phí
+    if (price > 0) {
+      const currentBalance = user.balance || 0;
+      if (currentBalance < price) {
+        return res.status(400).json({
+          success: false,
+          code: 'INSUFFICIENT_BALANCE',
+          message: `Số dư ví không đủ! Bạn hiện có ${currentBalance.toLocaleString('vi-VN')}đ, cần ${price.toLocaleString('vi-VN')}đ để thanh toán. Vui lòng nạp thêm tiền qua MoMo.`,
+        });
+      }
+      // Trừ tiền trong ví
+      user.balance -= price;
+    }
+
+    user.planId = planId;
+    await user.save();
 
     res.status(200).json({
       success: true,
-      message: `Kích hoạt gói cước ${planId} thành công!`,
+      message: `Thanh toán thành công! Đã kích hoạt gói cước ${planId}.`,
       data: user,
     });
   } catch (err) {
@@ -307,6 +354,77 @@ exports.downloadSong = async (req, res) => {
       success: true,
       message: 'Đã lưu bài hát offline thành công!',
       downloadedSongIds: user.downloadedSongIds,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
+// Nạp tiền qua Ví MoMo
+exports.depositMoMo = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { amount, momoPhone } = req.body;
+    const depositAmount = Number(amount);
+
+    if (!depositAmount || depositAmount < 10000) {
+      return res.status(400).json({ success: false, message: 'Số tiền nạp tối thiểu là 10.000đ.' });
+    }
+    if (!momoPhone || momoPhone.trim().length < 9) {
+      return res.status(400).json({ success: false, message: 'Số điện thoại ví MoMo không hợp lệ.' });
+    }
+
+    const user = await User.findOne({ id: userId });
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
+
+    // Cộng tiền vào tài khoản
+    user.balance = (user.balance || 0) + depositAmount;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Nạp thành công ${depositAmount.toLocaleString('vi-VN')}đ từ ví MoMo (${momoPhone})!`,
+      data: user,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Rút tiền về Ví MoMo
+exports.withdrawMoMo = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { amount, momoPhone } = req.body;
+    const withdrawAmount = Number(amount);
+
+    if (!withdrawAmount || withdrawAmount < 10000) {
+      return res.status(400).json({ success: false, message: 'Số tiền rút tối thiểu là 10.000đ.' });
+    }
+    if (!momoPhone || momoPhone.trim().length < 9) {
+      return res.status(400).json({ success: false, message: 'Số điện thoại ví MoMo không hợp lệ.' });
+    }
+
+    const user = await User.findOne({ id: userId });
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
+
+    const currentBalance = user.balance || 0;
+    if (currentBalance < withdrawAmount) {
+      return res.status(400).json({
+        success: false,
+        message: `Số dư không đủ! Bạn chỉ có ${currentBalance.toLocaleString('vi-VN')}đ trong tài khoản.`,
+      });
+    }
+
+    // Trừ tiền tài khoản
+    user.balance -= withdrawAmount;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Rút thành công ${withdrawAmount.toLocaleString('vi-VN')}đ về ví MoMo (${momoPhone})!`,
+      data: user,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
