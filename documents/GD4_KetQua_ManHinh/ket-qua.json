@@ -1,0 +1,60 @@
+{
+  "chayLuc": "2026-11-16T15:20:31.392Z",
+  "results": [
+    {
+      "id": "IT126",
+      "moTa": "Nghệ sĩ chưa có lượt nghe: Studio có mục Stats, màn Stats hiện \"No plays yet\" và 2 nút gợi ý",
+      "status": "Pass",
+      "actual": "Mục Stats ghi \"0 plays in the last 7 days\"; màn Stats hiện \"No plays yet\"; nút ⓘ mở bảng cách tính; nút \"Upload a song\" mở màn tải bài",
+      "screenshots": [
+        "IT126_1_studio_co_muc_stats.png",
+        "IT126_2_chua_co_luot_nghe.png",
+        "IT126_3_cach_tinh.png"
+      ]
+    },
+    {
+      "id": "IT127",
+      "moTa": "Người nghe tìm và nghe bài hơn 30 giây trên app → được tính 1 lượt, nguồn Search; nghe lại ngay không tính",
+      "status": "Pass",
+      "actual": "App gửi lượt nghe sau ~30 giây phát: Plays = 1, Listeners = 1, nguồn = search; nghe lại ngay: counted = false (duplicate); nghệ sĩ tự nghe: counted = false (own_song)",
+      "screenshots": [
+        "IT127_1_tim_bai.png",
+        "IT127_2_dang_phat.png"
+      ]
+    },
+    {
+      "id": "IT128",
+      "moTa": "Màn Stats 7 ngày: ô số, biểu đồ, top bài, nguồn lượt nghe, người theo dõi, Feed",
+      "status": "Pass",
+      "actual": "Plays 4, Listeners 3, New followers +2, Song likes +1; top: Stats Demo Song 3 | Second Demo Song 1; nguồn: feed 50%, home 25%, search 25%; Feed: 1 bài",
+      "screenshots": [
+        "IT128_1_studio_tuan_nay.png",
+        "IT128_2_stats_7_ngay.png",
+        "IT128_3_bam_cot_hom_nay.png",
+        "IT128_4_followers_feed.png"
+      ]
+    },
+    {
+      "id": "IT129",
+      "moTa": "Đổi khoảng thời gian: 30 days và All time (tổng, biểu đồ theo tháng)",
+      "status": "Pass",
+      "actual": "30 days hiện 30 cột; All time: Total plays 4, Listeners 3, biểu đồ 12 tháng, Followers 7 (+2 / −0)",
+      "screenshots": [
+        "IT129_1_stats_30_ngay.png",
+        "IT129_2_stats_all_time.png"
+      ]
+    },
+    {
+      "id": "IT130",
+      "moTa": "Thống kê một bài: mở từ Top songs và từ menu ⋯ ở My songs",
+      "status": "Pass",
+      "actual": "Bài \"Stats Demo Song\": Plays 3, Liked by +1, nguồn feed 33%, home 33%, search 33%; menu ⋯ ở My songs có mục Stats mở đúng bài \"Second Demo Song\"",
+      "screenshots": [
+        "IT130_1_thong_ke_bai_hat.png",
+        "IT130_2_menu_co_stats.png",
+        "IT130_3_thong_ke_bai_thu_hai.png"
+      ]
+    }
+  ],
+  "loiTrinhDuyet": []
+}

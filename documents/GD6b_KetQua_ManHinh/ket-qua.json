@@ -1,0 +1,84 @@
+{
+  "chayLuc": "2026-11-17T07:42:47.790Z",
+  "results": [
+    {
+      "id": "IT162",
+      "moTa": "Studio có mục AI Assistant → màn chat mới (C2): lời chào, 4 gợi ý nhanh, chip ✦ Auto; chưa đủ 10 bình luận → AI giải thích, không tính tin",
+      "status": "Pass",
+      "actual": "Mục \"AI Assistant – Fan insight, ideas & captions\" trong Studio; màn chat mới có lời chào \"Chào Mer! … đã đọc 5 bình luận\", 4 gợi ý nhanh, chip ✦ Auto ▾, dòng \"20 free messages today\"; bấm Phân tích fan → AI giải thích cần ít nhất 10 bình luận, không trừ tin",
+      "screenshots": [
+        "IT162_1_studio_muc_ai_assistant.png",
+        "IT162_2_chat_moi_loi_chao.png",
+        "IT162_3_chua_du_binh_luan.png"
+      ]
+    },
+    {
+      "id": "IT163",
+      "moTa": "Đủ bình luận → thẻ phân tích trong chat (C3) → View full report; hỏi ý tưởng → câu trả lời có nhãn model + gợi ý hỏi tiếp (C4); bộ đếm còn 18/20",
+      "status": "Pass",
+      "actual": "Thẻ phân tích \"Fan rất thích…\", thanh cảm xúc (Tích cực 70%), nhận xét chung, nhãn ✦ Gemini 3.8 Flash; View full report mở bản đầy đủ; hỏi ý tưởng → trả lời tiếng Việt (link bị lọc), 2 gợi ý hỏi tiếp, còn 18/20 tin",
+      "screenshots": [
+        "IT163_1_the_phan_tich.png",
+        "IT163_2_ban_day_du.png",
+        "IT163_3_hoi_dap_y_tuong.png"
+      ]
+    },
+    {
+      "id": "IT164",
+      "moTa": "Viết caption → 2 lựa chọn có Copy / Post to Feed (C5) → bảng viết bài điền sẵn → đăng lên Feed",
+      "status": "Pass",
+      "actual": "AI trả 2 caption, mỗi cái có Copy / Post to Feed; bấm Post to Feed → bảng \"New post\" điền sẵn caption, nghệ sĩ bấm Post → \"Posted to the Feed.\" và bài xuất hiện trên Feed (AI không tự đăng)",
+      "screenshots": [
+        "IT164_1_caption.png",
+        "IT164_2_bang_viet_bai_dien_san.png",
+        "IT164_3_da_dang.png"
+      ]
+    },
+    {
+      "id": "IT165",
+      "moTa": "Chọn model (C10) → cố định Gemini 3.8 Flash; model quá tải → báo lỗi, không trừ tin (C11) → \"Switch to Gemini 3.5 Flash-Lite & resend\" → trả lời bởi Flash-Lite",
+      "status": "Pass",
+      "actual": "Bảng chọn có Auto (Recommended) / Gemini 3.8 Flash / Gemini 3.5 Flash-Lite; chọn 3.8 Flash khi model này quá tải → khung cam \"Gemini 3.8 Flash is busy… wasn't counted\" (tin đã dùng vẫn 3); bấm \"Switch to Gemini 3.5 Flash-Lite & resend\" → chip đổi sang Flash-Lite, câu hỏi được gửi lại và trả lời bởi Flash-Lite; 3.8 Flash hiện nhãn Busy now",
+      "screenshots": [
+        "IT165_1_chon_model.png",
+        "IT165_2_model_qua_tai.png",
+        "IT165_3_doi_model_gui_lai.png",
+        "IT165_4_nhan_busy_now.png"
+      ]
+    },
+    {
+      "id": "IT178",
+      "moTa": "Danh sách cuộc trò chuyện (C8): nhiều chat, New chat, đổi tên; AI lỗi (cả 2 model, Auto) → \"AI is busy\" + Show basic fan summary (C9)",
+      "status": "Pass",
+      "actual": "Danh sách có 3 cuộc trò chuyện (tên tự đặt theo câu đầu, \"Today · n messages\"); đổi tên thành \"Phân tích fan của tôi tháng 11\"; New chat mở lời chào mới; cả 2 model bận → \"AI is busy\", không trừ tin, bấm Show basic fan summary → thẻ \"Basic summary · no AI\"",
+      "screenshots": [
+        "IT178_1_danh_sach_chat.png",
+        "IT178_2_doi_ten.png",
+        "IT178_3_ai_ban.png",
+        "IT178_4_ban_co_ban.png"
+      ]
+    },
+    {
+      "id": "IT179",
+      "moTa": "Hết 20 tin (C7) → khoá ô nhập → mua 20 tin $3 → câu hỏi đang chờ được trả lời; Payment history có \"AI Assistant – 20 extra messages\"",
+      "status": "Pass",
+      "actual": "Dùng hết 20 tin → thẻ \"You've used today's 20 free messages\", ô nhập khoá (\"Daily limit reached\"); Buy 20 more messages · $3 → Confirm → \"Payment successful – $3. 20 messages added.\"; hỏi tiếp dùng tin đã mua (còn 19); Payment history có \"AI Assistant – 20 extra messages $3 · 1/20 used\"",
+      "screenshots": [
+        "IT179_1_het_tin.png",
+        "IT179_2_xac_nhan_mua.png",
+        "IT179_3_da_mua.png",
+        "IT179_4_lich_su_thanh_toan.png"
+      ]
+    },
+    {
+      "id": "IT180",
+      "moTa": "Mua gói VIP → Payment history của người nghe có VIP $9.99; người khác không thấy",
+      "status": "Pass",
+      "actual": "Ashley mua VIP → Payment history có \"VIP Premium – 1 month $9.99\" và dòng \"Demo payments – no real money is charged\"; Jason không thấy giao dịch nào",
+      "screenshots": [
+        "IT180_1_lich_su_vip.png"
+      ]
+    }
+  ],
+  "loiTrinhDuyet": []
+}

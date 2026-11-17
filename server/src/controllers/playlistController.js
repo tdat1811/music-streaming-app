@@ -1,9 +1,11 @@
 const Playlist = require('../models/Playlist');
+const { logActivity } = require('../services/playEvents');
 const Song = require('../models/Song');
 const User = require('../models/User');
 const { isVipUser, VIP_REQUIRED_MESSAGE } = require('../config/plans');
 const { makeId, escapeRegex } = require('../utils/ids');
 
+const MAX_TITLE_LENGTH = 100;
 const NOT_OWNER_MESSAGE = 'Bạn chỉ được chỉnh sửa playlist của chính mình.';
 
 // Tìm playlist và kiểm tra người gọi (theo token) là chủ sở hữu.
@@ -37,8 +39,12 @@ exports.getPlaylistById = async (req, res) => {
   try {
     const playlist = await Playlist.findOne({ id: req.params.id });
     if (!playlist) return res.status(404).json({ success: false, message: 'Không tìm thấy Playlist.' });
+    if (playlist.ownerId !== req.userId) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền xem playlist của người khác.' });
+    }
 
-    const tracks = await Song.find({ id: { $in: playlist.songIds } });
+    // Bài nháp / bị nghệ sĩ ẩn không hiện trong playlist của người nghe
+    const tracks = await Song.find({ id: { $in: playlist.songIds }, ...Song.PUBLIC_SONG_FILTER });
     const sortedTracks = playlist.songIds.map((id) => tracks.find((t) => t.id === id)).filter(Boolean);
 
     res.status(200).json({
@@ -116,6 +122,7 @@ exports.addSongToPlaylist = async (req, res) => {
         ? res.status(400).json({ success: false, message: 'Bài hát đã có trong Playlist này.' })
         : res.status(404).json({ success: false, message: 'Không tìm thấy Playlist.' });
     }
+    await logActivity('playlist_add', { songId, userId: req.userId });
 
     res.status(200).json({
       success: true,
@@ -145,6 +152,42 @@ exports.removeSongFromPlaylist = async (req, res) => {
       message: 'Đã xóa bài hát khỏi Playlist!',
       data: playlist,
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Đổi tên (và mô tả) Playlist của chính mình
+exports.renamePlaylist = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description } = req.body;
+    const trimmedTitle = typeof title === 'string' ? title.trim() : '';
+    if (!trimmedTitle) {
+      return res.status(400).json({ success: false, message: 'Tên playlist không được để trống.' });
+    }
+    if (trimmedTitle.length > MAX_TITLE_LENGTH) {
+      return res.status(400).json({ success: false, message: `Tên playlist tối đa ${MAX_TITLE_LENGTH} ký tự.` });
+    }
+
+    const playlist = await findOwnedPlaylist(req, res, id);
+    if (!playlist) return;
+
+    // Không trùng tên với playlist khác của cùng người dùng (không phân biệt hoa thường)
+    const duplicate = await Playlist.findOne({
+      ownerId: req.userId,
+      id: { $ne: id },
+      title: new RegExp(`^${escapeRegex(trimmedTitle)}$`, 'i'),
+    });
+    if (duplicate) {
+      return res.status(400).json({ success: false, message: 'Bạn đã có playlist với tên này.' });
+    }
+
+    playlist.title = trimmedTitle;
+    if (typeof description === 'string') playlist.description = description.trim();
+    await playlist.save();
+
+    res.status(200).json({ success: true, message: 'Đã đổi tên playlist.', data: playlist });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

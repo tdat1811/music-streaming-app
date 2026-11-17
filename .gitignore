@@ -64,3 +64,9 @@ Thumbs.db
 ~$*.doc
 # Báo cáo độ phủ do Jest sinh ra
 coverage/
+
+# Bản web build riêng cho kiểm thử App ↔ API
+dist-e2e/
+
+# Đồ thị kiến thức do /graphify tự sinh (dựng lại được)
+graphify-out/

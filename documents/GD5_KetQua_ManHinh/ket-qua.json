@@ -1,0 +1,77 @@
+{
+  "chayLuc": "2026-11-17T04:34:11.647Z",
+  "results": [
+    {
+      "id": "IT146",
+      "moTa": "Người nghe báo cáo bình luận và bài đăng trên Feed (L1)",
+      "status": "Pass",
+      "actual": "Báo cáo bình luận (Spam) và bài đăng (Other) thành công, hiện \"Report sent\"; báo cáo lại cùng nội dung bị chặn (409)",
+      "screenshots": [
+        "IT146_1_nut_report_binh_luan.png",
+        "IT146_2_chon_ly_do.png",
+        "IT146_3_da_gui.png",
+        "IT146_4_menu_report_post.png"
+      ]
+    },
+    {
+      "id": "IT147",
+      "moTa": "Admin: Dashboard có báo cáo → mở chi tiết → gỡ bình luận (1 vi phạm)",
+      "status": "Pass",
+      "actual": "Dashboard hiện ô Open reports và mục Reports to review; gỡ bình luận → biến mất khỏi Feed; Jason nhận thông báo vi phạm 1/3",
+      "screenshots": [
+        "IT147_1_dashboard.png",
+        "IT147_2_chi_tiet_bao_cao.png",
+        "IT147_3_chon_quy_dinh.png",
+        "IT147_4_da_go.png"
+      ]
+    },
+    {
+      "id": "IT148",
+      "moTa": "Chủ bình luận thấy thông báo vi phạm (L4)",
+      "status": "Pass",
+      "actual": "Thông báo \"Your comment was removed because it violates our community standards (Spam or misleading)\" kèm \"Violation 1 of 3.\"",
+      "screenshots": [
+        "IT148_1_thong_bao_vi_pham.png"
+      ]
+    },
+    {
+      "id": "IT149",
+      "moTa": "Lần vi phạm thứ 4 → cảnh báo trước, khoá vĩnh viễn, không đăng nhập được; Revoke → mở lại",
+      "status": "Pass",
+      "actual": "Màn báo cáo cảnh báo \"will be locked permanently\", nút đổi thành \"Remove comment & lock account\"; Jason đăng nhập thấy \"permanently locked\"; chi tiết tài khoản không có Unlock; Revoke 1 lần → còn 3/3, đăng nhập lại được",
+      "screenshots": [
+        "IT149_1_tab_manage_reports.png",
+        "IT149_2_canh_bao_khoa.png",
+        "IT149_3_khong_dang_nhap_duoc.png",
+        "IT149_4_loc_co_vi_pham.png",
+        "IT149_5_khoa_vinh_vien.png",
+        "IT149_6_sau_revoke.png"
+      ]
+    },
+    {
+      "id": "IT150",
+      "moTa": "Ẩn trang nghệ sĩ và tắt tick xanh (R2); nghệ sĩ thấy băng đỏ trong Studio",
+      "status": "Pass",
+      "actual": "Tắt tick xanh và ẩn trang thành công; người nghe mở trang: 404, isVerified trong danh sách: không còn trong danh sách; Studio của Mer hiện băng đỏ và lý do",
+      "screenshots": [
+        "IT150_1_tab_manage_artists.png",
+        "IT150_2_chi_tiet_nghe_si.png",
+        "IT150_3_da_an_trang.png",
+        "IT150_4_studio_bi_an.png"
+      ]
+    },
+    {
+      "id": "IT151",
+      "moTa": "Khoá tay / mở khoá tài khoản (U5) và đổi role Listener → Admin (U3)",
+      "status": "Pass",
+      "actual": "Khoá tay Kevin (Scam or fraud + ghi chú) → không đăng nhập được (403), có nút Unlock → mở lại đăng nhập được; Ashley được đổi lên Admin → đăng nhập vào thẳng khu Admin",
+      "screenshots": [
+        "IT151_1_khoa_tay.png",
+        "IT151_2_dang_khoa_tay.png",
+        "IT151_3_doi_role.png",
+        "IT151_4_ashley_vao_khu_admin.png"
+      ]
+    }
+  ],
+  "loiTrinhDuyet": []
+}

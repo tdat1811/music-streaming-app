@@ -1,0 +1,62 @@
+{
+  "chayLuc": "2026-11-16T10:43:45.128Z",
+  "results": [
+    {
+      "id": "IT111",
+      "moTa": "Nghệ sĩ tải bài hát với \"Share to feed\" bật → bài tự lên Feed, người theo dõi được báo",
+      "status": "Pass",
+      "actual": "Tải xong: \"Shared to the Feed · 1 follower notified\"; đầu Feed là bài của Mer kèm \"Sunday Morning Demo\"; Jason nhận thông báo bài hát mới \"Sunday Morning Demo\"",
+      "screenshots": [
+        "IT111_1_share_to_feed.png",
+        "IT111_2_da_dang_va_chia_se.png"
+      ]
+    },
+    {
+      "id": "IT112",
+      "moTa": "Nghệ sĩ viết bài trên Feed (chữ + gắn bài hát), sửa bài → nhãn \"edited\"",
+      "status": "Pass",
+      "actual": "Ô \"What's new, Mer Watson?\" hiện cho nghệ sĩ; bài chữ + bài hát lên đầu Feed; sửa xong hiện \"· edited\"",
+      "screenshots": [
+        "IT112_1_feed_nghe_si.png",
+        "IT112_2_viet_bai.png",
+        "IT112_3_bai_moi_tren_feed.png",
+        "IT112_4_menu_bai_cua_minh.png",
+        "IT112_5_da_sua.png"
+      ]
+    },
+    {
+      "id": "IT113",
+      "moTa": "Người theo dõi nhận thông báo, mở bài trên Feed, tab Following, bình luận",
+      "status": "Pass",
+      "actual": "Thấy thông báo \"posted on the Feed\" và \"released a new song\"; bấm mở đúng bài; tab Following chỉ có bài của Mer; bình luận thành công",
+      "screenshots": [
+        "IT113_1_thong_bao.png",
+        "IT113_2_mo_bai_tu_thong_bao.png",
+        "IT113_3_tab_following.png",
+        "IT113_4_binh_luan.png"
+      ]
+    },
+    {
+      "id": "IT114",
+      "moTa": "Nghệ sĩ trả lời bình luận → nhãn \"✓ Artist\"; xoá bài (kèm bình luận)",
+      "status": "Pass",
+      "actual": "Trả lời của Mer có nhãn \"✓ Artist\" (nền xanh nhạt); xoá bài thành công, Mer còn 1 bài (bài chia sẻ bài hát)",
+      "screenshots": [
+        "IT114_1_nghe_si_tra_loi.png",
+        "IT114_2_xac_nhan_xoa.png",
+        "IT114_3_da_xoa.png"
+      ]
+    },
+    {
+      "id": "IT115",
+      "moTa": "Người không theo dõi: không có ô viết bài, tab Following trống → \"Discover artists\"; không nhận thông báo",
+      "status": "Pass",
+      "actual": "Listener không có ô viết bài; tab Following trống có nút \"Discover artists\"; Ashley không nhận thông báo của Mer",
+      "screenshots": [
+        "IT115_1_following_trong.png",
+        "IT115_2_kham_pha_nghe_si.png"
+      ]
+    }
+  ],
+  "loiTrinhDuyet": []
+}

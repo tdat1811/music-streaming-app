@@ -22,16 +22,20 @@ import {
   TRENDING_ALBUMS,
   POPULAR_ARTISTS,
   ALL_ALBUMS,
-  ARTISTS,
 } from '../../src/data/musicData';
 import { GroupedSearchResults } from '../../src/components/GroupedSearchResults';
 import { useSongSearch } from '../../src/hooks/useSongSearch';
 import { fuzzySearch } from '../../src/utils/fuzzySearch';
+import { useArtists } from '../../src/hooks/useArtists';
+import { useAlbums } from '../../src/hooks/useAlbums';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import {useAudioPlayer} from "../../src/context/AudioPlayerContext"
 import { useAuth } from '../../src/context/AuthContext';
 import { useAccess } from '../../src/context/AccessContext';
 import { api } from '../../src/services/api';
+import { isArtistHidden } from '../../src/data/songRegistry';
+import { useSongRegistryVersion } from '../../src/hooks/useSongsByIds';
+import { setPlaySource } from '../../src/utils/playSource';
 import { useNotifications } from '../../src/context/NotificationContext';
 import { useRefreshControl } from '../../src/context/RefreshContext';
 import { RefreshButton } from '../../src/components/RefreshButton';
@@ -83,13 +87,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const isSearching = searchQuery.trim() !== '';
   const matchedSongs = useSongSearch(searchQuery);
+  // Gồm cả album trên máy chủ (VD album nghệ sĩ tạo); phải khai báo trước khi dùng
+  const allAlbums = useAlbums();
   const matchedAlbums = useMemo(
-    () => (isSearching ? fuzzySearch(ALL_ALBUMS, searchQuery, (a) => [a.title, a.artist]) : []),
-    [searchQuery, isSearching]
+    () => (isSearching ? fuzzySearch(allAlbums, searchQuery, (a) => [a.title, a.artist]) : []),
+    [searchQuery, isSearching, allAlbums]
   );
+  // Gồm cả nghệ sĩ trên máy chủ (VD nghệ sĩ mới được Admin duyệt), không chỉ dữ liệu có sẵn trong app
+  const allArtists = useArtists();
+  // Vẽ lại khi danh sách nội dung bị ẩn thay đổi (giai đoạn 5)
+  useSongRegistryVersion();
   const matchedArtists = useMemo(
-    () => (isSearching ? fuzzySearch(ARTISTS, searchQuery, (a) => [a.name]) : []),
-    [searchQuery, isSearching]
+    () => (isSearching ? fuzzySearch(allArtists, searchQuery, (a) => [a.name]) : []),
+    [searchQuery, isSearching, allArtists]
   );
   const [suggestions, setSuggestions] = useState<Song[]>(SUGGESTIONS);
   const [charts, setCharts] = useState(CHARTS);
@@ -244,6 +254,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <TouchableOpacity
             onPress={onNavigateToProfile}
             activeOpacity={0.8}
+            accessibilityLabel="Profile"
           >
             <Image source={IMAGES.homeAvatar} style={styles.avatarImage} fadeDuration={0} />
           </TouchableOpacity>
@@ -328,6 +339,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             albums={matchedAlbums}
             artists={matchedArtists}
             onPressSong={(song, queue) => {
+              // Phát từ kết quả tìm kiếm ngay trên Home: nguồn lượt nghe là Search
+              setPlaySource('search');
               playSong(song, queue);
               if (onNavigateToPlay) onNavigateToPlay(song.id);
             }}
@@ -351,6 +364,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   key={item.id}
   style={styles.suggestionCard}
   onPress={() => {
+    setPlaySource('home');
     playSong(item, suggestions);
     if (onNavigateToPlay) onNavigateToPlay(item.id);
   }}
@@ -472,7 +486,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.horizontalScroll}
         >
-          {popularArtists.map((artist) => {
+          {popularArtists.filter((artist) => !isArtistHidden(artist)).map((artist) => {
             const isFollowing = !!currentUser?.followedArtistIds.includes(artist.id);
             return (
             <TouchableOpacity

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ALL_SONGS, Song } from '../data/musicData';
 import { api } from '../services/api';
+import { isSongUnavailable, registerSongs } from '../data/songRegistry';
 import { fuzzySearch } from '../utils/fuzzySearch';
 
 const DEBOUNCE_MS = 250;
@@ -25,6 +26,7 @@ export const useSongSearch = (query: string): Song[] => {
       api.songs
         .search(q)
         .then((res: any) => {
+          if (Array.isArray(res?.songs)) registerSongs(res.songs);
           if (active && Array.isArray(res?.songs)) setServerResult({ query: q, songs: res.songs });
         })
         .catch(() => {
@@ -41,6 +43,6 @@ export const useSongSearch = (query: string): Song[] => {
     if (!q) return [];
     // Chỉ dùng kết quả máy chủ nếu đúng là của từ khoá đang gõ, tránh hiện kết quả cũ
     if (serverResult && serverResult.query === q) return serverResult.songs;
-    return fuzzySearch(LOCAL_SONGS, q, (song) => [song.title, song.artist]);
+    return fuzzySearch(LOCAL_SONGS.filter((s) => !isSongUnavailable(s.id)), q, (song) => [song.title, song.artist]);
   }, [q, serverResult]);
 };

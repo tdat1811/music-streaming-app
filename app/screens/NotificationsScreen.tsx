@@ -7,6 +7,7 @@ import { COLORS } from '../../src/constants/theme';
 import { AppNotification, useNotifications } from '../../src/context/NotificationContext';
 import { useRefreshControl } from '../../src/context/RefreshContext';
 import { RefreshButton } from '../../src/components/RefreshButton';
+import { removalNoticeLines, ruleLabel } from '../../src/utils/moderation';
 
 interface NotificationsScreenProps {
   onBack?: () => void;
@@ -33,7 +34,129 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({ onBack
     if (onOpenNotification) onOpenNotification(item);
   };
 
-  const renderItem = ({ item }: { item: AppNotification }) => (
+  // Thông báo kết quả đăng ký nghệ sĩ (được duyệt / cần sửa)
+  const renderArtistResult = (item: AppNotification) => {
+    const approved = item.type === 'artist_request_approved';
+    return (
+      <TouchableOpacity
+        style={[styles.row, !item.read && styles.rowUnread]}
+        onPress={() => handleOpen(item)}
+        activeOpacity={0.7}
+        accessibilityLabel={`${approved ? 'Artist request approved' : 'Artist request needs changes'}${item.read ? '' : ', unread'}`}
+      >
+        <View style={[styles.iconCircle, { backgroundColor: approved ? '#16A34A' : '#E11D48' }]}>
+          <Ionicons name={approved ? 'checkmark' : 'close'} size={18} color="#FFFFFF" />
+        </View>
+        <View style={styles.body}>
+          {approved ? (
+            <Text style={styles.message}>
+              <Text style={styles.actor}>You're now an artist! 🎉</Text> Your request for <Text style={styles.actor}>{item.text}</Text> was approved. Open Artist Studio to set up your page.
+            </Text>
+          ) : (
+            <Text style={styles.message}>
+              <Text style={styles.actor}>Your artist request needs changes.</Text> Reason: {item.text}. Tap to see details.
+            </Text>
+          )}
+          <Text style={styles.time}>{formatTimeAgo(item.createdAt)}</Text>
+        </View>
+        {!item.read && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    );
+  };
+
+  // Thông báo từ nghệ sĩ mình theo dõi: đăng bài mới / ra bài hát mới
+  const renderFromArtist = (item: AppNotification) => {
+    const isSong = item.type === 'artist_new_song';
+    const label = isSong ? 'released a new song' : 'posted on the Feed';
+    return (
+      <TouchableOpacity
+        style={[styles.row, !item.read && styles.rowUnread]}
+        onPress={() => handleOpen(item)}
+        activeOpacity={0.7}
+        accessibilityLabel={`${item.actorName} ${label}${item.read ? '' : ', unread'}`}
+      >
+        <View style={[styles.iconCircle, { backgroundColor: isSong ? '#7B2CBF' : '#0EA5B5' }]}>
+          <Ionicons name={isSong ? 'musical-notes' : 'megaphone'} size={18} color="#FFFFFF" />
+        </View>
+        <View style={styles.body}>
+          <Text style={styles.message}>
+            <Text style={styles.actor}>{item.actorName}</Text> {label}
+            {isSong && !!item.text && <Text style={styles.actor}>: {item.text}</Text>}
+          </Text>
+          {!isSong && !!item.text && (
+            <Text style={styles.preview} numberOfLines={2}>
+              "{item.text}"
+            </Text>
+          )}
+          <Text style={styles.time}>{formatTimeAgo(item.createdAt)}</Text>
+        </View>
+        {!item.read && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    );
+  };
+
+  // Giai đoạn 5: nội dung của mình bị gỡ vì vi phạm / trang nghệ sĩ bị ẩn hoặc hiện lại
+  const renderModeration = (item: AppNotification) => {
+    if (item.type === 'content_removed') {
+      const l = removalNoticeLines(item);
+      return (
+        <TouchableOpacity
+          style={[styles.row, !item.read && styles.rowAlert]}
+          onPress={() => handleOpen(item)}
+          activeOpacity={0.7}
+          accessibilityLabel={`${l.title}${item.read ? '' : ', unread'}`}
+        >
+          <View style={[styles.iconCircle, { backgroundColor: '#E11D48' }]}>
+            <Ionicons name="shield-outline" size={18} color="#FFFFFF" />
+          </View>
+          <View style={styles.body}>
+            <Text style={styles.message}>
+              <Text style={styles.actor}>{l.title}</Text> {l.body}
+            </Text>
+            {!!item.text && (
+              <Text style={styles.removedQuote} numberOfLines={2}>"{item.text}"</Text>
+            )}
+            <Text style={[styles.strike, l.severe && styles.strikeSevere]}>{l.warning}</Text>
+            <Text style={styles.time}>{formatTimeAgo(item.createdAt)}</Text>
+          </View>
+          {!item.read && <View style={styles.unreadDot} />}
+        </TouchableOpacity>
+      );
+    }
+    const hidden = item.type === 'artist_page_hidden';
+    return (
+      <TouchableOpacity
+        style={[styles.row, !item.read && (hidden ? styles.rowAlert : styles.rowUnread)]}
+        onPress={() => handleOpen(item)}
+        activeOpacity={0.7}
+        accessibilityLabel={`${hidden ? 'Your artist page was hidden' : 'Your artist page is visible again'}${item.read ? '' : ', unread'}`}
+      >
+        <View style={[styles.iconCircle, { backgroundColor: hidden ? '#E11D48' : '#16A34A' }]}>
+          <Ionicons name={hidden ? 'eye-off-outline' : 'eye-outline'} size={18} color="#FFFFFF" />
+        </View>
+        <View style={styles.body}>
+          <Text style={styles.message}>
+            {hidden ? (
+              <>
+                <Text style={styles.actor}>Your artist page was hidden</Text> by a moderator ({ruleLabel(item.rule)}). Listeners can't see your page, songs or posts.
+              </>
+            ) : (
+              <>
+                <Text style={styles.actor}>Your artist page is visible again.</Text> Listeners can find your songs and posts.
+              </>
+            )}
+          </Text>
+          <Text style={styles.time}>{formatTimeAgo(item.createdAt)}</Text>
+        </View>
+        {!item.read && <View style={styles.unreadDot} />}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderItem = ({ item }: { item: AppNotification }) =>
+    item.type === 'content_removed' || item.type === 'artist_page_hidden' || item.type === 'artist_page_restored' ? renderModeration(item) :
+    item.type === 'artist_new_post' || item.type === 'artist_new_song' ? renderFromArtist(item) :
+    item.type !== 'comment_reply' ? renderArtistResult(item) : (
     <TouchableOpacity
       style={[styles.row, !item.read && styles.rowUnread]}
       onPress={() => handleOpen(item)}
@@ -154,6 +277,10 @@ const styles = StyleSheet.create({
   rowUnread: {
     backgroundColor: '#ECFEFF',
   },
+  rowAlert: { backgroundColor: '#FFF5F6' },
+  removedQuote: { backgroundColor: '#F3F4F6', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, fontSize: 13, color: '#111216', marginTop: 6 },
+  strike: { fontSize: 12.5, color: '#686A70', marginTop: 6, fontWeight: '700' },
+  strikeSevere: { color: '#9F1239' },
   iconCircle: {
     width: 36,
     height: 36,

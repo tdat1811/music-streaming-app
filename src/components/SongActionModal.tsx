@@ -17,6 +17,7 @@ import { Song } from '../data/musicData';
 import { useAuth } from '../context/AuthContext';
 import { useAccess } from '../context/AccessContext';
 import { toImageSource } from '../utils/imageSource';
+import { ReportSheet } from './ModerationUi';
 
 interface SongActionModalProps {
   visible: boolean;
@@ -44,15 +45,25 @@ export const SongActionModal: React.FC<SongActionModalProps> = ({
   const { ensureMember, ensureVip } = useAccess();
 
   const [showPlaylistPicker, setShowPlaylistPicker] = useState(false);
+  // Đang báo cáo bài hát (giai đoạn 5): ẩn menu, hiện bảng báo cáo
+  const [reporting, setReporting] = useState(false);
 
   if (!song) return null;
+  // Chỉ báo cáo được bài hát của nghệ sĩ khác (không phải trang của chính mình)
+  const canReport = !!song.artistId && currentUser?.artistId !== song.artistId && currentUser?.role !== 'admin';
 
   const isLiked = !!currentUser?.likedSongIds.includes(song.id);
   const isDownloaded = isSongDownloaded(song.id);
 
   const handleClose = () => {
     setShowPlaylistPicker(false);
+    setReporting(false);
     onClose();
+  };
+
+  const handleReport = () => {
+    if (!memberOnly()) return;
+    setReporting(true);
   };
 
   // Đóng menu trước rồi mới chuyển sang Log In hoặc hộp thoại nâng cấp VIP
@@ -118,8 +129,10 @@ export const SongActionModal: React.FC<SongActionModalProps> = ({
   };
 
   return (
+    <>
+    <ReportSheet target={reporting ? { type: 'song', id: song.id, preview: `${song.title} · ${song.artist}` } : null} onClose={handleClose} />
     <Modal
-      visible={visible}
+      visible={visible && !reporting}
       transparent
       animationType="fade"
       onRequestClose={handleClose}
@@ -274,6 +287,16 @@ export const SongActionModal: React.FC<SongActionModalProps> = ({
                     </View>
                     <Text style={styles.menuItemText}>Chia sẻ bài hát</Text>
                   </TouchableOpacity>
+
+                  {/* Báo cáo vi phạm (giai đoạn 5) */}
+                  {canReport && (
+                    <TouchableOpacity style={styles.menuItem} onPress={handleReport} accessibilityLabel="Report song">
+                      <View style={styles.iconWrapper}>
+                        <Ionicons name="flag-outline" size={21} color="#E11D48" />
+                      </View>
+                      <Text style={[styles.menuItemText, { color: '#E11D48' }]}>Report</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
 
@@ -286,6 +309,7 @@ export const SongActionModal: React.FC<SongActionModalProps> = ({
         </View>
       </TouchableWithoutFeedback>
     </Modal>
+    </>
   );
 };
 

@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GĐ5 – Admin nâng cao (bản 3)</title>
+<style>
+  :root {
+    --primary: #10C7D5; --primary-dark: #0EA5B5; --text: #111216; --text2: #686A70; --muted: #9CA3AF;
+    --border: #E8ECF2; --soft: #F3F4F6; --purple: #7B2CBF; --purple-soft: #F3E8FF; --red: #E11D48; --green: #16A34A; --amber: #D97706;
+    --ink: #15161B; --ink2: #23252E; --page: #EEF1F5;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--page); color: var(--text); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 48px 0 6px; }
+  .lead { color: var(--text2); margin: 0 0 8px; line-height: 1.6; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--purple-soft); color: var(--purple); margin-right: 6px; }
+  .changes { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 14px; padding: 6px 22px; margin-top: 16px; font-size: 14.5px; }
+  .changes li { margin: 8px 0; line-height: 1.5; }
+  .flow { background: #fff; border-radius: 16px; padding: 20px; margin-top: 16px; overflow-x: auto; }
+  .lane { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+  .lane-title { width: 140px; font-weight: 800; font-size: 13px; color: var(--text2); flex-shrink: 0; }
+  .node { border: 2px solid var(--border); border-radius: 12px; padding: 8px 12px; font-size: 13px; font-weight: 600; background: #fff; }
+  .node b { color: var(--purple); margin-right: 4px; }
+  .node.l { border-color: #BAE6FD; background: #F0F9FF; } .node.l b { color: var(--primary-dark); }
+  .node.ok { border-color: #BBF7D0; background: #F0FDF4; } .node.bad { border-color: #FECDD3; background: #FFF1F2; }
+  .arrow { color: var(--muted); font-weight: 800; }
+  .rules { background: #fff; border-radius: 16px; padding: 8px 24px; margin-top: 16px; }
+  .rules li { margin: 10px 0; line-height: 1.55; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 28px; margin-top: 18px; }
+  .card { display: flex; flex-direction: column; align-items: center; }
+  .caption { width: 360px; margin-top: 12px; background: #fff; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: #333; }
+  .caption h3 { margin: 0 0 4px; font-size: 15px; }
+
+  /* ---- khung điện thoại ---- */
+  .phone { width: 360px; height: 760px; background: #F6F7F9; border-radius: 34px; border: 10px solid #121316; position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,.12); }
+  .phone.white { background: #fff; }
+  .statusbar { height: 28px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .statusbar.dark { background: var(--ink); color: #fff; }
+  .ico { width: 24px; height: 24px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .ico.sm { width: 16px; height: 16px; } .ico.xs { width: 13px; height: 13px; }
+  .ico.w { stroke: #fff; }
+  .muted { color: var(--text2); font-size: 13px; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .between { justify-content: space-between; }
+
+  /* Thanh trên của khu Admin: nền tối, nhận diện khác hẳn app nghe nhạc */
+  .abar { background: var(--ink); color: #fff; padding: 6px 18px 16px; flex-shrink: 0; }
+  .abar .brand { display: flex; align-items: center; gap: 10px; }
+  .abar .logo { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, var(--primary), var(--purple)); display: flex; align-items: center; justify-content: center; }
+  .abar .t { font-size: 18px; font-weight: 800; }
+  .abar .s { font-size: 12px; color: #A3A8B5; }
+  .abar .back { display: flex; align-items: center; gap: 8px; height: 40px; }
+  .abar .back b { font-size: 17px; }
+  .body { flex: 1; overflow: hidden; padding: 14px 16px 0; }
+  .tabbar { height: 64px; background: var(--ink); display: flex; justify-content: space-around; align-items: center; flex-shrink: 0; }
+  .tabbar div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10.5px; color: #8B90A0; font-weight: 600; position: relative; }
+  .tabbar .ico { stroke: #8B90A0; width: 21px; height: 21px; }
+  .tabbar .on { color: #fff; } .tabbar .on .ico { stroke: var(--primary); }
+  .tabbar .dot { position: absolute; top: -4px; right: -10px; background: var(--red); color: #fff; font-size: 10px; font-weight: 800; border-radius: 8px; padding: 0 5px; line-height: 16px; }
+  .tabbar .soon { opacity: .45; }
+
+  .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kpi { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+  .kpi .n { font-size: 24px; font-weight: 900; margin-top: 2px; } .kpi .l { font-size: 12px; color: var(--text2); font-weight: 600; }
+  .kpi .d { font-size: 11px; color: var(--green); font-weight: 700; margin-top: 2px; }
+  .panel { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; margin-top: 12px; }
+  .panel h4 { margin: 0 0 6px; font-size: 14.5px; }
+  .item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--soft); }
+  .item:last-child { border-bottom: none; }
+  .item .t { flex: 1; min-width: 0; } .item .t b { font-size: 13.5px; display: block; } .item .t span { font-size: 11.5px; color: var(--text2); }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+  .av-a { background: linear-gradient(135deg, #F59E0B, #EC4899); } .av-b { background: linear-gradient(135deg, #6366F1, #10C7D5); }
+  .av-c { background: linear-gradient(135deg, #10B981, #0EA5B5); } .av-d { background: linear-gradient(135deg, #7B2CBF, #EC4899); }
+  .avatar.s32 { width: 32px; height: 32px; font-size: 12px; } .avatar.s64 { width: 64px; height: 64px; font-size: 22px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+  .b-pending { background: #FEF3C7; color: var(--amber); } .b-ok { background: #DCFCE7; color: var(--green); }
+  .b-bad { background: #FFE4E6; color: var(--red); } .b-grey { background: var(--soft); color: var(--text2); }
+  .b-artist { background: #E6FAFB; color: var(--primary-dark); } .b-admin { background: var(--purple-soft); color: var(--purple); }
+  .seg { display: flex; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 4px; margin-bottom: 10px; }
+  .seg div { flex: 1; text-align: center; font-size: 12px; font-weight: 700; padding: 7px 0; border-radius: 9px; color: var(--text2); }
+  .seg .on { background: var(--ink); color: #fff; }
+  .search { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--border); border-radius: 12px; height: 40px; padding: 0 12px; color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--soft); font-size: 13px; }
+  .kv span { color: var(--text2); } .kv b { text-align: right; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 46px; border-radius: 13px; font-weight: 800; font-size: 15px; width: 100%; }
+  .btn-primary { background: var(--primary); color: #fff; } .btn-ink { background: var(--ink); color: #fff; }
+  .btn-outline { background: #fff; color: var(--text); border: 1.5px solid var(--border); }
+  .btn-danger { background: var(--red); color: #fff; } .btn-ghost { color: var(--text2); height: 38px; font-weight: 600; }
+  .footer { display: flex; gap: 10px; padding: 10px 16px 14px; background: #fff; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .okbox { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 9px 12px; font-size: 12.5px; color: #166534; }
+  .info { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 12px; padding: 10px 12px; font-size: 12.5px; color: #075985; line-height: 1.5; }
+  .overlay { position: absolute; inset: 28px 0 0 0; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; }
+  .sheet { background: #fff; width: 100%; border-radius: 22px 22px 0 0; padding: 18px 18px 22px; }
+  .sheet h4 { margin: 0 0 6px; font-size: 18px; }
+  .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--border); margin: 0 auto 14px; }
+  .ul-check { margin: 10px 0 14px; padding: 0; list-style: none; }
+  .ul-check li { display: flex; gap: 8px; font-size: 13px; line-height: 1.45; margin: 8px 0; }
+  .radio-line { display: flex; gap: 10px; align-items: center; font-size: 13.5px; padding: 8px 0; }
+  .radio-line .r { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted); flex-shrink: 0; }
+  .radio-line .r.on { border: 6px solid var(--red); }
+  .toggle { width: 42px; height: 24px; border-radius: 12px; background: #CBD5E1; position: relative; flex-shrink: 0; }
+  .toggle::after { content: ""; position: absolute; left: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+  .toggle.on { background: var(--primary); } .toggle.on::after { left: 21px; }
+  .input { background: #fff; border: 1px solid var(--border); border-radius: 12px; min-height: 42px; padding: 10px 12px; font-size: 13.5px; }
+  .input.area { min-height: 60px; line-height: 1.4; }
+  .label { font-size: 12px; font-weight: 700; color: var(--text2); margin: 8px 0 5px; }
+  .soonbox { text-align: center; padding: 26px 18px; background: #fff; border: 1.5px dashed var(--border); border-radius: 16px; margin-top: 8px; }
+  .menu { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 2px 14px; margin-top: 12px; }
+  .menu .item { padding: 13px 0; }
+  .login-bg { flex: 1; background: linear-gradient(160deg, #15161B 0%, #2B1B47 55%, #0E4C55 100%); padding: 40px 22px 0; color: #fff; }
+  .login-card { background: #fff; color: var(--text); border-radius: 18px; padding: 18px; margin-top: 26px; }
+
+  .confirm-list { background: #fff; border-radius: 16px; padding: 8px 24px; margin-top: 16px; }
+  .confirm-list li { margin: 12px 0; line-height: 1.55; }
+  table.api { width: 100%; border-collapse: collapse; background: #fff; border-radius: 16px; overflow: hidden; margin-top: 16px; font-size: 14px; }
+  table.api th, table.api td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  table.api th { background: #1F3A68; color: #fff; }
+  code { background: #EEF2F7; border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+
+  .tag.new { background: #E6FAFB; color: var(--primary-dark); border: 1px dashed var(--primary); font-size: 10px; }
+  .caption .new { background: #E6FAFB; color: var(--primary-dark); font-weight: 800; font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-right: 4px; }
+  .tabbar.five div { font-size: 9.5px; }
+  .chips { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: nowrap; overflow: hidden; }
+  .chip { font-size: 11.5px; font-weight: 700; padding: 6px 11px; border-radius: 999px; background: #fff; border: 1px solid var(--border); color: var(--text2); white-space: nowrap; }
+  .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .list { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 2px 12px; }
+  .vf { width: 14px; height: 14px; border-radius: 50%; background: #00A3FF; display: inline-flex; align-items: center; justify-content: center; vertical-align: -2px; margin-left: 3px; }
+  .vf svg { width: 9px; height: 9px; stroke: #fff; stroke-width: 3.5; fill: none; }
+  .hero { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+  .hero b { font-size: 16px; display: block; }
+  .trio { display: flex; gap: 8px; margin-top: 10px; }
+  .trio div { flex: 1; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 8px; text-align: center; }
+  .trio b { font-size: 15px; font-weight: 900; display: block; } .trio span { font-size: 10.5px; color: var(--text2); }
+  .warn { background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 12px; padding: 9px 12px; font-size: 12.5px; color: #9A3412; line-height: 1.45; }
+  .bad { background: #FFF1F2; border: 1px solid #FECDD3; border-radius: 12px; padding: 9px 12px; font-size: 12.5px; color: #9F1239; line-height: 1.45; }
+  .overlay.center { align-items: center; padding: 0 22px; }
+  .dialog { background: #fff; width: 100%; border-radius: 20px; padding: 18px; }
+  .dialog h4 { margin: 0 0 6px; font-size: 17px; }
+  .quote { background: var(--soft); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; margin: 8px 0; }
+  .lphone { background: #fff; }
+  .lhdr { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px 8px; }
+  .lhdr b { font-size: 18px; font-weight: 900; }
+  .opt { display: flex; align-items: center; gap: 12px; padding: 13px 2px; border-bottom: 1px solid var(--soft); font-size: 14.5px; font-weight: 600; }
+  .opt:last-child { border-bottom: none; }
+  .cover { width: 40px; height: 40px; border-radius: 8px; background: linear-gradient(135deg, #F59E0B, #EC4899); flex-shrink: 0; }
+  .cover.c2 { background: linear-gradient(135deg, #6366F1, #10C7D5); } .cover.c3 { background: linear-gradient(135deg, #10B981, #0EA5B5); }
+  .b-lock { background: #111216; color: #fff; }
+
+  .strike { display: inline-flex; gap: 3px; vertical-align: -1px; }
+  .strike i { width: 9px; height: 9px; border-radius: 50%; background: #E5E7EB; display: inline-block; }
+  .strike i.on { background: var(--red); }
+  .b-strike { background: #FFF1F2; color: var(--red); }
+  .notif { display: flex; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #F3F4F6; align-items: flex-start; background: #fff; }
+  .notif.unread { background: #FFF5F6; }
+  .notif p { margin: 0; font-size: 14px; line-height: 1.45; }
+  .notif .tm { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .nic { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .udot { width: 9px; height: 9px; border-radius: 50%; background: #EF4444; margin-top: 6px; flex-shrink: 0; }
+  .meter { height: 8px; border-radius: 4px; background: var(--soft); overflow: hidden; margin-top: 6px; }
+  .meter i { display: block; height: 100%; background: var(--red); border-radius: 4px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="i-back" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+</defs></svg>
+<div class="wrap">
+  <h1>Giai đoạn 5 – Admin nâng cao <span class="tag" style="background:#FEF3C7;color:#D97706;vertical-align:middle">BẢN 3</span></h1>
+  <p class="lead"><span class="tag">BẢN XEM TRƯỚC</span>Mockup để duyệt trước khi code. Dùng lại khung khu Admin đang chạy. Nhãn <span class="tag new">MỚI</span> là phần thêm, <span class="tag" style="background:#FEF3C7;color:#D97706;font-size:10px">SỬA</span> là phần đổi so với bản 1. Số liệu và tên trong ảnh chỉ là ví dụ.</p>
+
+  <ul class="changes">
+    <li><b>Thay đổi ở bản 3</b> (theo các điểm vừa chốt):</li>
+    <li>Vi phạm lần thứ 4 → <b>khoá vĩnh viễn</b>, không có nút Unlock (U4). Chỉ <b>Revoke</b> một lần vi phạm bị gỡ nhầm mới mở lại được.</li>
+    <li>Bình luận, bài đăng, bài hát bị gỡ đều tính chung 1 bộ đếm; vi phạm <b>không hết hạn</b>.</li>
+    <li>Tài khoản bị khoá → <b>mọi nội dung của họ tự ẩn</b>: bình luận, bài đăng; nghệ sĩ thì cả bài hát và trang nghệ sĩ.</li>
+    <li>Khoá tay (chưa đủ 4 lần) thì <b>mở lại được</b> – màn mới U5.</li>
+    <li>Admin không bị tính vi phạm và không bị báo cáo. <code>npm run seed</code> tạo sẵn dữ liệu mẫu (mục 5).</li>
+  </ul>
+  <ul class="changes" style="background:#fff;border-color:var(--border)">
+    <li><b>Thay đổi ở bản 2</b>:</li>
+    <li>Gộp Artists và Users vào <b>một tab Manage</b>, chọn loại ở thanh trên: <b>Users / Artists / Reports</b> (G1–G3). Thanh tab còn 4 mục.</li>
+    <li>Có làm <b>báo cáo vi phạm</b>; đổi role chỉ Listener ↔ Admin; tài khoản bị khoá <b>chặn đăng nhập</b> (L2) – giữ như bản 1.</li>
+    <li><b>Nội dung bị gỡ biến mất hẳn</b>. Chủ nội dung nhận thông báo vi phạm tiêu chuẩn cộng đồng (L4).</li>
+    <li>Mỗi lần gỡ được <b>lưu vết thành 1 lần vi phạm</b> trong CSDL; admin xem được số lần và chi tiết từng lần (G1, M2, U2). <b>Vi phạm lần thứ 4 → tự khoá tài khoản</b> (U4).</li>
+  </ul>
+
+  <h2>1. Luồng vi phạm</h2>
+  <div class="flow">
+    <div class="lane"><div class="lane-title">Người nghe</div><div class="node l"><b>L1</b>Báo cáo</div><span class="arrow">→</span><div class="node"><b>G3</b>Reports</div><span class="arrow">→</span><div class="node"><b>M2</b>Chi tiết</div><span class="arrow">→</span><div class="node ok">Dismiss (không tính)</div><div class="node bad"><b>R3</b>Gỡ</div></div>
+    <div class="lane"><div class="lane-title">Sau khi gỡ</div><div class="node bad">Nội dung biến mất</div><span class="arrow">+</span><div class="node">Lưu 1 vi phạm</div><span class="arrow">+</span><div class="node l"><b>L4</b>Báo cho chủ nội dung</div><span class="arrow">→</span><div class="node">Vi phạm lần 4?</div><span class="arrow">→</span><div class="node bad"><b>U4</b>Tự khoá</div><span class="arrow">→</span><div class="node l"><b>L2</b>Không đăng nhập được</div></div>
+    <div class="lane"><div class="lane-title">Admin sửa sai</div><div class="node"><b>U2 / U4</b>Revoke 1 vi phạm</div><span class="arrow">→</span><div class="node ok">Khôi phục nội dung, giảm 1 lần</div><span class="arrow">→</span><div class="node ok">Còn ≤ 3 lần → mở khoá, hiện lại nội dung</div></div>
+    <div class="lane"><div class="lane-title">Khoá tay</div><div class="node bad"><b>U2</b>Lock account (lý do)</div><span class="arrow">→</span><div class="node"><b>U5</b>Đang khoá</div><span class="arrow">→</span><div class="node ok">Unlock</div></div>
+  </div>
+
+  <h2>2. Quy tắc</h2>
+  <ul class="rules">
+    <li><b>Vi phạm</b>: mỗi lần admin gỡ một bình luận, bài đăng hoặc bài hát = 1 lần vi phạm của tài khoản tác giả (với bài hát / bài đăng là tài khoản sở hữu trang nghệ sĩ). "Dismiss" báo cáo thì không tính.</li>
+    <li>Mỗi lần vi phạm lưu: tài khoản, loại và nội dung bị gỡ (bản sao để đối chiếu), quy định bị vi phạm, admin gỡ, ghi chú, thời điểm.</li>
+    <li>Vi phạm <b>không bao giờ hết hạn</b>.</li>
+    <li><b>Khoá vĩnh viễn</b>: khi số vi phạm đạt <b>4</b> (tức hơn 3 lần), tài khoản bị khoá ngay, phiên đang mở bị đăng xuất. <b>Không admin nào mở khoá được.</b></li>
+    <li><b>Revoke</b> (chỉ dùng khi gỡ nhầm): huỷ 1 lần vi phạm, khôi phục nội dung đó. Nếu tài khoản đang khoá vĩnh viễn và giảm còn 3 lần thì tự mở lại.</li>
+    <li><b>Khoá tay</b> (bắt buộc lý do, chưa cần đủ 4 lần): mở lại được bằng Unlock.</li>
+    <li><b>Khi tài khoản bị khoá</b> (vĩnh viễn hay khoá tay): mọi bình luận, bài đăng của họ tự ẩn; nếu là nghệ sĩ thì trang nghệ sĩ và mọi bài hát cũng ẩn (bị gỡ khỏi tìm kiếm, playlist, Feed). Mở khoá thì hiện lại, trừ nội dung đã bị gỡ vì vi phạm. Không xoá dữ liệu.</li>
+    <li>Nội dung bị gỡ <b>biến mất với mọi người</b> (số bình luận giảm tương ứng). Chỉ chủ nội dung biết qua thông báo; người báo cáo không được thông báo kết quả.</li>
+    <li>Admin vẫn có thể khoá tay ngay (bắt buộc lý do) mà không cần đủ 4 lần. Admin không tự khoá / tự đổi role; luôn còn ít nhất 1 admin. Tài khoản admin <b>không bị tính vi phạm</b> và không bị báo cáo.</li>
+    <li>Ẩn cả trang nghệ sĩ, bật / tắt tick xanh: giữ như bản 1.</li>
+  </ul>
+
+  <h2>3. Màn hình</h2>
+  <div class="grid">
+    <div class="card"><div class="phone " id="D1"><div class="statusbar dark">9:41<span>●●● 100%</span></div><div class="abar"><div class="row between"><div class="brand"><div class="logo"><svg class="ico w sm"><use href="#i-shield"/></svg></div><div><div class="t">Dashboard</div><div class="s">MusicStream Admin · Admin Team</div></div></div><svg class="ico w"><use href="#i-refresh"/></svg></div></div>
+<div class="body">
+  <div class="kpis">
+    <div class="kpi"><div class="l">Pending requests</div><div class="n" style="color:var(--amber)">2</div><div class="d" style="color:var(--text2)">Oldest: 5 h ago</div></div>
+    <div class="kpi" style="border-color:#FECDD3"><div class="l">Open reports</div><div class="n" style="color:var(--red)">3</div><div class="d" style="color:var(--text2)">1 song · 2 comments</div></div>
+    <div class="kpi"><div class="l">Users</div><div class="n">128</div><div class="d" style="color:var(--text2)">2 locked · 1 at 3/3</div></div>
+    <div class="kpi"><div class="l">Violations</div><div class="n">9</div><div class="d" style="color:var(--text2)">+4 this week</div></div>
+  </div>
+  <div class="panel">
+    <div class="row between"><h4>Reports to review</h4><span style="color:var(--primary);font-weight:700;font-size:12.5px">See all</span></div>
+    <div class="item"><span class="badge b-pending">Comment</span><div class="t"><b style="font-size:13px">"Buy followers at…"</b><span>Spam · 2 reports · 5 h ago</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+    <div class="item"><span class="badge b-bad">Song</span><div class="t"><b style="font-size:13px">Fake Love (Leak)</b><span>Copyright · 4 reports · 2 h ago</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+  </div>
+  <div class="panel">
+    <h4>Recent activity</h4>
+    <div class="item"><span class="badge b-lock">Locked</span><div class="t"><b style="font-size:13px">spam_bot_22</b><span>Permanently · 4th violation · 1 h ago</span></div></div>
+    <div class="item"><span class="badge b-grey">Removed</span><div class="t"><b style="font-size:13px">Comment by spam_bot_22</b><span>by Admin Team · Spam · 1 h ago</span></div></div>
+  </div>
+</div><div class="tabbar"><div class="on"><svg class="ico "><use href="#i-grid"/></svg>Dashboard</div><div class=""><span class="dot">2</span><svg class="ico "><use href="#i-mic"/></svg>Requests</div><div class=""><span class="dot">3</span><svg class="ico "><use href="#i-users"/></svg>Manage</div><div class=""><svg class="ico "><use href="#i-user"/></svg>Account</div></div></div><div class="caption"><h3>D1 · Dashboard</h3><span class="new" style="background:#FEF3C7;color:#D97706">SỬA</span> Thanh tab còn <b>4 mục</b>: Dashboard, Requests, <b>Manage</b>, Account (số đỏ trên Manage = báo cáo đang chờ). <span class="new">MỚI</span> Ô <b>Violations</b>: tổng lượt vi phạm. Ô Users ghi số tài khoản bị khoá và số người đã <b>3/3</b> lần vi phạm. Recent activity ghi cả việc <b>tự khoá</b> do vi phạm lần thứ 4.</div></div><div class="card"><div class="phone " id="G1"><div class="statusbar dark">9:41<span>●●● 100%</span></div><div class="abar"><div class="row between"><div class="brand"><div class="logo"><svg class="ico w sm"><use href="#i-users"/></svg></div><div><div class="t">Manage</div><div class="s">Users, artists and reports</div></div></div><svg class="ico w"><use href="#i-refresh"/></svg></div></div><div class="seg"><div class="on">Users (128)</div><div class="">Artists (14)</div><div class="">Reports (3)</div></div>
+<div class="body" style="padding-top:0">
+  <div class="search"><svg class="ico sm"><use href="#i-search"/></svg>Search name or email</div>
+  <div class="chips"><div class="chip on">All</div><div class="chip">Listeners</div><div class="chip">Artists</div><div class="chip">Admins</div><div class="chip">Locked</div><div class="chip">Has violations</div></div>
+  <div class="list">
+    <div class="item"><div class="avatar s32 av-c">JS</div><div class="t"><b>Jason Smith</b><span>jason@example.com · VIP</span></div><span class="badge b-grey">Listener</span></div>
+    <div class="item"><div class="avatar s32 av-c">QA</div><div class="t"><b>Quang Anh</b><span>quanganh@mail.com · <span class="strike"><i class="on"></i><i class="on"></i><i class="on"></i></span> 3/3</span></div><span class="badge b-grey">Listener</span></div>
+    <div class="item"><div class="avatar s32 av-a">LN</div><div class="t"><b>Lan Nguyen</b><span>lan@example.com · <span class="strike"><i class="on"></i><i class=""></i><i class=""></i></span> 1/3</span></div><span class="badge b-grey">Listener</span></div>
+    <div class="item"><div class="avatar s32 av-a">MW</div><div class="t"><b>Mer Watson</b><span>mer@example.com</span></div><span class="badge b-artist">Artist</span></div>
+    <div class="item"><div class="avatar s32 av-d">SB</div><div class="t"><b>spam_bot_22</b><span>bot22@mail.com · 4 violations</span></div><span class="badge b-lock">Locked</span></div>
+    <div class="item"><div class="avatar s32 av-d">AT</div><div class="t"><b>Admin Team</b><span>admin@example.com · You</span></div><span class="badge b-admin">Admin</span></div>
+  </div>
+</div><div class="tabbar"><div class=""><svg class="ico "><use href="#i-grid"/></svg>Dashboard</div><div class=""><span class="dot">2</span><svg class="ico "><use href="#i-mic"/></svg>Requests</div><div class="on"><span class="dot">3</span><svg class="ico "><use href="#i-users"/></svg>Manage</div><div class=""><svg class="ico "><use href="#i-user"/></svg>Account</div></div></div><div class="caption"><h3>G1 · Tab Manage – Users</h3><span class="new">MỚI</span> Một tab <b>Manage</b> thay cho 2 tab riêng; chọn loại ở thanh trên cùng: <b>Users / Artists / Reports</b>. Phần Users: tìm, lọc theo vai trò, Locked và <span class="new">MỚI</span> <b>Has violations</b>. Mỗi dòng có <span class="strike"><i class="on"></i><i class="on"></i><i class=""></i></span> <b>số lần vi phạm / 3</b> (dòng 3/3 là sắp bị khoá).</div></div><div class="card"><div class="phone " id="G2"><div class="statusbar dark">9:41<span>●●● 100%</span></div><div class="abar"><div class="row between"><div class="brand"><div class="logo"><svg class="ico w sm"><use href="#i-users"/></svg></div><div><div class="t">Manage</div><div class="s">Users, artists and reports</div></div></div><svg class="ico w"><use href="#i-refresh"/></svg></div></div><div class="seg"><div class="">Users (128)</div><div class="on">Artists (14)</div><div class="">Reports (3)</div></div>
+<div class="body" style="padding-top:0">
+  <div class="search"><svg class="ico sm"><use href="#i-search"/></svg>Search artist name</div>
+  <div class="chips"><div class="chip on">All</div><div class="chip">Verified</div><div class="chip">Not verified</div><div class="chip">Hidden</div></div>
+  <div class="list">
+    <div class="item"><div class="avatar s32 av-a">MW</div><div class="t"><b>Mer Watson<span class="vf"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></b><span>342 followers · 3 songs · 11.2K plays</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+    <div class="item"><div class="avatar s32 av-b">HV</div><div class="t"><b>Hà Vy<span class="vf"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></b><span>128 followers · 5 songs · 4.1K plays</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+    <div class="item"><div class="avatar s32 av-d">TK</div><div class="t"><b>T.K Beats</b><span>12 followers · 2 songs · <span class="strike"><i class="on"></i><i class=""></i><i class=""></i></span> 1/3</span></div><span class="badge b-grey">Not verified</span></div>
+    <div class="item"><div class="avatar s32 av-c">DJ</div><div class="t"><b>DJ Mix 99</b><span>40 followers · 6 songs</span></div><span class="badge b-bad">Hidden</span></div>
+    <div class="item"><div class="avatar s32 av-b">TW</div><div class="t"><b>The Weeknd<span class="vf"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></b><span>1.2M followers · no owner</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+  </div>
+</div><div class="tabbar"><div class=""><svg class="ico "><use href="#i-grid"/></svg>Dashboard</div><div class=""><span class="dot">2</span><svg class="ico "><use href="#i-mic"/></svg>Requests</div><div class="on"><span class="dot">3</span><svg class="ico "><use href="#i-users"/></svg>Manage</div><div class=""><svg class="ico "><use href="#i-user"/></svg>Account</div></div></div><div class="caption"><h3>G2 · Tab Manage – Artists</h3>Cùng tab Manage, chọn <b>Artists</b>. Tìm, lọc All / Verified / Not verified / Hidden. Nghệ sĩ có bài hát / bài đăng bị gỡ cũng hiện số lần vi phạm (tính vào tài khoản sở hữu). Bấm một dòng mở R2.</div></div><div class="card"><div class="phone " id="G3"><div class="statusbar dark">9:41<span>●●● 100%</span></div><div class="abar"><div class="row between"><div class="brand"><div class="logo"><svg class="ico w sm"><use href="#i-users"/></svg></div><div><div class="t">Manage</div><div class="s">Users, artists and reports</div></div></div><svg class="ico w"><use href="#i-refresh"/></svg></div></div><div class="seg"><div class="">Users (128)</div><div class="">Artists (14)</div><div class="on">Reports (3)</div></div>
+<div class="body" style="padding-top:0">
+  <div class="chips"><div class="chip on">Open (3)</div><div class="chip">Resolved (12)</div><div class="chip">Songs</div><div class="chip">Posts</div><div class="chip">Comments</div></div>
+  <div class="list">
+    <div class="item"><span class="badge b-bad">Song</span><div class="t"><b>Fake Love (Leak)</b><span>T.K Beats · Copyright · 4 reports · 2 h ago</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+    <div class="item"><span class="badge b-pending">Comment</span><div class="t"><b>"Buy followers at cheap…"</b><span>Quang Anh <span class="strike"><i class="on"></i><i class="on"></i><i class="on"></i></span> · Spam · 2 reports</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+    <div class="item"><span class="badge b-pending">Comment</span><div class="t"><b>"You sing like a…"</b><span>Lan Nguyen <span class="strike"><i class="on"></i><i class=""></i><i class=""></i></span> · Offensive · 1 report</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+  </div>
+  <div class="info" style="margin-top:12px">Reports about the same item are grouped. Most-reported items come first. Dots show how many violations the author already has.</div>
+</div><div class="tabbar"><div class=""><svg class="ico "><use href="#i-grid"/></svg>Dashboard</div><div class=""><span class="dot">2</span><svg class="ico "><use href="#i-mic"/></svg>Requests</div><div class="on"><span class="dot">3</span><svg class="ico "><use href="#i-users"/></svg>Manage</div><div class=""><svg class="ico "><use href="#i-user"/></svg>Account</div></div></div><div class="caption"><h3>G3 · Tab Manage – Reports</h3><span class="new" style="background:#FEF3C7;color:#D97706">SỬA</span> Danh sách báo cáo nằm luôn trong tab Manage (loại <b>Reports</b>), lọc Open / Resolved và theo loại nội dung. <span class="new">MỚI</span> Cạnh tên tác giả có <b>số lần vi phạm đã có</b> để admin biết lần gỡ này có làm tài khoản bị khoá không.</div></div><div class="card"><div class="phone " id="M2"><div class="statusbar dark">9:41<span>●●● 100%</span></div><div class="abar"><div class="back"><svg class="ico w"><use href="#i-back"/></svg><b>Report</b></div></div>
+<div class="body">
+  <div class="panel" style="margin-top:0">
+    <div class="row between"><span class="badge b-pending">Comment</span><span class="muted">2 reports</span></div>
+    <div class="quote">"Buy followers at cheap price 👉 bit.ly/xxxx — best service, trusted!!!"</div>
+    <div class="kv"><span>Author</span><b style="color:var(--primary-dark)">Quang Anh ›</b></div>
+    <div class="kv"><span>Violations so far</span><b style="color:var(--red)"><span class="strike"><i class="on"></i><i class="on"></i><i class="on"></i></span>&nbsp; 3 / 3</b></div>
+    <div class="kv" style="border-bottom:none"><span>On post</span><b>Mer Watson · "Thank you all…"</b></div>
+  </div>
+  <div class="bad" style="margin-top:10px"><b>Removing this comment is violation #4.</b> The author's account will be <b>locked permanently</b> and all their content hidden.</div>
+  <div class="panel">
+    <h4>Reports</h4>
+    <div class="item"><div class="avatar s32 av-b">AS</div><div class="t"><b style="font-size:13px">Ashley Scott · Spam</b><span>"Same link under many songs" · 5 h ago</span></div></div>
+    <div class="item"><div class="avatar s32 av-c">JS</div><div class="t"><b style="font-size:13px">Jason Smith · Spam</b><span>6 h ago</span></div></div>
+  </div>
+</div>
+<div class="footer" style="flex-direction:column;gap:8px"><div class="btn btn-danger">Remove comment &amp; lock account</div><div class="btn btn-outline" style="height:42px;font-size:13.5px">Dismiss reports</div></div></div><div class="caption"><h3>M2 · Chi tiết báo cáo</h3>Xem nội dung, tác giả, người báo cáo. <span class="new">MỚI</span> Dòng <b>Violations so far</b>. <span class="new">MỚI</span> Nếu lần gỡ này là lần thứ 4, màn hình <b>cảnh báo trước</b> và nút đổi thành "Remove comment &amp; lock account". Hai lựa chọn: <b>Remove</b> (gỡ + tính 1 vi phạm) hoặc <b>Dismiss</b> (không vi phạm, không tính). Bỏ nút "Lock author" vì đã khoá tự động.</div></div><div class="card"><div class="phone " id="R3"><div class="statusbar dark">9:41<span>●●● 100%</span></div><div class="abar"><div class="back"><svg class="ico w"><use href="#i-back"/></svg><b>Report</b></div></div>
+<div class="body"></div>
+<div class="overlay"><div class="sheet"><div class="grab"></div>
+  <h4>Remove this comment?</h4>
+  <div class="muted" style="line-height:1.5">It disappears for everyone. The author gets a notification and this counts as <b>1 violation</b> (<span class="strike"><i class="on"></i><i class="on"></i><i class=""></i></span> 2/3 → 3/3).</div>
+  <div class="label">Rule broken (sent to the author) *</div>
+  <div class="radio-line"><div class="r on"></div>Spam or misleading</div>
+  <div class="radio-line"><div class="r"></div>Harassment or hate speech</div>
+  <div class="radio-line"><div class="r"></div>Copyright infringement</div>
+  <div class="radio-line"><div class="r"></div>Other</div>
+  <div class="input area" style="color:var(--muted);margin:6px 0 12px">Note for the record (optional, only admins see it)</div>
+  <div class="btn btn-danger">Remove</div><div class="btn btn-ghost">Cancel</div>
+</div></div></div><div class="caption"><h3>R3 · Gỡ nội dung (chọn quy định bị vi phạm)</h3>Dùng chung cho gỡ bình luận, bài đăng, bài hát. Bắt buộc chọn quy định bị vi phạm. <span class="new">MỚI</span> Ghi rõ lần gỡ này đưa số vi phạm từ bao nhiêu lên bao nhiêu. Ghi chú chỉ admin thấy; tác giả chỉ thấy tên quy định.</div></div><div class="card"><div class="phone " id="R2"><div class="statusbar dark">9:41<span>●●● 100%</span></div><div class="abar"><div class="back"><svg class="ico w"><use href="#i-back"/></svg><b>Artist</b></div></div>
+<div class="body">
+  <div class="hero"><div class="avatar s64 av-d" style="width:52px;height:52px;font-size:18px">TK</div><div style="flex:1"><b>T.K Beats</b><span class="muted">Rap · EDM · joined Nov 12, 2026</span></div></div>
+  <div class="trio"><div><b>12</b><span>Followers</span></div><div><b>2</b><span>Songs</span></div><div><b>310</b><span>Plays</span></div></div>
+  <div class="panel">
+    <div class="kv"><span>Owner account</span><b style="color:var(--primary-dark)">tk@example.com ›</b></div>
+    <div class="kv"><span>Owner violations</span><b style="color:var(--red)"><span class="strike"><i class="on"></i><i class=""></i><i class=""></i></span>&nbsp; 1 / 3</b></div>
+    <div class="kv" style="border-bottom:none;align-items:center"><span>Verified badge <span class="vf"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></span><div class="toggle"></div></div>
+  </div>
+  <div class="panel">
+    <h4>Songs (2)</h4>
+    <div class="item"><div class="cover"></div><div class="t"><b>Night Drive</b><span>Published · 240 plays</span></div><span style="color:var(--red);font-weight:700;font-size:12.5px">Remove</span></div>
+    <div class="item"><div class="cover c2"></div><div class="t"><b>Fake Remix</b><span>Removed · Copyright · violation #1</span></div><span style="color:var(--primary-dark);font-weight:700;font-size:12.5px">Restore</span></div>
+  </div>
+</div>
+<div class="footer"><div class="btn btn-outline" style="color:var(--red);border-color:#FECDD3">Hide artist page</div></div></div><div class="caption"><h3>R2 · Chi tiết nghệ sĩ</h3>Bật / tắt tick xanh, gỡ / khôi phục bài hát, ẩn cả trang. <span class="new">MỚI</span> Hiện số vi phạm của tài khoản sở hữu. Bài bị gỡ ghi rõ là vi phạm thứ mấy. <b>Restore</b> khôi phục bài và <b>xoá luôn lần vi phạm đó</b> (admin gỡ nhầm).</div></div><div class="card"><div class="phone " id="U2"><div class="statusbar dark">9:41<span>●●● 100%</span></div><div class="abar"><div class="back"><svg class="ico w"><use href="#i-back"/></svg><b>User</b></div></div>
+<div class="body">
+  <div class="hero"><div class="avatar s64 av-c" style="width:52px;height:52px;font-size:18px">QA</div><div style="flex:1"><b>Quang Anh</b><span class="muted">quanganh@mail.com</span></div><span class="badge b-grey">Listener</span></div>
+  <div class="panel">
+    <div class="row between"><h4 style="margin:0">Violations</h4><b style="color:var(--red)">3 / 3</b></div>
+    <div class="meter"><i style="width:100%"></i></div>
+    <div class="muted" style="font-size:11.5px;margin-top:4px">One more violation locks this account <b style="color:var(--red)">permanently</b>. Violations never expire.</div>
+    <div class="item"><span class="badge b-strike">#3</span><div class="t"><b style="font-size:13px">Comment · Spam</b><span>"Buy followers at…" · 2 h ago · <span style="color:var(--primary-dark);font-weight:700">Revoke</span></span></div></div>
+    <div class="item"><span class="badge b-strike">#2</span><div class="t"><b style="font-size:13px">Comment · Harassment</b><span>"You are so…" · 3 days ago · <span style="color:var(--primary-dark);font-weight:700">Revoke</span></span></div></div>
+    <div class="item"><span class="badge b-strike">#1</span><div class="t"><b style="font-size:13px">Comment · Spam</b><span>"Check my channel…" · Nov 2 · <span style="color:var(--primary-dark);font-weight:700">Revoke</span></span></div></div>
+  </div>
+  <div class="menu">
+    <div class="item"><svg class="ico sm"><use href="#i-shield"/></svg><div class="t"><b>Change role</b><span>Listener → Admin</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+    <div class="item"><svg class="ico sm"><use href="#i-lock"/></svg><div class="t"><b style="color:var(--red)">Lock account</b><span>Manual lock · can be unlocked later</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+  </div>
+</div></div><div class="caption"><h3>U2 · Chi tiết tài khoản + lịch sử vi phạm</h3><span class="new">MỚI</span> Khung <b>Violations</b>: thanh đếm x / 3 và danh sách từng lần vi phạm (nội dung bị gỡ, quy định, admin, thời điểm). Vi phạm <b>không bao giờ hết hạn</b>. <span class="new">MỚI</span> <b>Revoke</b> trên từng lần: huỷ lần vi phạm do gỡ nhầm, nội dung được khôi phục. Vẫn <b>khoá tay</b> được ngay (ví dụ tài khoản lừa đảo); khoá tay thì mở lại được (U5).</div></div><div class="card"><div class="phone " id="U3"><div class="statusbar dark">9:41<span>●●● 100%</span></div><div class="abar"><div class="back"><svg class="ico w"><use href="#i-back"/></svg><b>User</b></div></div>
+<div class="body"><div class="hero"><div class="avatar s64 av-c" style="width:52px;height:52px;font-size:18px">JS</div><div><b>Jason Smith</b><span class="muted">jason@example.com</span></div></div></div>
+<div class="overlay"><div class="sheet"><div class="grab"></div>
+  <h4>Change role</h4>
+  <div class="radio-line"><div class="r on" style="border-color:var(--primary)"></div><div><b>Listener</b><div class="muted" style="font-size:12px">Listens, comments, makes playlists</div></div></div>
+  <div class="radio-line"><div class="r"></div><div><b>Admin</b><div class="muted" style="font-size:12px">Full access to the Admin area, no music app</div></div></div>
+  <div class="radio-line" style="opacity:.45"><div class="r"></div><div><b>Artist</b><div class="muted" style="font-size:12px">Only by approving an artist request</div></div></div>
+  <div class="warn" style="margin:8px 0 12px">You can't change your own role, and the last admin can't be removed.</div>
+  <div class="btn btn-ink">Save</div><div class="btn btn-ghost">Cancel</div>
+</div></div></div><div class="caption"><h3>U3 · Đổi vai trò</h3>Giữ như bản 1 (đã đồng ý): chỉ Listener ↔ Admin; Artist chỉ qua duyệt yêu cầu; không tự đổi role, luôn còn ít nhất 1 admin.</div></div><div class="card"><div class="phone " id="U4"><div class="statusbar dark">9:41<span>●●● 100%</span></div><div class="abar"><div class="back"><svg class="ico w"><use href="#i-back"/></svg><b>User</b></div></div>
+<div class="body">
+  <div class="hero"><div class="avatar s64 av-d" style="width:52px;height:52px;font-size:18px">SB</div><div style="flex:1"><b>spam_bot_22</b><span class="muted">bot22@mail.com</span></div><span class="badge b-lock">Locked</span></div>
+  <div class="bad" style="margin-top:10px"><b>Permanently locked 1 h ago</b><br>Reached 4 community standards violations. This lock can't be undone.</div>
+  <div class="panel">
+    <div class="row between"><h4 style="margin:0">Violations</h4><b style="color:var(--red)">4</b></div>
+    <div class="item"><span class="badge b-strike">#4</span><div class="t"><b style="font-size:13px">Comment · Spam</b><span>by Admin Team · 1 h ago · <span style="color:var(--primary-dark);font-weight:700">Revoke</span></span></div></div>
+    <div class="item"><span class="badge b-strike">#3</span><div class="t"><b style="font-size:13px">Comment · Spam</b><span>by Admin Team · 1 day ago · <span style="color:var(--primary-dark);font-weight:700">Revoke</span></span></div></div>
+    <div class="item"><span class="badge b-strike">#2</span><div class="t"><b style="font-size:13px">Post · Spam</b><span>by Admin Team · 2 days ago · <span style="color:var(--primary-dark);font-weight:700">Revoke</span></span></div></div>
+    <div class="item"><span class="badge b-strike">#1</span><div class="t"><b style="font-size:13px">Comment · Harassment</b><span>by Admin Team · 5 days ago · <span style="color:var(--primary-dark);font-weight:700">Revoke</span></span></div></div>
+  </div>
+  <div class="panel"><h4>Hidden with this account</h4>
+    <div class="kv"><span>Comments</span><b>23</b></div>
+    <div class="kv" style="border-bottom:none"><span>Posts · songs · artist page</span><b>—</b></div>
+  </div>
+  <div class="info" style="margin-top:10px">If a violation was a mistake, <b>Revoke</b> it. Dropping back to 3 violations reopens the account and restores its content.</div>
+</div></div><div class="caption"><h3>U4 · Khoá vĩnh viễn (vi phạm lần thứ 4)</h3><span class="new" style="background:#FEF3C7;color:#D97706">SỬA</span> Vi phạm lần 4 → <b>khoá vĩnh viễn</b>: <b>không có nút Unlock</b>. <span class="new">MỚI</span> Mọi nội dung của tài khoản (bình luận, bài đăng; nếu là nghệ sĩ thì cả bài hát và trang nghệ sĩ) <b>tự ẩn</b> với người nghe. Cách duy nhất để mở lại: <b>Revoke</b> một lần vi phạm bị gỡ nhầm → còn 3 lần → tài khoản mở lại, nội dung hiện lại.</div></div><div class="card"><div class="phone " id="U5"><div class="statusbar dark">9:41<span>●●● 100%</span></div><div class="abar"><div class="back"><svg class="ico w"><use href="#i-back"/></svg><b>User</b></div></div>
+<div class="body">
+  <div class="hero"><div class="avatar s64 av-b" style="width:52px;height:52px;font-size:18px">TK</div><div style="flex:1"><b>T.K Beats</b><span class="muted">tk@example.com</span></div><span class="badge b-lock">Locked</span></div>
+  <div class="warn" style="margin-top:10px"><b>Locked by Admin Team · 2 h ago</b><br>Reason: Scam or fraud · "Asking fans for bank transfers"</div>
+  <div class="panel">
+    <div class="kv"><span>Violations</span><b style="color:var(--red)"><span class="strike"><i class="on"></i><i class=""></i><i class=""></i></span>&nbsp; 1 / 3</b></div>
+    <div class="kv"><span>Artist page</span><b>Hidden while locked</b></div>
+    <div class="kv" style="border-bottom:none"><span>Songs · posts · comments</span><b>2 · 4 · 9 hidden</b></div>
+  </div>
+  <div class="info" style="margin-top:10px">Manual locks can be undone. Unlocking restores the artist page and all content that wasn't removed for a violation.</div>
+</div>
+<div class="footer"><div class="btn btn-ink">Unlock account</div></div></div><div class="caption"><h3>U5 · Khoá tay (mở lại được)</h3><span class="new">MỚI</span> Admin khoá tay khi chưa đủ 4 lần (bắt buộc lý do). Trong lúc khoá, nội dung của tài khoản cũng <b>tự ẩn</b> như U4. Khác U4: có nút <b>Unlock account</b> – mở lại tài khoản và hiện lại các nội dung không bị gỡ vì vi phạm.</div></div><div class="card"><div class="phone lphone white" id="L1"><div class="statusbar">9:41<span>●●● 100%</span></div>
+<div class="lhdr"><b>Feed</b><span></span></div>
+<div class="body" style="background:#fff"></div>
+<div class="overlay"><div class="sheet"><div class="grab"></div>
+  <h4>Report this comment</h4>
+  <div class="quote">"Buy followers at cheap price 👉 bit.ly/xxxx…"</div>
+  <div class="label">Why are you reporting it? *</div>
+  <div class="radio-line"><div class="r on" style="border-color:var(--primary)"></div>Spam or misleading</div>
+  <div class="radio-line"><div class="r"></div>Harassment or hate speech</div>
+  <div class="radio-line"><div class="r"></div>Copyright infringement</div>
+  <div class="radio-line"><div class="r"></div>Other</div>
+  <div class="input area" style="color:var(--muted);margin:6px 0 12px">Add details (optional)</div>
+  <div class="btn btn-primary">Send report</div><div class="btn btn-ghost">Cancel</div>
+</div></div></div><div class="caption"><h3>L1 · Người nghe báo cáo vi phạm</h3>Như bản 1 (đã đồng ý): mục "Report" trong menu ⋯ của bài hát, bài đăng và cạnh "Reply" ở bình luận. Phải đăng nhập; mỗi người 1 lần / nội dung, tối đa 10 báo cáo / ngày.</div></div><div class="card"><div class="phone white" id="L4"><div class="statusbar">9:41<span>●●● 100%</span></div>
+<div class="lhdr"><svg class="ico "><use href="#i-back"/></svg><b>Notifications</b><span style="color:var(--primary);font-size:13px;font-weight:700">Mark all read</span></div>
+<div class="body" style="background:#fff;padding:0">
+  <div class="notif unread"><div class="nic" style="background:var(--red)"><svg class="ico w sm"><use href="#i-shield"/></svg></div><div style="flex:1">
+    <p><b>Your comment was removed</b> because it violates our community standards (Spam or misleading).</p>
+    <div class="quote" style="margin:6px 0">"Buy followers at cheap price 👉…"</div>
+    <p style="font-size:12.5px;color:#9F1239"><b>Violation 3 of 3.</b> One more and your account will be locked permanently.</p>
+    <div class="tm">Just now</div></div><div class="udot"></div></div>
+  <div class="notif"><div class="nic" style="background:var(--primary)"><svg class="ico w sm"><use href="#i-bell"/></svg></div><div style="flex:1"><p><b>Mer Watson</b> posted on the Feed</p><div class="tm">2 h ago</div></div></div>
+</div></div><div class="caption"><h3>L4 · Chủ bình luận nhận thông báo vi phạm</h3><span class="new">MỚI</span> Bình luận bị gỡ <b>biến mất với mọi người</b>; chủ bình luận nhận thông báo: nội dung đã gỡ, quy định bị vi phạm và <b>đang ở lần thứ mấy / 3</b>. Lần 3/3 có cảnh báo màu đỏ. Áp dụng tương tự cho bài đăng và bài hát của nghệ sĩ.</div></div><div class="card"><div class="phone white" id="L2"><div class="statusbar">9:41<span>●●● 100%</span></div>
+<div class="lhdr"><svg class="ico "><use href="#i-back"/></svg><b>Log in</b><span style="width:24px"></span></div>
+<div class="body" style="background:#fff">
+  <div class="bad" style="margin-bottom:12px"><b>This account has been permanently locked.</b><br>It reached 4 community standards violations.<br>If you think this is a mistake, contact support@musicstream.app.</div>
+  <div class="label">Email</div><div class="input">bot22@mail.com</div>
+  <div class="label">Password</div><div class="input">••••••</div>
+  <div class="btn btn-primary" style="margin-top:16px">Log in</div>
+</div></div><div class="caption"><h3>L2 · Tài khoản bị khoá đăng nhập</h3>Chặn đăng nhập hoàn toàn. Khoá vĩnh viễn ghi "permanently locked"; khoá tay ghi lý do admin chọn. Phiên đang mở bị đăng xuất ở lần gọi máy chủ kế tiếp. Dữ liệu không bị xoá (chỉ ẩn).</div></div><div class="card"><div class="phone white" id="L3"><div class="statusbar">9:41<span>●●● 100%</span></div>
+<div class="lhdr"><svg class="ico "><use href="#i-back"/></svg><b>My songs</b><span style="width:24px"></span></div>
+<div class="body" style="background:#fff">
+  <div class="bad" style="margin-bottom:10px"><b>1 song was removed for violating community standards.</b> Violation 1 of 3.</div>
+  <div class="item"><div class="cover"></div><div class="t"><b>Night Drive</b><span>240 plays · 03:12</span></div><span class="badge b-ok">Published</span></div>
+  <div class="item"><div class="cover c2"></div><div class="t"><b>Fake Remix</b><span>Removed · Copyright infringement</span></div><span class="badge b-bad">Removed</span></div>
+  <div class="muted" style="margin-top:10px;font-size:12.5px;line-height:1.5">Removed songs can't be published again. Contact support if you think this is a mistake.</div>
+</div></div><div class="caption"><h3>L3 · Nghệ sĩ thấy bài bị gỡ</h3>Như bản 1, thêm số lần vi phạm. Bài bị gỡ có nhãn <b>Removed</b> và lý do; nghệ sĩ không tự hiện lại được. Bài hát / bài đăng bị gỡ cũng tính vào số vi phạm của tài khoản nghệ sĩ.</div></div>
+  </div>
+
+  <h2>4. Phía máy chủ (không có màn hình)</h2>
+  <table class="api">
+    <tr><th style="width:32%">Phần</th><th>Nội dung</th></tr>
+    <tr><td>Bảng <code>Violation</code> (mới)</td><td>Lưu vết từng lần vi phạm: userId, loại nội dung, id, bản sao nội dung, quy định, adminId, ghi chú, thời điểm, <code>revokedAt</code>. Đếm số vi phạm còn hiệu lực để tự khoá.</td></tr>
+    <tr><td>Bảng <code>Report</code> (mới)</td><td>Báo cáo của người nghe: nội dung, người báo cáo, lý do, trạng thái open / resolved, kết quả (removed / dismissed).</td></tr>
+    <tr><td>Bảng <code>AdminAction</code> (mới)</td><td>Nhật ký thao tác quản trị (gỡ, khôi phục, khoá, mở khoá, đổi role, tick xanh) cho Recent activity.</td></tr>
+    <tr><td>Trường mới</td><td><code>User.lockedAt / lockReason / lockType ('permanent' | 'manual') / lockedBy</code>; <code>Song / FeedPost / Comment / reply</code> thêm <code>removedAt</code> + <code>violationId</code>; <code>Artist.hiddenAt / hiddenReason</code>.</td></tr>
+    <tr><td><code>/api/admin/manage/users | artists | reports</code></td><td>Danh sách + lọc + tìm + phân trang cho 3 loại trong tab Manage; chi tiết; gỡ / khôi phục; khoá / mở khoá; đổi role; revoke vi phạm.</td></tr>
+    <tr><td><code>POST /api/reports</code></td><td>Người nghe gửi báo cáo (1 lần / nội dung, 10 / ngày, không báo cáo nội dung của mình).</td></tr>
+    <tr><td>Thông báo</td><td>Loại mới <code>content_removed</code> gửi cho chủ nội dung, kèm quy định và số lần vi phạm.</td></tr>
+    <tr><td>Chặn ở API có sẵn</td><td>Đăng nhập / API cần token từ chối tài khoản bị khoá (<code>ACCOUNT_LOCKED</code>); API công khai lọc bỏ nội dung đã gỡ và trang bị ẩn.</td></tr>
+    <tr><td>Dữ liệu mẫu (<code>npm run seed</code>)</td><td>Thêm tài khoản mẫu với email riêng (không đụng tài khoản test hiện có): 1 người nghe <b>3/3</b> vi phạm, 1 tài khoản <b>khoá vĩnh viễn</b> (4 lần), 1 nghệ sĩ <b>bị khoá tay</b> (trang ẩn), vài <b>báo cáo đang chờ</b> trên bình luận và bài hát, cùng nhật ký hoạt động.</td></tr>
+    <tr><td>Kiểm thử</td><td>Unit: đếm vi phạm, ngưỡng tự khoá, revoke tự mở khoá. Integration: gỡ 4 nội dung (trộn bình luận / bài đăng / bài hát) → khoá vĩnh viễn, token cũ bị từ chối, không unlock được, nội dung của tài khoản bị ẩn; revoke → mở lại và nội dung hiện lại; khoá tay → unlock được; dismiss không tính; admin không bị báo cáo. E2E: người nghe báo cáo → admin gỡ → bình luận biến mất, tác giả nhận thông báo → lần 4 thì không đăng nhập được.</td></tr>
+  </table>
+
+  <h2>5. Đã chốt</h2>
+  <ol class="confirm-list">
+    <li>Báo cáo vi phạm: có. Tab <b>Manage</b> gộp Users / Artists / Reports. Đổi role chỉ Listener ↔ Admin. Tài khoản bị khoá chặn đăng nhập.</li>
+    <li>Nội dung bị gỡ biến mất, chủ nội dung nhận thông báo, lưu vết vi phạm trong CSDL, admin xem được số lần.</li>
+    <li>Lần vi phạm thứ <b>4</b> → khoá <b>vĩnh viễn</b> (không unlock; chỉ Revoke lần gỡ nhầm). Tính chung bình luận, bài đăng, bài hát. Vi phạm không hết hạn.</li>
+    <li>Khoá tay mở lại được. Tài khoản bị khoá → mọi nội dung của họ tự ẩn (nghệ sĩ: cả trang và bài hát).</li>
+    <li><code>npm run seed</code> tạo sẵn dữ liệu mẫu cho khu Admin. Admin không bị tính vi phạm, không bị báo cáo.</li>
+  </ol>
+  <p class="lead" style="margin-top:12px">Nếu bản này ổn, mình bắt đầu hiện thực.</p>
+</div>
+</body>
+</html>

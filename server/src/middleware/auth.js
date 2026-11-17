@@ -44,4 +44,52 @@ const requireSelf = (req, res, next) => {
   next();
 };
 
-module.exports = { signToken, requireAuth, requireSelf };
+// Chỉ cho phép các vai trò được liệt kê (dùng sau requireAuth). Vai trò luôn đọc lại từ CSDL
+// vì có thể đã thay đổi sau khi token được cấp. Gán req.user (id, role, artistId) cho controller.
+const requireRole = (...roles) => async (req, res, next) => {
+  try {
+    // Nạp model khi gọi để file này không phụ thuộc CSDL lúc import (unit test middleware)
+    const User = require('../models/User');
+    const user = await User.findOne({ id: req.userId }).select('id name role artistId');
+    if (!user) {
+      return res.status(401).json({ success: false, code: 'TOKEN_INVALID', message: 'Tài khoản không còn tồn tại.' });
+    }
+    if (!roles.includes(user.role)) {
+      return res.status(403).json({
+        success: false,
+        code: 'ROLE_FORBIDDEN',
+        message: 'Bạn không có quyền thực hiện thao tác này.',
+      });
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Có token hợp lệ thì gán req.userId, không có / sai thì bỏ qua (API công khai nhưng biết người xem)
+const optionalAuth = (req, res, next) => {
+  const [scheme, token] = (req.headers.authorization || '').split(' ');
+  if (scheme === 'Bearer' && token) {
+    try {
+      req.userId = jwt.verify(token, secret).userId;
+    } catch {
+      // bỏ qua token sai / hết hạn
+    }
+  }
+  next();
+};
+
+// userId trong token hợp lệ (không hợp lệ / không có → null). Dùng cho lockGuard.
+const readUserId = (req) => {
+  const [scheme, token] = (req.headers.authorization || '').split(' ');
+  if (scheme !== 'Bearer' || !token) return null;
+  try {
+    return jwt.verify(token, secret).userId || null;
+  } catch {
+    return null;
+  }
+};
+
+module.exports = { signToken, requireAuth, requireSelf, requireRole, optionalAuth, readUserId };

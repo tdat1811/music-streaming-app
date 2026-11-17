@@ -12,7 +12,14 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
-import { Album, ALL_SONGS, ARTIST_ALBUMS, ARTISTS, Song, Artist } from '../../src/data/musicData';
+import { artistImageSource } from '../../src/utils/imageSource';
+import { isArtistHidden, registerSongs } from '../../src/data/songRegistry';
+import { useSongRegistryVersion } from '../../src/hooks/useSongsByIds';
+import { isApiError } from '../../src/services/api';
+import { formatFollowers } from '../../src/utils/plays';
+import { Album, ALL_SONGS, ARTIST_ALBUMS, ARTISTS, Song, Artist, getSongsByIds } from '../../src/data/musicData';
+import { useFeed } from '../../src/context/FeedContext';
+import { postSubtitle } from '../../src/utils/posts';
 import { SongItem } from '../../src/components/SongItem';
 import { SongActionModal } from '../../src/components/SongActionModal';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
@@ -31,6 +38,9 @@ interface ArtistProfileScreenProps {
   onBack?: () => void;
   onNavigateToPlay?: (trackId?: string) => void;
   onTabPress?: (tab: TabName) => void;
+  // Xem toàn bộ bài đăng của nghệ sĩ trên Feed
+  onOpenPosts?: (artistId: string, name: string) => void;
+  onOpenComments?: (postId: string) => void;
 }
 
 export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
@@ -41,7 +51,10 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
   onBack,
   onNavigateToPlay,
   onTabPress,
+  onOpenPosts,
+  onOpenComments,
 }) => {
+  const { posts: feedPosts, getCommentCount } = useFeed();
   const { currentUser, toggleFollowArtist } = useAuth();
   const { ensureMember } = useAccess();
   const currentId = artistId ?? (initialArtist?.id || DEFAULT_ARTIST_ID);
@@ -64,6 +77,9 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
   const [loading, setLoading] = useState<boolean>(!localArtist);
 
   const [aboutExpanded, setAboutExpanded] = useState(false);
+  // Máy chủ báo không có trang này (bị admin ẩn / chủ trang bị khoá): không dùng bản có sẵn trên máy
+  const [notFound, setNotFound] = useState(false);
+  useSongRegistryVersion();
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [songModalVisible, setSongModalVisible] = useState(false);
   const { playSong } = useAudioPlayer();
@@ -86,11 +102,15 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
         const data = res?.data || res;
         if (isMounted && data && data.name) {
           setDbArtist(data);
-          if (Array.isArray(data.tracks)) setDbTracks(data.tracks);
+          if (Array.isArray(data.tracks)) {
+            registerSongs(data.tracks);
+            setDbTracks(data.tracks);
+          }
           if (Array.isArray(data.albums)) setDbAlbums(data.albums);
           if (Array.isArray(data.relatedArtists)) setDbRelated(data.relatedArtists);
         }
       } catch (err) {
+        if (isMounted && isApiError(err) && err.status === 404) setNotFound(true);
         console.log('Using local fallback for artist profile:', err);
       } finally {
         if (isMounted) setLoading(false);
@@ -121,8 +141,26 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
     playFrom(queue[0], queue);
   };
 
-  const resolveImage = (img: any) =>
-    typeof img === 'string' ? { uri: img } : img;
+  const resolveImage = (img: any) => artistImageSource(img);
+
+  // Giai đoạn 5: trang đang bị ẩn → báo không có, không hiện bài hát / album
+  if (notFound || isArtistHidden(activeArtist ?? { id: currentId })) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <StatusBar style="dark" />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onBack} style={styles.headerIconBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityLabel="Back">
+            <Feather name="chevron-left" size={26} color={COLORS.textPrimary} />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.centerLoading}>
+          <Ionicons name="eye-off-outline" size={40} color={COLORS.textMuted} />
+          <Text style={styles.loadingText}>This artist isn't available.</Text>
+        </View>
+        <BottomTabBar currentTab="Home" onTabPress={(tab) => onTabPress && onTabPress(tab)} />
+      </SafeAreaView>
+    );
+  }
 
   // Nếu đang tải và chưa có bất kỳ thông tin nghệ sĩ nào, hiển thị màn hình chờ mượt mà
   if (!activeArtist || (loading && !activeArtist.name)) {
@@ -134,6 +172,7 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
             onPress={onBack}
             style={styles.headerIconBtn}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityLabel="Back"
           >
             <Feather name="chevron-left" size={26} color={COLORS.textPrimary} />
           </TouchableOpacity>
@@ -157,6 +196,7 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
           onPress={onBack}
           style={styles.headerIconBtn}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityLabel="Back"
         >
           <Feather name="chevron-left" size={26} color={COLORS.textPrimary} />
         </TouchableOpacity>
@@ -174,9 +214,12 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
           />
           <View style={styles.nameVerifiedRow}>
             <Text style={styles.artistName}>{activeArtist.name}</Text>
-            <Ionicons name="checkmark-circle" size={18} color="#00A3FF" style={{ marginLeft: 6 }} />
+            {/* Tick xanh theo trạng thái Admin đặt (dữ liệu cũ chưa có trường này coi như có tick) */}
+            {activeArtist.isVerified !== false && (
+              <Ionicons name="checkmark-circle" size={18} color="#00A3FF" style={{ marginLeft: 6 }} accessibilityLabel="Verified artist" />
+            )}
           </View>
-          <Text style={styles.followersText}>{activeArtist.followers || '1.2M Followers'}</Text>
+          <Text style={styles.followersText}>{formatFollowers(activeArtist) || '1.2M Followers'}</Text>
 
           {/* Actions Row */}
           <View style={styles.actionsRow}>
@@ -228,7 +271,7 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
         </View>
         <View style={styles.popularTracksList}>
           {activeTracks.length === 0 ? (
-            <Text style={styles.emptyText}>Đang tải các bài hát phổ biến...</Text>
+            <Text style={styles.emptyText}>{loading ? 'Đang tải các bài hát phổ biến...' : 'This artist has no songs yet.'}</Text>
           ) : (
             activeTracks.map((track) => (
               <SongItem
@@ -244,6 +287,38 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
             ))
           )}
         </View>
+
+        {/* Section: Posts (2 bài mới nhất trên Feed) */}
+        {(() => {
+          const artistPosts = feedPosts.filter((p) => p.authorArtistId === currentId);
+          if (!artistPosts.length) return null;
+          return (
+            <>
+              <View style={[styles.sectionHeader, styles.postsHeader]}>
+                <Text style={styles.sectionTitle}>Posts</Text>
+                <TouchableOpacity onPress={() => onOpenPosts && onOpenPosts(currentId, activeArtist.name)} accessibilityLabel="See all posts">
+                  <Text style={styles.seeAll}>See all posts</Text>
+                </TouchableOpacity>
+              </View>
+              {artistPosts.slice(0, 2).map((post) => {
+                const song = post.songId ? getSongsByIds([post.songId])[0] : undefined;
+                return (
+                  <TouchableOpacity key={post.id} style={styles.postCard} onPress={() => onOpenComments && onOpenComments(post.id)} activeOpacity={0.8}>
+                    <Text style={styles.postTime}>{postSubtitle(post, !!post.songId)}</Text>
+                    {!!post.content && <Text style={styles.postContent} numberOfLines={3}>{post.content}</Text>}
+                    {!!song && (
+                      <View style={styles.postSong}>
+                        <Ionicons name="musical-note" size={14} color="#0EA5B5" />
+                        <Text style={styles.postSongText} numberOfLines={1}>{song.title}</Text>
+                      </View>
+                    )}
+                    <Text style={styles.postStats}>♥ {post.likes}   💬 {getCommentCount(post.id)}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </>
+          );
+        })()}
 
         {/* Section: Albums */}
         {activeAlbums.length > 0 && (
@@ -331,7 +406,7 @@ export const ArtistProfileScreen: React.FC<ArtistProfileScreenProps> = ({
                     {item.name}
                   </Text>
                   <Text style={styles.albumArtist} numberOfLines={1}>
-                    {item.followers || 'Artist'}
+                    {formatFollowers(item) || 'Artist'}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -447,6 +522,14 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 10,
   },
+  postsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  seeAll: { fontSize: 13, fontWeight: '700', color: '#0EA5B5' },
+  postCard: { marginHorizontal: 16, marginBottom: 10, padding: 12, borderRadius: 12, backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#F3F4F6' },
+  postTime: { fontSize: 11.5, color: '#686A70', marginBottom: 4 },
+  postContent: { fontSize: 14, color: '#111216', lineHeight: 20 },
+  postSong: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
+  postSongText: { flex: 1, fontSize: 13, fontWeight: '700', color: '#111216' },
+  postStats: { fontSize: 12, color: '#686A70', marginTop: 8 },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',

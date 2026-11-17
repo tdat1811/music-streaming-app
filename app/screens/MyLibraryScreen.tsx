@@ -17,10 +17,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
 import { IMAGES } from '../../src/constants/images';
-import { ARTISTS, ALL_ALBUMS, Album, Artist, getSongsByIds, Playlist } from '../../src/data/musicData';
+import { ALL_ALBUMS, Album, Artist, getSongsByIds, Playlist } from '../../src/data/musicData';
+import { useArtists } from '../../src/hooks/useArtists';
+import { useSongsByIds } from '../../src/hooks/useSongsByIds';
+import { useAlbums } from '../../src/hooks/useAlbums';
 import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
 import { fuzzySearch } from '../../src/utils/fuzzySearch';
-import { toImageSource } from '../../src/utils/imageSource';
+import { artistImageSource, toImageSource } from '../../src/utils/imageSource';
+import { formatFollowers } from '../../src/utils/plays';
 import { AuthInput } from '../../src/components/AuthInput';
 import { SongItem } from '../../src/components/SongItem';
 import { TrackListView } from '../../src/components/TrackListView';
@@ -92,23 +96,26 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
     closeCreateModal();
   };
 
+  // Bài đã thích: có cả bài nghệ sĩ tải lên (lấy từ máy chủ khi chưa có trên máy)
+  const likedSongRecords = useSongsByIds(currentUser?.likedSongIds ?? []);
   const likedSongs = useMemo(
-    () =>
-      getSongsByIds(currentUser?.likedSongIds ?? []).map((song) => ({ ...song, isLiked: true })),
-    [currentUser?.likedSongIds]
+    () => likedSongRecords.map((song) => ({ ...song, isLiked: true })),
+    [likedSongRecords]
   );
 
+  const allArtists = useArtists();
   const followedArtists = useMemo(
     () =>
       (currentUser?.followedArtistIds ?? []).flatMap(
-        (id) => ARTISTS.find((artist) => artist.id === id) ?? []
+        (id) => allArtists.find((artist) => artist.id === id) ?? []
       ),
-    [currentUser?.followedArtistIds]
+    [currentUser?.followedArtistIds, allArtists]
   );
 
+  const allAlbums = useAlbums();
   const likedAlbums = useMemo(
-    () => ALL_ALBUMS.filter((album) => likedAlbumIds.includes(album.id)),
-    [likedAlbumIds]
+    () => allAlbums.filter((album) => likedAlbumIds.includes(album.id)),
+    [likedAlbumIds, allAlbums]
   );
 
   // Tìm kiếm tương đối, chỉ trong thư viện của người dùng:
@@ -207,7 +214,7 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
       onPress={() => onSelectArtist && onSelectArtist(item.id)}
       activeOpacity={0.7}
     >
-      <Image source={toImageSource(item.avatarImage)} style={styles.artistAvatar} />
+      <Image source={artistImageSource(item.avatarImage)} style={styles.artistAvatar} />
       <View style={styles.artistInfo}>
         <Text style={styles.artistName} numberOfLines={1}>{item.name}</Text>
         <View style={styles.followersRow}>
@@ -217,7 +224,7 @@ export const MyLibraryScreen: React.FC<MyLibraryScreenProps> = ({
             color={COLORS.textSecondary}
             style={{ marginRight: 4 }}
           />
-          <Text style={styles.followersText}>{item.followers}</Text>
+          <Text style={styles.followersText}>{formatFollowers(item)}</Text>
         </View>
       </View>
       <TouchableOpacity

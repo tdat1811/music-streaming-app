@@ -14,6 +14,9 @@ export const IMAGES = {
   subscriptionCardMain: require('../../assets/images/Subscription Plans/Container 110.png'),
   subscriptionCardSecond: require('../../assets/images/Subscription Plans/Container 112.png'),
 
+  // Ảnh mặc định cho nghệ sĩ chưa có ảnh đại diện (VD nghệ sĩ mới được duyệt)
+  defaultArtist: require('../../assets/images/default-artist.png'),
+
   // Home Screen
   homeAvatar: require('../../assets/images/Home - Audio Listing/Avatar 3.png'),
   homeLogo: require('../../assets/images/Home - Audio Listing/Image 36.png'),

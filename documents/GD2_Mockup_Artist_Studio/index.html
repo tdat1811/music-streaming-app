@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GĐ2 – Artist Studio</title>
+<style>
+  :root {
+    --primary: #10C7D5; --primary-dark: #0EA5B5; --text: #111216; --text2: #686A70; --muted: #9CA3AF;
+    --border: #E8ECF2; --soft: #F3F4F6; --purple: #7B2CBF; --red: #E11D48; --green: #16A34A; --amber: #D97706;
+    --page: #EEF1F5;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--page); color: var(--text); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 48px 0 6px; }
+  .lead { color: var(--text2); margin: 0 0 8px; line-height: 1.6; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #E6FAFB; color: var(--primary-dark); margin-right: 6px; }
+
+  .flow { background: #fff; border-radius: 16px; padding: 20px; margin-top: 16px; overflow-x: auto; }
+  .lane { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+  .lane-title { width: 130px; font-weight: 800; font-size: 13px; color: var(--text2); flex-shrink: 0; }
+  .node { border: 2px solid var(--border); border-radius: 12px; padding: 8px 12px; font-size: 13px; font-weight: 600; background: #fff; }
+  .node b { color: var(--primary-dark); margin-right: 4px; }
+  .node.ok { border-color: #BBF7D0; background: #F0FDF4; } .node.ok b { color: var(--green); }
+  .node.listener { border-color: #E9D5FF; background: #FAF5FF; } .node.listener b { color: var(--purple); }
+  .arrow { color: var(--muted); font-weight: 800; }
+
+  .rules { background: #fff; border-radius: 16px; padding: 8px 24px; margin-top: 16px; }
+  .rules li { margin: 10px 0; line-height: 1.55; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 28px; margin-top: 18px; }
+  .card { display: flex; flex-direction: column; align-items: center; }
+  .caption { width: 360px; margin-top: 12px; background: #fff; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: #333; }
+  .caption h3 { margin: 0 0 4px; font-size: 15px; }
+
+  .phone { width: 360px; height: 760px; background: #fff; border-radius: 34px; border: 10px solid #121316; position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,.12); }
+  .statusbar { height: 28px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .screen { flex: 1; overflow: hidden; padding: 4px 18px 0; display: flex; flex-direction: column; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; height: 44px; flex-shrink: 0; }
+  .topbar .title { font-size: 17px; font-weight: 800; }
+  .ico { width: 24px; height: 24px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .ico.sm { width: 16px; height: 16px; } .ico.xs { width: 13px; height: 13px; }
+  .muted { color: var(--text2); font-size: 13px; }
+  .section-title { font-size: 15px; font-weight: 800; margin: 16px 0 8px; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .between { justify-content: space-between; }
+  .link { color: var(--primary); font-weight: 700; font-size: 14px; }
+  .box { border: 1px solid var(--border); border-radius: 16px; padding: 14px; background: #fff; }
+  .dim { opacity: .45; }
+
+  .avatar { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 22px; flex-shrink: 0; background: linear-gradient(135deg, #F59E0B, #EC4899); }
+  .avatar.s48 { width: 48px; height: 48px; font-size: 17px; }
+  .cover { width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .cv1 { background: linear-gradient(135deg, #F97316, #DB2777); } .cv2 { background: linear-gradient(135deg, #6366F1, #0EA5B5); }
+  .cv3 { background: linear-gradient(135deg, #10B981, #065F46); } .cv4 { background: linear-gradient(135deg, #7B2CBF, #312E81); }
+  .cover.big { width: 120px; height: 120px; border-radius: 16px; }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+  .b-pub { background: #DCFCE7; color: var(--green); } .b-draft { background: #FEF3C7; color: var(--amber); }
+  .b-hidden { background: var(--soft); color: var(--text2); } .b-artist { background: #E6FAFB; color: var(--primary-dark); }
+  .b-phase { background: var(--soft); color: var(--text2); font-size: 10px; }
+
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; border-radius: 14px; font-weight: 800; font-size: 15px; border: none; width: 100%; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-outline { background: #fff; color: var(--text); border: 1.5px solid var(--border); }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--text2); height: 40px; font-weight: 600; }
+  .footer-actions { display: flex; gap: 10px; padding: 12px 0 14px; margin-top: auto; }
+
+  .field { margin-bottom: 11px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--text2); margin-bottom: 5px; }
+  .input { border: 1px solid var(--border); border-radius: 12px; min-height: 42px; padding: 10px 13px; font-size: 14px; color: var(--text); background: #fff; }
+  .input.ph { color: var(--muted); } .input.area { min-height: 62px; line-height: 1.4; }
+  .input.lock { background: var(--soft); color: var(--text2); display: flex; justify-content: space-between; align-items: center; }
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip { border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; color: var(--text2); }
+  .chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .seg { display: flex; background: var(--soft); border-radius: 12px; padding: 4px; margin: 4px 0 12px; }
+  .seg div { flex: 1; text-align: center; font-size: 12px; font-weight: 700; padding: 8px 0; border-radius: 9px; color: var(--text2); }
+  .seg .on { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+  .file { border: 1.5px dashed #9BE3EA; background: #F2FDFE; border-radius: 14px; padding: 14px; display: flex; align-items: center; gap: 12px; }
+  .file.done { border-style: solid; border-color: var(--border); background: #fff; }
+  .file .fi { width: 42px; height: 42px; border-radius: 12px; background: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .progress { height: 6px; border-radius: 3px; background: var(--soft); overflow: hidden; margin-top: 8px; }
+  .progress i { display: block; height: 100%; width: 68%; background: var(--primary); border-radius: 3px; }
+
+  .radio-card { border: 2px solid var(--border); border-radius: 14px; padding: 11px 12px; display: flex; gap: 10px; flex: 1; }
+  .radio-card.on { border-color: var(--primary); background: #F2FDFE; }
+  .radio-card .r { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted); flex-shrink: 0; margin-top: 1px; }
+  .radio-card.on .r { border: 6px solid var(--primary); }
+  .radio-card b { font-size: 13px; display: block; } .radio-card span { font-size: 11.5px; color: var(--text2); }
+
+  .stat { flex: 1; border-radius: 14px; padding: 12px; }
+  .stat .n { font-size: 22px; font-weight: 900; } .stat .l { font-size: 11.5px; color: var(--text2); font-weight: 600; }
+  .menu-item { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--soft); }
+  .menu-item .mi { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .menu-item .t { flex: 1; } .menu-item .t b { font-size: 14px; display: block; } .menu-item .t span { font-size: 12px; color: var(--text2); }
+  .song { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--soft); align-items: center; }
+  .song .t { flex: 1; min-width: 0; } .song .t b { font-size: 14px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .song .t span { font-size: 12px; color: var(--text2); }
+  .check { width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--muted); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .check.on { background: var(--primary); border-color: var(--primary); }
+  .num { width: 20px; text-align: center; font-size: 13px; color: var(--text2); font-weight: 700; }
+
+  .overlay { position: absolute; inset: 28px 0 0 0; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; }
+  .overlay.center { align-items: center; padding: 0 26px; }
+  .sheet { background: #fff; width: 100%; border-radius: 22px 22px 0 0; padding: 18px 18px 22px; }
+  .dialog { background: #fff; width: 100%; border-radius: 20px; padding: 22px; }
+  .sheet h4, .dialog h4 { margin: 0 0 6px; font-size: 18px; }
+  .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--border); margin: 0 auto 14px; }
+  .action { display: flex; align-items: center; gap: 12px; padding: 13px 2px; border-bottom: 1px solid var(--soft); font-size: 14.5px; font-weight: 600; }
+  .action:last-child { border-bottom: none; }
+  .info { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 12px; padding: 11px 12px; font-size: 12.5px; line-height: 1.5; color: #075985; }
+  .warn { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 11px 12px; font-size: 12.5px; line-height: 1.5; color: #92400E; }
+  .okbox { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 11px 12px; font-size: 12.5px; color: #166534; }
+
+  .tabbar { height: 62px; border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; flex-shrink: 0; background: #fff; }
+  .tabbar div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .tabbar .ico { stroke: var(--muted); width: 22px; height: 22px; }
+  .tabbar .on { color: var(--primary); } .tabbar .on .ico { stroke: var(--primary); }
+
+  .confirm-list { background: #fff; border-radius: 16px; padding: 8px 24px; margin-top: 16px; }
+  .confirm-list li { margin: 12px 0; line-height: 1.55; }
+  table.api { width: 100%; border-collapse: collapse; background: #fff; border-radius: 16px; overflow: hidden; margin-top: 16px; font-size: 14px; }
+  table.api th, table.api td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  table.api th { background: #1F3A68; color: #fff; }
+  code { background: #EEF2F7; border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+    <symbol id="i-disc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+    <symbol id="i-feed" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+    <symbol id="i-lib" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <h1>Giai đoạn 2 – Artist Studio (quản lý nội dung của nghệ sĩ)</h1>
+  <p class="lead"><span class="tag">BẢN XEM TRƯỚC</span>Mockup giao diện để nhóm duyệt trước khi code. Chữ trên giao diện để tiếng Anh như app; ghi chú bằng tiếng Việt. Ví dụ dùng nghệ sĩ <b>"Ashley S."</b> vừa được duyệt ở giai đoạn 1.</p>
+  <div class="lead">Phạm vi giai đoạn 2:
+    <ul class="lead" style="margin:4px 0 0">
+      <li>nghệ sĩ <b>tải bài hát</b> lên, <b>quản lý bài</b> (sửa, đăng / ẩn, xoá) và <b>album</b>, rồi <b>sửa trang nghệ sĩ</b>;</li>
+      <li>người nghe <b>thấy và nghe được</b> các bài đó (trang nghệ sĩ, tìm kiếm, playlist).</li>
+    </ul>
+    Đăng bài lên Feed để ở giai đoạn 3, thống kê ở giai đoạn 4, AI ở giai đoạn 6. Các mục này hiện mờ trong Studio.</div>
+
+  <h2>1. Sơ đồ luồng</h2>
+  <div class="flow">
+    <div class="lane">
+      <div class="lane-title">Nghệ sĩ</div>
+      <div class="node"><b>S1</b>Profile → Artist Studio</div><span class="arrow">→</span>
+      <div class="node"><b>S2</b>Upload song</div><span class="arrow">→</span>
+      <div class="node"><b>S3</b>Đang tải → xong</div><span class="arrow">→</span>
+      <div class="node"><b>S4</b>My songs</div><span class="arrow">→</span>
+      <div class="node"><b>S5–S6</b>Sửa / đăng / ẩn / xoá bài</div>
+    </div>
+    <div class="lane">
+      <div class="lane-title">Nghệ sĩ (tiếp)</div>
+      <div class="node"><b>S7</b>Albums</div><span class="arrow">→</span>
+      <div class="node"><b>S8</b>Tạo / sửa album, chọn bài</div>
+      <span class="arrow">·</span>
+      <div class="node"><b>S9</b>Edit artist page</div>
+    </div>
+    <div class="lane">
+      <div class="lane-title">Người nghe</div>
+      <div class="node listener"><b>L1</b>Trang nghệ sĩ có bài và album mới</div><span class="arrow">→</span>
+      <div class="node listener"><b>L2</b>Tìm kiếm ra bài mới, phát được</div>
+    </div>
+  </div>
+
+  <h2>2. Quy tắc nghiệp vụ đề xuất</h2>
+  <ul class="rules">
+    <li>Chỉ tài khoản <b>artist</b> mới vào được Studio, và chỉ thấy, sửa được <b>bài và album của chính mình</b>. Server kiểm tra quyền ở từng API (<code>requireRole('artist')</code> + kiểm tra chủ sở hữu).</li>
+    <li><b>Tải bài hát:</b>
+      <ul>
+        <li>file mp3/m4a tối đa 20 MB, ảnh bìa jpg/png/webp tối đa 5 MB;</li>
+        <li>tên bài 1–150 ký tự; thể loại chọn 1 trong các thể loại của nghệ sĩ;</li>
+        <li><b>thời lượng tự đọc từ file</b>, nghệ sĩ không phải nhập;</li>
+        <li>không có ảnh bìa thì dùng ảnh đại diện của nghệ sĩ.</li>
+      </ul></li>
+    <li><b>Trạng thái bài hát</b>:
+      <ul>
+        <li><code>published</code>: mọi người thấy;</li>
+        <li><code>draft</code>: bản nháp, chỉ nghệ sĩ thấy;</li>
+        <li><code>hidden</code>: đã từng đăng, nghệ sĩ tạm ẩn. Bài ẩn biến khỏi tìm kiếm, trang nghệ sĩ và playlist của người nghe, nhưng lượt nghe vẫn giữ.</li>
+      </ul></li>
+    <li><b>Xoá bài:</b>
+      <ul>
+        <li>bài <b>chưa có lượt nghe</b> thì xoá hẳn được (xoá cả file);</li>
+        <li>bài <b>đã có lượt nghe</b> thì chỉ được <b>ẩn</b>, để giữ thống kê và không làm hỏng playlist của người nghe.</li>
+      </ul></li>
+    <li><b>Album:</b>
+      <ul>
+        <li>chỉ chọn được bài của chính mình, tối đa 30 bài, sắp xếp được thứ tự;</li>
+        <li>album phải có ít nhất 1 bài đã đăng thì mới đăng được;</li>
+        <li>bài nháp hoặc bài ẩn trong album không hiện cho người nghe.</li>
+      </ul></li>
+    <li><b>Sửa trang nghệ sĩ:</b>
+      <ul>
+        <li>đổi được ảnh đại diện, ảnh bìa, tiểu sử, thể loại, link mạng xã hội;</li>
+        <li><b>không tự đổi được nghệ danh</b>, vì nghệ danh đã được Admin duyệt (muốn đổi thì liên hệ Admin, làm ở giai đoạn 5).</li>
+      </ul></li>
+    <li><b>Phía người nghe:</b> app lấy bài hát và album từ server thay vì chỉ dùng dữ liệu có sẵn trong app, nên bài mới hiện ở trang nghệ sĩ, tìm kiếm, playlist, và phát được. Lượt nghe tăng như các bài khác.</li>
+  </ul>
+
+  <h2>3. Màn hình của nghệ sĩ (S1–S9)</h2>
+  <div class="grid">
+
+    <!-- S1 Studio home -->
+    <div class="card">
+      <div class="phone" id="S1">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Artist Studio</span><span style="width:24px"></span></div>
+          <div class="row" style="margin:4px 0 12px">
+            <div class="avatar s48">AS</div>
+            <div style="flex:1"><div class="row" style="gap:5px"><b style="font-size:17px">Ashley S.</b><svg class="ico xs" style="stroke:#00A3FF;stroke-width:3"><use href="#i-check"/></svg></div><div class="muted" style="font-size:12px">Pop · Ballad</div></div>
+            <span class="link" style="font-size:13px">View page</span>
+          </div>
+          <div class="row" style="gap:10px">
+            <div class="stat" style="background:#E6FAFB"><div class="n">4</div><div class="l">Songs</div></div>
+            <div class="stat" style="background:#FEF3C7"><div class="n">1.3K</div><div class="l">Total plays</div></div>
+            <div class="stat" style="background:#F3E8FF"><div class="n">28</div><div class="l">Followers</div></div>
+          </div>
+          <div class="btn btn-primary" style="margin:14px 0 4px"><svg class="ico sm" style="stroke:#fff"><use href="#i-upload"/></svg>Upload a song</div>
+          <div class="menu-item"><div class="mi" style="background:#E6FAFB"><svg class="ico sm" style="stroke:var(--primary-dark)"><use href="#i-music"/></svg></div><div class="t"><b>My songs</b><span>2 published · 1 draft · 1 hidden</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+          <div class="menu-item"><div class="mi" style="background:#FCE7F3"><svg class="ico sm" style="stroke:#DB2777"><use href="#i-disc"/></svg></div><div class="t"><b>Albums</b><span>1 album</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+          <div class="menu-item"><div class="mi" style="background:var(--soft)"><svg class="ico sm"><use href="#i-user"/></svg></div><div class="t"><b>Edit artist page</b><span>Photo, bio, genres, links</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+          <div class="menu-item dim"><div class="mi" style="background:var(--soft)"><svg class="ico sm"><use href="#i-feed"/></svg></div><div class="t"><b>Post to feed</b><span>Phase 3</span></div></div>
+          <div class="menu-item dim"><div class="mi" style="background:var(--soft)"><svg class="ico sm"><use href="#i-chart"/></svg></div><div class="t"><b>Stats</b><span>Phase 4</span></div></div>
+          <div class="menu-item dim" style="border:none"><div class="mi" style="background:var(--soft)"><svg class="ico sm"><use href="#i-spark"/></svg></div><div class="t"><b>AI Fan Insight</b><span>Phase 6</span></div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>S1 · Artist Studio</h3>Thay cho trang "coming soon" của giai đoạn 1. Có 3 ô số liệu đơn giản tính từ CSDL: số bài, tổng lượt nghe, người theo dõi. Nút lớn <b>"Upload a song"</b>, 3 mục quản lý, và 3 mục của các giai đoạn sau để mờ.</div>
+    </div>
+
+    <!-- S2 Upload -->
+    <div class="card">
+      <div class="phone" id="S2">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-x"/></svg><span class="title">Upload a song</span><span style="width:24px"></span></div>
+          <div class="file done" style="margin-bottom:10px">
+            <div class="fi"><svg class="ico sm" style="stroke:#fff"><use href="#i-music"/></svg></div>
+            <div style="flex:1;min-width:0"><b style="font-size:13.5px">mua-thu-ha-noi.mp3</b><div class="muted" style="font-size:12px">6.8 MB · 03:42</div></div>
+            <span class="link" style="font-size:12.5px">Change</span>
+          </div>
+          <div class="row" style="gap:12px;margin-bottom:10px">
+            <div class="cover cv1" style="width:72px;height:72px;border-radius:12px"><svg class="ico" style="stroke:#fff"><use href="#i-camera"/></svg></div>
+            <div><b style="font-size:13.5px">Cover image</b><div class="muted" style="font-size:12px">Optional · square, up to 5 MB.<br>No cover → your profile photo.</div></div>
+          </div>
+          <div class="field"><label>Title *</label><div class="input">Mùa thu Hà Nội</div></div>
+          <div class="field"><label>Genre *</label><div class="chips"><span class="chip on">Pop</span><span class="chip">Ballad</span></div></div>
+          <div class="field"><label>Description</label><div class="input area ph">Tell listeners about this song (optional)</div></div>
+          <div class="field" style="margin-bottom:6px"><label>When ready</label>
+            <div class="row" style="gap:8px">
+              <div class="radio-card on"><div class="r"></div><div><b>Publish now</b><span>Everyone can listen</span></div></div>
+              <div class="radio-card"><div class="r"></div><div><b>Save as draft</b><span>Only you can see</span></div></div>
+            </div>
+          </div>
+          <div class="footer-actions"><div class="btn btn-primary">Upload</div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>S2 · Tải bài hát lên</h3>Chọn file nhạc trước; app hiện tên file, dung lượng và <b>thời lượng tự đọc từ file</b>. Thể loại chỉ cho chọn trong các thể loại của nghệ sĩ. Có thêm mục lời bài hát (Lyrics), thu gọn ở cuối form, không bắt buộc. Cuối form chọn <b>Publish now</b> hoặc <b>Save as draft</b>.</div>
+    </div>
+
+    <!-- S2b validation -->
+    <div class="card">
+      <div class="phone" id="S2b">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-x"/></svg><span class="title">Upload a song</span><span style="width:24px"></span></div>
+          <div class="file">
+            <div class="fi"><svg class="ico sm" style="stroke:#fff"><use href="#i-upload"/></svg></div>
+            <div style="flex:1"><b style="font-size:13.5px">Choose an audio file *</b><div class="muted" style="font-size:12px">MP3 or M4A · up to 20 MB</div></div>
+          </div>
+          <div class="hint" style="color:var(--red);margin:6px 0 10px">"concert.wav" is not supported. Please choose an MP3 or M4A file.</div>
+          <div class="row" style="gap:12px;margin-bottom:10px">
+            <div class="cover" style="width:72px;height:72px;border-radius:12px;background:var(--soft)"><svg class="ico" style="stroke:var(--muted)"><use href="#i-image"/></svg></div>
+            <div><b style="font-size:13.5px">Cover image</b><div class="muted" style="font-size:12px">Optional · square, up to 5 MB</div></div>
+          </div>
+          <div class="field"><label>Title *</label><div class="input" style="border-color:var(--red)"></div><div class="hint" style="color:var(--red)">Please enter a song title.</div></div>
+          <div class="field"><label>Genre *</label><div class="chips"><span class="chip">Pop</span><span class="chip">Ballad</span></div><div class="hint" style="color:var(--red)">Please choose a genre.</div></div>
+          <div class="warn">Leaving now will discard this upload.</div>
+          <div class="footer-actions"><div class="btn btn-primary" style="opacity:.5">Upload</div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>S2b · Báo lỗi khi tải lên</h3>Kiểm tra ngay trên máy trước khi gửi: sai định dạng, quá 20 MB, thiếu tên hoặc thể loại. Server kiểm tra lại lần nữa. Bấm ✕ khi đã điền dở thì app hỏi xác nhận trước khi bỏ.</div>
+    </div>
+
+    <!-- S3 uploading / done -->
+    <div class="card">
+      <div class="phone" id="S3">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><span style="width:24px"></span><span class="title">Upload a song</span><span style="width:24px"></span></div>
+          <div class="box" style="margin-top:8px">
+            <div class="row"><div class="cover cv1"><svg class="ico sm" style="stroke:#fff"><use href="#i-music"/></svg></div><div style="flex:1"><b style="font-size:14px">Mùa thu Hà Nội</b><div class="muted" style="font-size:12px">Uploading… 4.6 of 6.8 MB</div></div><b style="color:var(--primary-dark)">68%</b></div>
+            <div class="progress"><i></i></div>
+          </div>
+          <div style="text-align:center;margin:44px 0 18px">
+            <div style="width:76px;height:76px;border-radius:50%;background:#DCFCE7;margin:0 auto 12px;display:flex;align-items:center;justify-content:center"><svg class="ico" style="stroke:var(--green);width:36px;height:36px;stroke-width:3"><use href="#i-check"/></svg></div>
+            <div style="font-size:20px;font-weight:900">Song published!</div>
+            <div class="muted" style="margin-top:4px">"Mùa thu Hà Nội" is now on your artist page.</div>
+          </div>
+          <div class="info">Above: while uploading. Below: when finished (same screen, two states).</div>
+          <div class="footer-actions" style="flex-direction:column;gap:6px"><div class="btn btn-primary">View in My songs</div><div class="btn btn-outline">Upload another</div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>S3 · Đang tải và hoàn tất</h3>Có thanh tiến trình theo phần trăm, không cho rời màn trong lúc tải. Xong thì báo <b>"Song published!"</b> (hoặc "Draft saved"). Nếu mất mạng giữa chừng thì báo lỗi kèm nút "Try again", dữ liệu đã nhập vẫn giữ.</div>
+    </div>
+
+    <!-- S4 My songs -->
+    <div class="card">
+      <div class="phone" id="S4">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">My songs</span><svg class="ico"><use href="#i-plus"/></svg></div>
+          <div class="seg"><div class="on">All (4)</div><div>Published</div><div>Drafts</div><div>Hidden</div></div>
+          <div class="song"><div class="cover cv1"></div><div class="t"><b>Mùa thu Hà Nội</b><span>1.2K plays · 03:42 · 16/11</span></div><span class="badge b-pub">Published</span><svg class="ico sm"><use href="#i-more"/></svg></div>
+          <div class="song"><div class="cover cv2"></div><div class="t"><b>Late Night Drive</b><span>0 plays · 03:15 · 15/11</span></div><span class="badge b-draft">Draft</span><svg class="ico sm"><use href="#i-more"/></svg></div>
+          <div class="song"><div class="cover cv3"></div><div class="t"><b>Sunday Morning</b><span>96 plays · 02:58 · 10/11</span></div><span class="badge b-pub">Published</span><svg class="ico sm"><use href="#i-more"/></svg></div>
+          <div class="song"><div class="cover cv4"></div><div class="t"><b>Old Letters</b><span>24 plays · 04:05 · 02/11</span></div><span class="badge b-hidden">Hidden</span><svg class="ico sm"><use href="#i-more"/></svg></div>
+          <div class="hint" style="text-align:center;margin-top:14px">Newest first · pull down to refresh</div>
+        </div>
+      </div>
+      <div class="caption"><h3>S4 · Bài hát của tôi</h3>Có 4 tab lọc theo trạng thái. Mỗi bài hiện ảnh bìa, lượt nghe, thời lượng, ngày tải và nhãn trạng thái. Bấm vào bài để nghe thử; bấm <b>"⋯"</b> để mở menu thao tác (S5). Nút <b>＋</b> trên cùng mở màn Upload.</div>
+    </div>
+
+    <!-- S5 action sheet -->
+    <div class="card">
+      <div class="phone" id="S5">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">My songs</span><svg class="ico"><use href="#i-plus"/></svg></div>
+          <div class="seg"><div class="on">All (4)</div><div>Published</div><div>Drafts</div><div>Hidden</div></div>
+          <div class="song"><div class="cover cv1"></div><div class="t"><b>Mùa thu Hà Nội</b><span>1.2K plays</span></div></div>
+        </div>
+        <div class="overlay">
+          <div class="sheet">
+            <div class="grab"></div>
+            <div class="row" style="margin-bottom:8px"><div class="cover cv1"></div><div><b>Mùa thu Hà Nội</b><div class="muted" style="font-size:12px">Published · 1.2K plays</div></div></div>
+            <div class="action"><svg class="ico sm"><use href="#i-play"/></svg>Play</div>
+            <div class="action"><svg class="ico sm"><use href="#i-edit"/></svg>Edit details</div>
+            <div class="action"><svg class="ico sm"><use href="#i-eyeoff"/></svg>Hide from listeners</div>
+            <div class="action" style="color:var(--muted)"><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-trash"/></svg><div>Delete<div style="font-size:11.5px;font-weight:500">Songs with plays can only be hidden</div></div></div>
+            <div class="btn btn-ghost" style="margin-top:6px">Cancel</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>S5 · Menu thao tác bài hát</h3>Các lựa chọn thay đổi theo trạng thái bài:
+        <ul style="margin:4px 0 0;padding-left:18px">
+          <li><b>Published</b> → "Hide from listeners";</li>
+          <li><b>Draft</b> → "Publish now";</li>
+          <li><b>Hidden</b> → "Show again".</li>
+        </ul>
+        Nút "Delete" chỉ bấm được khi bài <b>chưa có lượt nghe</b>; ở ví dụ này bài đã có lượt nghe nên nút bị mờ và có ghi chú lý do.</div>
+    </div>
+
+    <!-- S6 Edit song + delete confirm -->
+    <div class="card">
+      <div class="phone" id="S6">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Edit song</span><span class="badge b-draft">Draft</span></div>
+          <div class="row" style="gap:12px;margin-bottom:10px">
+            <div class="cover cv2" style="width:72px;height:72px;border-radius:12px"></div>
+            <div><span class="link" style="font-size:13px">Change cover</span><div class="muted" style="font-size:12px;margin-top:4px">late-night-drive.mp3 · 03:15</div><div class="hint">To change the audio, upload a new song.</div></div>
+          </div>
+          <div class="field"><label>Title *</label><div class="input">Late Night Drive</div></div>
+          <div class="field"><label>Genre *</label><div class="chips"><span class="chip">Pop</span><span class="chip on">Ballad</span></div></div>
+          <div class="field"><label>Description</label><div class="input area">Written on a rainy night in Đà Lạt.</div></div>
+          <div class="footer-actions" style="flex-direction:column;gap:6px"><div class="btn btn-primary">Save &amp; publish</div><div class="btn btn-outline">Save as draft</div></div>
+        </div>
+        <div class="overlay center">
+          <div class="dialog">
+            <h4>Delete "Late Night Drive"?</h4>
+            <div class="muted" style="margin-bottom:16px;line-height:1.5">This draft has no plays yet. The song and its audio file will be removed permanently.</div>
+            <div class="btn btn-danger">Delete</div>
+            <div class="btn btn-ghost">Cancel</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>S6 · Sửa bài hát và xác nhận xoá</h3>Sửa được ảnh bìa, tên, thể loại, mô tả, lời bài hát. <b>Không đổi được file nhạc</b> (muốn đổi thì tải bài mới), để lượt nghe luôn gắn đúng với bản nhạc đã nghe. Hình phía trên là hộp xác nhận xoá cho một bài nháp chưa có lượt nghe.</div>
+    </div>
+
+    <!-- S7 Albums -->
+    <div class="card">
+      <div class="phone" id="S7">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Albums</span><svg class="ico"><use href="#i-plus"/></svg></div>
+          <div class="song" style="padding:12px 0"><div class="cover cv1" style="width:64px;height:64px;border-radius:12px"></div><div class="t"><b>Hà Nội Stories</b><span>2024 · 3 songs</span><div style="margin-top:4px"><span class="badge b-pub">Published</span></div></div><svg class="ico sm"><use href="#i-more"/></svg></div>
+          <div class="song" style="padding:12px 0"><div class="cover" style="width:64px;height:64px;border-radius:12px;background:var(--soft)"><svg class="ico" style="stroke:var(--muted)"><use href="#i-disc"/></svg></div><div class="t"><b>Untitled album</b><span>0 songs</span><div style="margin-top:4px"><span class="badge b-draft">Draft</span></div></div><svg class="ico sm"><use href="#i-more"/></svg></div>
+          <div class="box" style="margin-top:16px;text-align:center;border-style:dashed">
+            <svg class="ico" style="stroke:var(--primary)"><use href="#i-plus"/></svg>
+            <div style="font-weight:800;margin-top:4px">New album</div>
+            <div class="muted" style="font-size:12px">Group your songs into an album or EP</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>S7 · Danh sách album</h3>Mỗi album hiện năm phát hành, số bài và trạng thái. Album nháp chỉ nghệ sĩ thấy. Menu <b>"⋯"</b> gồm Edit, Publish / Unpublish và Delete; xoá album <b>không xoá bài hát</b> bên trong.</div>
+    </div>
+
+    <!-- S8 Album editor -->
+    <div class="card">
+      <div class="phone" id="S8">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Edit album</span><span style="width:24px"></span></div>
+          <div class="row" style="gap:12px;margin-bottom:10px">
+            <div class="cover cv1" style="width:72px;height:72px;border-radius:12px"></div>
+            <div style="flex:1"><div class="field" style="margin:0 0 6px"><div class="input">Hà Nội Stories</div></div><div class="row" style="gap:6px"><div class="input" style="min-height:34px;padding:6px 10px;font-size:13px;width:80px">2024</div><span class="link" style="font-size:12.5px">Change cover</span></div></div>
+          </div>
+          <div class="row between"><div class="section-title" style="margin:6px 0">Songs (3 selected)</div><span class="muted" style="font-size:12px">Drag ≡ to reorder</span></div>
+          <div class="song"><div class="check on"><svg class="ico xs" style="stroke:#fff;stroke-width:3"><use href="#i-check"/></svg></div><div class="num">1</div><div class="t"><b>Mùa thu Hà Nội</b><span>Published</span></div><span class="muted">≡</span></div>
+          <div class="song"><div class="check on"><svg class="ico xs" style="stroke:#fff;stroke-width:3"><use href="#i-check"/></svg></div><div class="num">2</div><div class="t"><b>Sunday Morning</b><span>Published</span></div><span class="muted">≡</span></div>
+          <div class="song"><div class="check on"><svg class="ico xs" style="stroke:#fff;stroke-width:3"><use href="#i-check"/></svg></div><div class="num">3</div><div class="t"><b>Late Night Drive</b><span style="color:var(--amber)">Draft – hidden from listeners</span></div><span class="muted">≡</span></div>
+          <div class="song"><div class="check"></div><div class="num"></div><div class="t"><b>Old Letters</b><span>Hidden</span></div></div>
+          <div class="footer-actions" style="flex-direction:column;gap:6px"><div class="btn btn-primary">Save &amp; publish</div><div class="btn btn-outline">Save as draft</div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>S8 · Tạo / sửa album</h3>Gồm ảnh bìa, tên album, năm phát hành, và danh sách <b>bài của chính mình</b> để tích chọn. Kéo biểu tượng ≡ để đổi thứ tự (trên web dùng nút ↑ ↓). Bài nháp hoặc bài ẩn vẫn thêm vào album được, nhưng không hiện cho người nghe; app ghi chú màu vàng bên cạnh.</div>
+    </div>
+
+    <!-- S9 Edit artist page -->
+    <div class="card">
+      <div class="phone" id="S9">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Edit artist page</span><span style="width:24px"></span></div>
+          <div style="height:86px;border-radius:14px;background:linear-gradient(135deg,#4E2A84,#9B30FF);position:relative;margin-bottom:34px">
+            <span style="position:absolute;right:10px;top:10px;background:rgba(255,255,255,.9);border-radius:999px;padding:4px 10px;font-size:11.5px;font-weight:700">Change cover</span>
+            <div class="avatar" style="position:absolute;left:14px;bottom:-28px;border:3px solid #fff">AS<span style="position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center"><svg class="ico xs" style="stroke:#fff"><use href="#i-camera"/></svg></span></div>
+          </div>
+          <div class="field"><label>Stage name</label><div class="input lock">Ashley S.<svg class="ico sm" style="stroke:var(--muted)"><use href="#i-lock"/></svg></div><div class="hint">Approved by admin. Contact support to change it.</div></div>
+          <div class="field"><label>Genres * (up to 3)</label><div class="chips"><span class="chip on">Pop</span><span class="chip on">Ballad</span><span class="chip">Indie</span><span class="chip">R&amp;B</span><span class="chip">Acoustic</span></div></div>
+          <div class="field"><label>Bio *</label><div class="input area">Singer from Hà Nội writing honest songs about growing up.</div></div>
+          <div class="field"><label>Social links</label><div class="input row" style="gap:8px"><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-link"/></svg>instagram.com/ashley.music</div></div>
+          <div class="footer-actions"><div class="btn btn-primary">Save changes</div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>S9 · Sửa trang nghệ sĩ</h3>Đổi được ảnh đại diện, ảnh bìa trang (hiện ở phần "About"), thể loại, tiểu sử, link. <b>Nghệ danh bị khoá</b> vì đã được Admin duyệt. Lưu xong, trang nghệ sĩ và tên tác giả trên Feed cập nhật ngay.</div>
+    </div>
+  </div>
+
+  <h2>4. Phía người nghe (L1–L2)</h2>
+  <div class="grid">
+    <!-- L1 Artist page -->
+    <div class="card">
+      <div class="phone" id="L1">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen" style="padding-top:0">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span></span><span style="width:24px"></span></div>
+          <div style="text-align:center">
+            <div class="avatar" style="width:96px;height:96px;font-size:32px;margin:0 auto 8px">AS</div>
+            <div class="row" style="justify-content:center;gap:5px"><b style="font-size:21px">Ashley S.</b><svg class="ico sm" style="stroke:#00A3FF;stroke-width:3"><use href="#i-check"/></svg></div>
+            <div class="muted">28 Followers</div>
+            <div class="row" style="justify-content:center;gap:14px;margin:10px 0 4px"><div class="btn btn-outline" style="width:100px;height:38px;font-size:14px">Follow</div><div style="width:44px;height:44px;border-radius:50%;background:var(--text);display:flex;align-items:center;justify-content:center"><svg class="ico sm" style="stroke:#fff;fill:#fff"><use href="#i-play"/></svg></div></div>
+          </div>
+          <div class="section-title">Popular</div>
+          <div class="song"><div class="cover cv1"></div><div class="t"><b>Mùa thu Hà Nội</b><span>▶ 1.2K · 03:42</span></div><svg class="ico sm"><use href="#i-more"/></svg></div>
+          <div class="song"><div class="cover cv3"></div><div class="t"><b>Sunday Morning</b><span>▶ 96 · 02:58</span></div><svg class="ico sm"><use href="#i-more"/></svg></div>
+          <div class="section-title">Albums</div>
+          <div class="row"><div class="cover cv1" style="width:110px;height:110px;border-radius:14px"></div><div class="cover" style="width:110px;height:110px;border-radius:14px;background:var(--soft);opacity:0"></div></div>
+          <div style="font-size:13px;font-weight:700;margin-top:6px">Hà Nội Stories</div><div class="muted" style="font-size:12px">2024 · 2 songs</div>
+        </div>
+        <div class="tabbar"><div class="on"><svg class="ico"><use href="#i-home"/></svg>Home</div><div><svg class="ico"><use href="#i-search"/></svg>Search</div><div><svg class="ico"><use href="#i-feed"/></svg>Feed</div><div><svg class="ico"><use href="#i-lib"/></svg>Library</div></div>
+      </div>
+      <div class="caption"><h3>L1 · Trang nghệ sĩ (người nghe thấy)</h3>Chỉ hiện bài <b>đã đăng</b>: "Late Night Drive" (nháp) và "Old Letters" (ẩn) không xuất hiện. Album "Hà Nội Stories" hiện <b>2 bài</b> chứ không phải 3, vì bài nháp bị bỏ ra. Bấm vào bài thì phát như mọi bài khác, và lượt nghe được tính.</div>
+    </div>
+
+    <!-- L2 Search -->
+    <div class="card">
+      <div class="phone" id="L2">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="row" style="border:1px solid var(--border);border-radius:999px;height:44px;padding:0 14px;margin:6px 0 10px"><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-search"/></svg><span style="font-size:14px">mua thu</span></div>
+          <div class="row" style="gap:22px;font-size:14px;font-weight:700;color:var(--text2);border-bottom:1px solid var(--border);padding-bottom:10px"><span style="color:var(--primary)">All</span><span>Tracks</span><span>Albums</span><span>Artists</span></div>
+          <div class="section-title">Songs</div>
+          <div class="song"><div class="cover cv1"></div><div class="t"><b>Mùa thu Hà Nội</b><span>Ashley S. · ▶ 1.2K · 03:42</span></div><svg class="ico sm"><use href="#i-more"/></svg></div>
+          <div class="section-title">Albums</div>
+          <div class="song"><div class="cover cv1"></div><div class="t"><b>Hà Nội Stories</b><span>Album · Ashley S.</span></div></div>
+          <div class="info" style="margin-top:14px">Tìm kiếm không dấu "mua thu" vẫn ra "Mùa thu Hà Nội". Bài nháp hoặc bài ẩn không bao giờ hiện ở đây.</div>
+        </div>
+        <div class="tabbar"><div><svg class="ico"><use href="#i-home"/></svg>Home</div><div class="on"><svg class="ico"><use href="#i-search"/></svg>Search</div><div><svg class="ico"><use href="#i-feed"/></svg>Feed</div><div><svg class="ico"><use href="#i-lib"/></svg>Library</div></div>
+      </div>
+      <div class="caption"><h3>L2 · Tìm kiếm ra bài và album mới</h3>Bài và album nghệ sĩ tải lên hiện trong tìm kiếm (Home và tab Search), thêm vào playlist được, và bấm "⋯" có đủ các thao tác như bài có sẵn. Màn này giữ giao diện cũ; chỉ đổi nguồn dữ liệu sang server.</div>
+    </div>
+  </div>
+
+  <h2>5. Phần sẽ làm khi hiện thực (sau khi duyệt mockup)</h2>
+  <table class="api">
+    <tr><th style="width:24%">Hạng mục</th><th>Chi tiết</th></tr>
+    <tr><td>API Studio – bài hát</td><td>
+      <ul style="margin:0;padding-left:18px">
+        <li><code>GET /api/studio/overview</code> (số liệu S1);</li>
+        <li><code>GET /api/studio/songs?status=</code>;</li>
+        <li><code>POST /api/studio/songs</code> (đã có, bổ sung tự đọc thời lượng bằng thư viện <code>music-metadata</code>);</li>
+        <li><code>PUT /api/studio/songs/:id</code> (sửa thông tin và ảnh bìa);</li>
+        <li><code>PATCH /api/studio/songs/:id/status</code> (publish / draft / hidden);</li>
+        <li><code>DELETE /api/studio/songs/:id</code> (chỉ bài 0 lượt nghe, xoá cả file).</li>
+      </ul></td></tr>
+    <tr><td>API Studio – album, trang</td><td>
+      <ul style="margin:0;padding-left:18px">
+        <li><code>GET / POST /api/studio/albums</code>;</li>
+        <li><code>PUT / DELETE /api/studio/albums/:id</code> (songIds có thứ tự, chỉ bài của mình);</li>
+        <li><code>GET / PUT /api/studio/profile</code>;</li>
+        <li><code>POST /api/studio/profile/images</code> (ảnh đại diện, ảnh bìa).</li>
+      </ul>
+      Tất cả qua <code>requireAuth + requireRole('artist')</code> và kiểm tra chủ sở hữu.</td></tr>
+    <tr><td>Phía người nghe</td><td>
+      <ul style="margin:0;padding-left:18px">
+        <li>App lấy bài và album từ server, có bộ nhớ đệm và dữ liệu dự phòng khi server tắt (giống cách đã làm với nghệ sĩ ở <code>useArtists</code>).</li>
+        <li>Thay <code>getSongsByIds</code> chỉ đọc dữ liệu có sẵn bằng hàm lấy từ server, để playlist, Feed và trang nghệ sĩ có bài mới.</li>
+        <li>Tìm kiếm album lấy từ server.</li>
+        <li>Album công khai chỉ trả về bài đã đăng.</li>
+      </ul></td></tr>
+    <tr><td>App – màn hình mới</td><td><code>ArtistStudio</code> (S1, thay màn "coming soon"), <code>UploadSong</code> (S2–S3), <code>StudioSongs</code> (S4–S5), <code>EditSong</code> (S6), <code>StudioAlbums</code> (S7), <code>EditAlbum</code> (S8), <code>EditArtistPage</code> (S9). Chọn file nhạc bằng <code>expo-document-picker</code>; chọn ảnh dùng lại <code>expo-image-picker</code>.</td></tr>
+    <tr><td>Kiểm thử</td><td>
+      <ul style="margin:0;padding-left:18px">
+        <li>Unit test: kiểm tra form upload, quy tắc xoá / ẩn, sắp xếp bài trong album.</li>
+        <li>Integration test:
+          <ul style="padding-left:18px">
+            <li>tải bài và đọc thời lượng;</li>
+            <li>sửa bài, đổi trạng thái;</li>
+            <li>xoá bài có lượt nghe (bị chặn);</li>
+            <li>nghệ sĩ A sửa bài hoặc album của nghệ sĩ B (403);</li>
+            <li>album bỏ bài nháp khi người nghe xem;</li>
+            <li>bài ẩn biến khỏi tìm kiếm và playlist.</li>
+          </ul></li>
+        <li>E2E trên Chrome: tải bài → người nghe tìm thấy và phát được.</li>
+      </ul></td></tr>
+  </table>
+
+  <h2>6. Cần bạn xác nhận</h2>
+  <ol class="confirm-list">
+    <li><b>Quy tắc xoá bài:</b> bài đã có lượt nghe thì chỉ được ẩn, không xoá hẳn. Bạn đồng ý không, hay muốn cho xoá hẳn mọi bài (và tự gỡ khỏi playlist của người nghe)?</li>
+    <li><b>Nghệ danh</b> bị khoá, nghệ sĩ không tự đổi được. Bạn đồng ý không?</li>
+    <li><b>Lời bài hát (Lyrics):</b> giai đoạn 2 chỉ cho nhập và lưu; hiển thị lời trong màn phát nhạc để sau. Như vậy được không?</li>
+    <li><b>Hẹn giờ phát hành</b> (đặt ngày đăng trong tương lai): để sau, giai đoạn 2 chỉ có "Publish now" và "Save as draft". Bạn đồng ý không?</li>
+    <li>Có màn hình hoặc trường thông tin nào muốn thêm, bớt hay sửa không?</li>
+  </ol>
+</div>
+</body>
+</html>

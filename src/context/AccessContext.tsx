@@ -7,6 +7,9 @@ interface AccessContextType {
   ensureMember: () => boolean;
   // Có gói hội viên: trả về true. Khách: chuyển tới Log In. Thành viên thường: mời nâng cấp
   ensureVip: (feature: string) => boolean;
+  // Chỉ dùng để ẩn / hiện giao diện; quyền thật luôn được máy chủ kiểm tra ở từng API
+  ensureArtist: () => boolean;
+  ensureAdmin: () => boolean;
 }
 
 const AccessContext = createContext<AccessContextType | undefined>(undefined);
@@ -19,7 +22,7 @@ interface AccessProviderProps {
 
 // Gom quy tắc phân quyền Khách / Thành viên thường / VIP vào một chỗ cho mọi màn hình dùng chung
 export const AccessProvider: React.FC<AccessProviderProps> = ({ children, onRequireLogin, onOpenPlans }) => {
-  const { currentUser, isVip } = useAuth();
+  const { currentUser, isVip, isArtist, isAdmin } = useAuth();
   const [lockedFeature, setLockedFeature] = useState<string | null>(null);
 
   const ensureMember = () => {
@@ -35,8 +38,11 @@ export const AccessProvider: React.FC<AccessProviderProps> = ({ children, onRequ
     return false;
   };
 
+  const ensureArtist = () => ensureMember() && isArtist;
+  const ensureAdmin = () => ensureMember() && isAdmin;
+
   return (
-    <AccessContext.Provider value={{ ensureMember, ensureVip }}>
+    <AccessContext.Provider value={{ ensureMember, ensureVip, ensureArtist, ensureAdmin }}>
       {children}
       <VipUpgradeModal
         feature={lockedFeature}

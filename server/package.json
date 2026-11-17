@@ -8,19 +8,30 @@
     "dev": "node --watch src/server.js",
     "seed": "node src/seed/seedData.js",
     "hash-passwords": "node src/seed/hashPasswords.js",
+    "migrate:artist": "node src/seed/migrateArtistAdmin.js",
+    "make-admin": "node src/seed/makeAdmin.js",
     "test": "jest",
     "test:unit": "jest tests/unit --verbose",
     "test:integration": "jest tests/integration --runInBand --verbose",
-    "test:e2e": "node tests/e2e/app-api.e2e.mjs"
+    "test:e2e": "node tests/e2e/app-api.e2e.mjs",
+    "test:e2e:gd1": "node tests/e2e/artist-admin.e2e.mjs",
+    "test:e2e:gd2": "node tests/e2e/studio.e2e.mjs",
+    "test:e2e:gd3": "node tests/e2e/feed.e2e.mjs",
+    "test:e2e:gd4": "node tests/e2e/stats.e2e.mjs",
+    "test:e2e:gd5": "node tests/e2e/moderation.e2e.mjs",
+    "test:e2e:gd6": "node tests/e2e/insights.e2e.mjs"
   },
   "dependencies": {
     "@distube/ytdl-core": "^5.2.1",
+    "@google/genai": "^3.4.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.9.5",
+    "multer": "^2.5.0",
+    "music-metadata": "^11.16.1",
     "play-dl": "^1.9.7"
   },
   "devDependencies": {
@@ -31,6 +42,7 @@
   },
   "jest": {
     "testEnvironment": "node",
+    "testTimeout": 30000,
     "collectCoverageFrom": [
       "src/config/plans.js",
       "src/middleware/**/*.js"

@@ -1,6 +1,11 @@
 const User = require('../models/User');
+const { logActivity } = require('../services/playEvents');
+const { lockedResponse } = require('../middleware/lockGuard');
+const Payment = require('../models/Payment');
+const { VIP_PRICE_USD } = require('../config/insights');
 const bcrypt = require('bcryptjs');
-const { VALID_PLAN_IDS, isVipUser, VIP_REQUIRED_MESSAGE } = require('../config/plans');
+const { VALID_PLAN_IDS, VIP_PLAN_IDS, isVipUser, nextExpiryDate, VIP_REQUIRED_MESSAGE } = require('../config/plans');
+const Artist = require('../models/Artist');
 const { signToken } = require('../middleware/auth');
 const { makeId } = require('../utils/ids');
 
@@ -72,6 +77,9 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác.' });
     }
+
+    // Tài khoản bị khoá (giai đoạn 5): không cho đăng nhập, báo lý do
+    if (user.lockedAt) return res.status(403).json(lockedResponse(user));
 
     // Không trả password hash về client
     const userObj = user.toObject();
@@ -192,16 +200,34 @@ exports.subscribe = async (req, res) => {
         message: `Gói hội viên không hợp lệ. Chỉ chấp nhận: ${VALID_PLAN_IDS.join(', ')}.`,
       });
     }
-    const user = await User.findOneAndUpdate(
-      { id: userId },
-      { planId: planId },
-      { new: true }
-    ).select('-password');
+    const user = await User.findOne({ id: userId }).select('-password');
     if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
+
+    // Gói VIP có thời hạn 1 tháng kể từ khi thanh toán (còn hạn thì cộng dồn); gói Free không có hạn
+    const wasActiveVip = isVipUser(user);
+    if (VIP_PLAN_IDS.includes(planId)) {
+      user.planExpiresAt = nextExpiryDate(user.planId === planId ? user.planExpiresAt : null);
+    } else {
+      user.planExpiresAt = null;
+    }
+    user.planId = planId;
+    await user.save();
+    // Lịch sử thanh toán (giai đoạn 6) – thanh toán giả lập, chỉ ghi khi mua / gia hạn gói VIP
+    if (VIP_PLAN_IDS.includes(planId)) {
+      await Payment.create({
+        id: makeId('pay'),
+        userId,
+        type: 'vip',
+        amount: VIP_PRICE_USD,
+        description: wasActiveVip ? 'VIP Premium – renew 1 month' : 'VIP Premium – 1 month',
+      });
+    }
 
     res.status(200).json({
       success: true,
-      message: `Kích hoạt gói cước ${planId} thành công!`,
+      message: wasActiveVip && VIP_PLAN_IDS.includes(planId)
+        ? `Gia hạn gói ${planId} thành công!`
+        : `Kích hoạt gói cước ${planId} thành công!`,
       data: user,
     });
   } catch (err) {
@@ -224,6 +250,7 @@ exports.toggleLikeSong = async (req, res) => {
       user.likedSongIds.unshift(songId);
     }
     await user.save();
+    await logActivity(isLiked ? 'unlike' : 'like', { songId, userId });
 
     res.status(200).json({
       success: true,
@@ -251,10 +278,19 @@ exports.toggleFollowArtist = async (req, res) => {
     }
     await user.save();
 
+    // Cập nhật số người theo dõi của nghệ sĩ (không để âm)
+    const artist = await Artist.findOneAndUpdate(
+      isFollowing ? { id: artistId, followersCount: { $gt: 0 } } : { id: artistId },
+      { $inc: { followersCount: isFollowing ? -1 : 1 } },
+      { new: true }
+    );
+    if (artist) await logActivity(isFollowing ? 'unfollow' : 'follow', { artistId, userId });
+
     res.status(200).json({
       success: true,
       isFollowing: !isFollowing,
       followedArtistIds: user.followedArtistIds,
+      followersCount: artist ? artist.followersCount : undefined,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

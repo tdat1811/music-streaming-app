@@ -24,3 +24,24 @@ export const sortByPlays = (songs: Song[]): Song[] =>
     .map((song, index) => ({ song, index, plays: parsePlays(song.plays) }))
     .sort((a, b) => b.plays - a.plays || a.index - b.index)
     .map((entry) => entry.song);
+
+// Hiển thị số gọn: 12800000 -> "12.8M", 950000 -> "950K", 1500 -> "1.5K", 999 -> "999".
+// Nhận cả dữ liệu cũ dạng chuỗi ("12.8M") nhờ parsePlays.
+export const formatCount = (value: unknown): string => {
+  const n = Math.max(0, Math.round(parsePlays(value)));
+  const units: [number, string][] = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
+  for (const [size, suffix] of units) {
+    if (n >= size) {
+      const scaled = Math.floor(n / (size / 10)) / 10; // cắt bớt, không làm tròn lên (999999 -> 999.9K)
+      return `${Number.isInteger(scaled) ? scaled.toFixed(0) : scaled.toFixed(1)}${suffix}`;
+    }
+  }
+  return String(n);
+};
+
+// Số người theo dõi của nghệ sĩ: ưu tiên followersCount (số), dữ liệu cũ dùng chuỗi followers
+export const formatFollowers = (artist: { followersCount?: number; followers?: string } | null | undefined): string => {
+  if (!artist) return '';
+  if (typeof artist.followersCount === 'number') return `${formatCount(artist.followersCount)} Followers`;
+  return artist.followers ?? '';
+};
