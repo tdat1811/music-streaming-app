@@ -24,19 +24,31 @@ interface FeedContextType {
   refreshComments: (postId: string) => void;
   // Tải lại toàn bộ bảng tin và bình luận (dùng khi làm mới ứng dụng)
   reloadFeed: () => Promise<void>;
+  // Nghệ sĩ đăng / sửa / xoá bài: trả về null nếu thành công, ngược lại là thông báo lỗi
+  createPost: (data: { content: string; songId: string | null }) => Promise<string | null>;
+  editPost: (postId: string, data: { content: string; songId: string | null }) => Promise<string | null>;
+  removePost: (postId: string) => Promise<string | null>;
 }
 
 const FeedContext = createContext<FeedContextType | undefined>(undefined);
 
 // Áp dụng like/unlike của một user lên post hoặc bình luận (utils/likes.ts)
 import { toggleLike } from '../utils/likes';
+import { timeAgo } from '../utils/time';
 
 const mapPost = (p: any): FeedPost => ({
   id: p.id,
+  authorArtistId: p.authorArtistId ?? null,
   authorName: p.authorName,
   authorAvatar: p.authorAvatar,
-  timeAgo: p.timeAgo,
-  songId: p.songId,
+  authorVerified: p.authorVerified,
+  content: p.content || undefined,
+  // Bài mới của nghệ sĩ không lưu sẵn "2h": tính từ thời điểm đăng
+  timeAgo: p.timeAgo || timeAgo(p.createdAt),
+  createdAt: p.createdAt,
+  editedAt: p.editedAt ?? null,
+  // Bài đăng chỉ có chữ (không kèm bài hát) chưa được hiển thị ở bảng tin
+  songId: p.songId || '',
   likes: p.likes ?? 0,
   likedByUserIds: p.likedByUserIds ?? [],
   shares: p.shares ?? 0,
@@ -53,6 +65,7 @@ const mapComment = (c: any): CommentItem => ({
   likes: c.likes ?? 0,
   likedByUserIds: c.likedByUserIds ?? [],
   replyToName: c.replyToName || undefined,
+  isArtist: !!c.isArtist,
   replies: (c.replies ?? []).map(mapComment),
 });
 
@@ -143,6 +156,40 @@ export const FeedProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch((err) => {
         if (isApiError(err)) updatePost(postId, (post) => ({ ...post, shares: Math.max(0, post.shares - 1) }));
       });
+  };
+
+  const errorText = (err: unknown) => (isApiError(err) ? err.message : "Can't connect to the server. Please try again.");
+
+  const createPost: FeedContextType['createPost'] = async (data) => {
+    try {
+      const res: any = await api.feed.createPost(data);
+      setPosts((prev) => [mapPost(res.data), ...prev]);
+      online.current = true;
+      return null;
+    } catch (err) {
+      return errorText(err);
+    }
+  };
+
+  const editPost: FeedContextType['editPost'] = async (postId, data) => {
+    try {
+      const res: any = await api.feed.updatePost(postId, data);
+      updatePost(postId, (post) => ({ ...post, ...mapPost(res.data), likes: post.likes, likedByUserIds: post.likedByUserIds }));
+      return null;
+    } catch (err) {
+      return errorText(err);
+    }
+  };
+
+  const removePost: FeedContextType['removePost'] = async (postId) => {
+    try {
+      await api.feed.deletePost(postId);
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+      setComments((prev) => prev.filter((c) => c.postId !== postId));
+      return null;
+    } catch (err) {
+      return errorText(err);
+    }
   };
 
   const getComments = (postId: string) => comments.filter((comment) => comment.postId === postId);
@@ -254,6 +301,9 @@ export const FeedProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleCommentLike,
         refreshComments,
         reloadFeed,
+        createPost,
+        editPost,
+        removePost,
       }}
     >
       {children}

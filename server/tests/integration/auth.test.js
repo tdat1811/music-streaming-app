@@ -24,14 +24,15 @@ describe('Tài khoản – đăng ký, đăng nhập, hồ sơ, mật khẩu', (
   });
 
   test('IT02: đăng ký email đã có (khác hoa thường) → 400, không tạo thêm tài khoản', async () => {
+    const soUserTruoc = await User.countDocuments();
     const res = await api().post('/api/auth/register')
       .send({ name: 'Ashley 2', email: 'ASHLEY@Example.com', password: '123456' });
     const soUser = await User.countDocuments();
-    ghiKetQua('IT02', `${res.status} "${res.body.message}"; số tài khoản: ${soUser}`);
+    ghiKetQua('IT02', `${res.status} "${res.body.message}"; số tài khoản: ${soUserTruoc} → ${soUser}`);
 
     expect(res.status).toBe(400);
     expect(res.body.message).toBe('Email này đã được sử dụng.');
-    expect(soUser).toBe(2);
+    expect(soUser).toBe(soUserTruoc);
   });
 
   test('IT03: mật khẩu 5 ký tự → 400, không tạo tài khoản', async () => {

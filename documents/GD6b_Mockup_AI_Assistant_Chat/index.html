@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GĐ6b – AI Assistant (chat, bản 4)</title>
+<style>
+  :root {
+    --primary: #10C7D5; --primary-dark: #0EA5B5; --text: #111216; --text2: #686A70; --muted: #9CA3AF; --icon: #4B5563;
+    --border: #E8ECF2; --soft: #F3F4F6; --purple: #7B2CBF; --red: #E11D48; --green: #16A34A; --blue: #00A3FF; --page: #EEF1F5;
+    --amber: #D97706;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--page); color: var(--text); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 48px 0 6px; }
+  .lead { color: var(--text2); margin: 0 0 8px; line-height: 1.6; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #E6FAFB; color: var(--primary-dark); margin-right: 6px; }
+  .rules { background: #fff; border-radius: 16px; padding: 8px 24px; margin-top: 16px; }
+  .rules li { margin: 10px 0; line-height: 1.55; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 28px; margin-top: 18px; }
+  .card { display: flex; flex-direction: column; align-items: center; }
+  .caption { width: 360px; margin-top: 12px; background: #fff; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: #333; }
+  .caption h3 { margin: 0 0 4px; font-size: 15px; }
+  .caption .new { background: #E6FAFB; color: var(--primary-dark); font-weight: 800; font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-right: 4px; }
+  .ref { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; margin-top: 16px; }
+  .ref img { width: 300px; border-radius: 22px; border: 8px solid #121316; }
+  .ref .note { flex: 1; min-width: 280px; background: #fff; border-radius: 14px; padding: 14px 18px; line-height: 1.6; font-size: 14.5px; }
+  .confirm-list { background: #fff; border-radius: 16px; padding: 8px 24px 8px 40px; margin-top: 16px; }
+  .confirm-list li { margin: 12px 0; line-height: 1.55; }
+  table.api { width: 100%; border-collapse: collapse; background: #fff; border-radius: 16px; overflow: hidden; margin-top: 16px; font-size: 14px; }
+  table.api th, table.api td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  table.api th { background: #1F3A68; color: #fff; }
+  code { background: #EEF2F7; border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+
+  /* ---- khung điện thoại, theo đúng các màn Studio đang chạy ---- */
+  .phone { width: 360px; height: 760px; background: #fff; border-radius: 34px; border: 10px solid #121316; position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,.12); }
+  .statusbar { height: 28px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .ico { width: 22px; height: 22px; stroke: var(--icon); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .ico.sm { width: 16px; height: 16px; } .ico.dark { stroke: var(--text); }
+  .shdr { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px 8px; flex-shrink: 0; }
+  .shdr b { font-size: 18px; font-weight: 900; }
+  .body { flex: 1; overflow: hidden; padding: 0 16px; position: relative; }
+  .newbadge { position: absolute; background: #E6FAFB; color: var(--primary-dark); font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 6px; border: 1px dashed var(--primary); z-index: 2; }
+  .ini { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 16px; background: #F59E0B; flex-shrink: 0; }
+  .head { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; }
+  .head .nm { font-size: 17px; font-weight: 900; display: flex; align-items: center; gap: 5px; }
+  .vf { width: 15px; height: 15px; border-radius: 50%; background: var(--blue); display: inline-flex; align-items: center; justify-content: center; }
+  .vf svg { width: 10px; height: 10px; stroke: #fff; stroke-width: 3.5; fill: none; }
+  .sub { font-size: 12.5px; color: var(--text2); }
+  .link { color: var(--primary); font-weight: 800; font-size: 13.5px; margin-left: auto; }
+  .tiles { display: flex; gap: 8px; }
+  .tile { flex: 1; border-radius: 14px; padding: 10px 11px; }
+  .tile b { font-size: 20px; font-weight: 900; display: block; }
+  .tile span { font-size: 11.5px; color: var(--text2); }
+  .delta { font-size: 11px; font-weight: 800; margin-top: 2px; display: block; }
+  .up, span.delta.up, small.up, b.up { color: var(--green); } .down, span.delta.down, small.down, b.down { color: var(--red); } .flat, span.delta.flat { color: var(--muted); }
+  .bigbtn { background: var(--primary); color: #fff; font-weight: 900; font-size: 15px; text-align: center; border-radius: 14px; padding: 13px; margin: 12px 0 4px; }
+  .mi { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--soft); position: relative; }
+  .mi .ic { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+  .mi b { font-size: 14.5px; font-weight: 800; display: block; }
+  .mi .chev { margin-left: auto; color: var(--muted); font-size: 18px; }
+  .mi.dim { opacity: .45; }
+  .seg { display: flex; background: var(--soft); border-radius: 12px; padding: 3px; margin: 2px 0 12px; }
+  .seg div { flex: 1; text-align: center; font-size: 13px; font-weight: 800; color: var(--text2); padding: 7px 0; border-radius: 10px; }
+  .seg .on { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .k { border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; }
+  .k span { font-size: 11.5px; color: var(--text2); font-weight: 600; }
+  .k b { font-size: 20px; font-weight: 900; display: block; margin-top: 2px; }
+  .sec { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 0 8px; }
+  .sec b { font-size: 15px; font-weight: 900; } .sec span { font-size: 12px; color: var(--text2); }
+  .chart { height: 130px; display: flex; align-items: flex-end; gap: 6px; border-bottom: 1px solid var(--border); position: relative; padding-top: 18px; }
+  .chart .bar { flex: 1; background: #BDEFF3; border-radius: 5px 5px 0 0; position: relative; }
+  .chart .bar.hi { background: var(--primary); }
+  .chart.thin { gap: 2px; } .chart.thin .bar { border-radius: 2px 2px 0 0; }
+  .chart .grid-l { position: absolute; left: 0; right: 0; border-top: 1px dashed #E5E7EB; font-size: 9.5px; color: var(--muted); }
+  .xl { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+  .tip { position: absolute; background: #111216; color: #fff; font-size: 11px; font-weight: 700; padding: 5px 8px; border-radius: 8px; white-space: nowrap; z-index: 3; }
+  .tip small { display: block; font-weight: 500; opacity: .75; font-size: 10px; }
+  .song { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+  .song .rk { width: 16px; font-weight: 900; font-size: 13px; color: var(--text2); text-align: center; }
+  .song img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
+  .song .t { flex: 1; min-width: 0; }
+  .song .t b { font-size: 13.5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .song .meter { height: 5px; border-radius: 3px; background: var(--soft); margin-top: 5px; }
+  .song .meter i { display: block; height: 100%; border-radius: 3px; background: var(--primary); }
+  .song .n { font-size: 12.5px; font-weight: 800; text-align: right; }
+  .song .n small { display: block; font-size: 10.5px; font-weight: 700; }
+  .feedbox { display: flex; gap: 8px; }
+  .feedbox div { flex: 1; background: #F9FAFB; border-radius: 12px; padding: 9px; text-align: center; }
+  .feedbox b { font-size: 16px; font-weight: 900; display: block; } .feedbox span { font-size: 11px; color: var(--text2); }
+  .info { display: flex; gap: 6px; align-items: center; font-size: 11.5px; color: var(--text2); margin-top: 10px; }
+  .overlay { position: absolute; inset: 28px 0 0 0; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; }
+  .sheet { background: #fff; width: 100%; border-radius: 22px 22px 0 0; padding: 14px 20px 26px; }
+  .grab { width: 40px; height: 4px; border-radius: 2px; background: #E5E7EB; margin: 0 auto 14px; }
+  .sheet h4 { margin: 0 0 10px; font-size: 17px; }
+  .rule { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--soft); font-size: 13.5px; line-height: 1.45; }
+  .rule:last-child { border-bottom: none; }
+  .rule .dot { width: 26px; height: 26px; border-radius: 8px; background: #E6FAFB; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; }
+  .empty { text-align: center; padding: 24px 10px 0; }
+  .empty .circle { width: 74px; height: 74px; border-radius: 50%; background: #E6FAFB; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; }
+  .empty b { font-size: 17px; font-weight: 900; display: block; margin-bottom: 6px; }
+  .empty p { margin: 0 0 14px; font-size: 13.5px; color: var(--text2); line-height: 1.5; }
+  .obtn { border: 1.5px solid var(--primary); color: var(--primary-dark); font-weight: 800; border-radius: 14px; padding: 11px; text-align: center; font-size: 14px; margin-top: 8px; }
+  .songhead { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+  .songhead img { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; }
+  .songhead b { font-size: 17px; font-weight: 900; display: block; }
+  .src { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 5px 0; }
+  .src span:first-child { width: 92px; color: var(--text2); font-weight: 600; }
+  .src .m { flex: 1; height: 8px; background: var(--soft); border-radius: 4px; } .src .m i { display: block; height: 100%; border-radius: 4px; background: var(--purple); }
+  .src b { width: 36px; text-align: right; font-size: 12.5px; }
+  .opt { border: 1px dashed #C4B5FD; border-radius: 12px; padding: 8px 10px 4px; position: relative; }
+
+  .ai-hero { border-radius: 16px; padding: 14px; background: linear-gradient(135deg, #7B2CBF 0%, #10C7D5 100%); color: #fff; }
+  .ai-hero b { font-size: 16px; display: block; } .ai-hero span { font-size: 12px; opacity: .9; }
+  .chipline { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .ch { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.22); color: #fff; }
+  .card2 { border: 1px solid var(--border); border-radius: 14px; padding: 11px 12px; margin-top: 10px; }
+  .card2 h5 { margin: 0 0 6px; font-size: 13.5px; display: flex; align-items: center; gap: 6px; }
+  .sent { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 6px 0 4px; }
+  .sent i { display: block; height: 100%; }
+  .legend { display: flex; gap: 12px; font-size: 11px; color: var(--text2); }
+  .legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; background: var(--c); }
+  .theme { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--soft); font-size: 12.5px; }
+  .theme:last-child { border-bottom: none; }
+  .theme b { font-size: 13px; } .theme .q { color: var(--text2); font-style: italic; display: block; margin-top: 1px; }
+  .pill { font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+  .p-pos { background: #DCFCE7; color: #16A34A; } .p-neu { background: #F3F4F6; color: #686A70; } .p-neg { background: #FFE4E6; color: #E11D48; }
+  .act { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--soft); font-size: 12.5px; line-height: 1.4; }
+  .act:last-child { border-bottom: none; }
+  .act .n { width: 22px; height: 22px; border-radius: 50%; background: #F3E8FF; color: var(--purple); font-weight: 900; font-size: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .foot { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+  .ghost { border: 1.5px solid var(--border); border-radius: 14px; padding: 11px; text-align: center; font-weight: 800; font-size: 14px; margin-top: 10px; }
+  .spinner { width: 54px; height: 54px; border-radius: 50%; border: 5px solid #E9D5FF; border-top-color: var(--purple); margin: 30px auto 14px; }
+  .step { display: flex; gap: 10px; align-items: center; font-size: 13px; padding: 7px 0; }
+  .step .d { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; flex-shrink: 0; }
+  .d-ok { background: #DCFCE7; color: #16A34A; } .d-now { background: #F3E8FF; color: var(--purple); } .d-todo { background: var(--soft); color: var(--muted); }
+  .warnbox { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 9px 11px; font-size: 12px; color: #92400E; line-height: 1.45; }
+  .newb { position: absolute; background: #E6FAFB; color: var(--primary-dark); font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 6px; border: 1px dashed var(--primary); z-index: 2; }
+  /* sơ đồ luồng */
+  .flowbox { background: #fff; border-radius: 16px; padding: 18px; margin-top: 16px; overflow-x: auto; }
+  .lane { display: flex; align-items: stretch; gap: 8px; margin: 10px 0; }
+  .lane-t { width: 120px; flex-shrink: 0; font-weight: 800; font-size: 12.5px; color: var(--text2); display: flex; align-items: center; }
+  .nd { border: 2px solid var(--border); border-radius: 12px; padding: 8px 10px; font-size: 12.5px; background: #fff; min-width: 120px; line-height: 1.4; }
+  .nd b { display: block; font-size: 12px; color: var(--purple); }
+  .nd.app { border-color: #BAE6FD; background: #F0F9FF; } .nd.app b { color: #0369A1; }
+  .nd.srv { border-color: #DDD6FE; background: #F5F3FF; }
+  .nd.ai { border-color: #F5D0FE; background: #FDF4FF; } .nd.ai b { color: #A21CAF; }
+  .nd.ok { border-color: #BBF7D0; background: #F0FDF4; } .nd.ok b { color: #16A34A; }
+  .nd.bad { border-color: #FECDD3; background: #FFF1F2; } .nd.bad b { color: #E11D48; }
+  .ar { color: var(--muted); font-weight: 900; display: flex; align-items: center; }
+  pre.code { background: #0F172A; color: #E2E8F0; border-radius: 14px; padding: 14px 16px; font-size: 12.5px; line-height: 1.55; overflow-x: auto; white-space: pre-wrap; }
+  pre.code .c { color: #94A3B8; }
+
+  .chat { flex: 1; overflow: hidden; padding: 8px 12px 0; background: #FAFAFC; display: flex; flex-direction: column; gap: 8px; }
+  .msg { max-width: 84%; padding: 9px 11px; border-radius: 16px; font-size: 13px; line-height: 1.45; }
+  .ai { background: #fff; border: 1px solid var(--border); border-top-left-radius: 4px; align-self: flex-start; }
+  .me { background: #7B2CBF; color: #fff; border-top-right-radius: 4px; align-self: flex-end; }
+  .who { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: var(--purple); margin-bottom: 3px; }
+  .ava { width: 20px; height: 20px; border-radius: 50%; background: linear-gradient(135deg,#7B2CBF,#10C7D5); display: inline-flex; align-items: center; justify-content: center; }
+  .ava svg { width: 11px; height: 11px; stroke: #fff; fill: none; stroke-width: 2; }
+  .chipsrow { display: flex; gap: 6px; flex-wrap: wrap; }
+  .qchip { font-size: 11.5px; font-weight: 700; padding: 6px 10px; border-radius: 999px; background: #F3E8FF; color: var(--purple); border: 1px solid #E9D5FF; }
+  .composer { display: flex; align-items: center; gap: 8px; padding: 8px 12px 12px; background: #fff; border-top: 1px solid var(--border); flex-shrink: 0; }
+  .inp { flex: 1; border: 1px solid var(--border); border-radius: 999px; padding: 9px 13px; font-size: 13px; color: var(--muted); }
+  .sendb { width: 36px; height: 36px; border-radius: 50%; background: var(--purple); display: flex; align-items: center; justify-content: center; }
+  .sendb svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2; }
+  .counter { font-size: 10.5px; color: var(--muted); text-align: center; padding: 0 0 2px; background: #fff; }
+  .icard { background: linear-gradient(135deg,#7B2CBF,#3B82F6 60%,#10C7D5); color: #fff; border-radius: 14px; padding: 10px 11px; margin-top: 6px; }
+  .icard b { font-size: 13.5px; display: block; line-height: 1.35; }
+  .mini-bar { display: flex; height: 7px; border-radius: 4px; overflow: hidden; margin: 7px 0 4px; background: rgba(255,255,255,.3); }
+  .mini-bar i { display: block; height: 100%; }
+  .ilegend { font-size: 10.5px; opacity: .92; }
+  .linkbtn { display: inline-block; margin-top: 7px; font-size: 11.5px; font-weight: 800; background: rgba(255,255,255,.2); padding: 4px 9px; border-radius: 999px; }
+  .caption-box { border: 1px dashed #D8B4FE; background: #FAF5FF; border-radius: 12px; padding: 8px 10px; margin-top: 6px; font-size: 12.5px; }
+  .cap-actions { display: flex; gap: 6px; margin-top: 6px; }
+  .cap-actions span { font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 999px; background: #fff; border: 1px solid var(--border); }
+  .cap-actions .pri { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .typing { display: inline-flex; gap: 4px; padding: 4px 2px; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: #C4B5FD; display: inline-block; }
+  .sys { align-self: center; font-size: 11px; color: var(--muted); background: #F3F4F6; padding: 3px 10px; border-radius: 999px; }
+  .drawer { position: absolute; inset: 28px 70px 0 0; background: #fff; box-shadow: 4px 0 20px rgba(0,0,0,.15); padding: 14px; z-index: 5; }
+  .dim { position: absolute; inset: 28px 0 0 0; background: rgba(0,0,0,.35); z-index: 4; }
+  .hist { padding: 9px 0; border-bottom: 1px solid var(--soft); font-size: 13px; }
+  .hist b { display: block; font-size: 13px; } .hist span { font-size: 11px; color: var(--text2); }
+  .ol { margin: 4px 0 0; padding-left: 18px; } .ol li { margin: 3px 0; }
+  .mchip { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 10.5px; font-weight: 800; color: var(--purple); background: #F3E8FF; border: 1px solid #E9D5FF; padding: 2px 8px; border-radius: 999px; }
+  .mtag { display: block; margin-top: 5px; font-size: 10.5px; color: var(--muted); }
+  .mtag.warn { color: #B45309; }
+  .mopt { display: flex; gap: 10px; align-items: flex-start; padding: 10px 2px; border-bottom: 1px solid var(--soft); }
+  .mopt:last-child { border-bottom: none; }
+  .mopt .r { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted); flex-shrink: 0; margin-top: 2px; }
+  .mopt .r.on { border: 6px solid var(--purple); }
+  .mopt b { font-size: 14px; display: block; } .mopt span { font-size: 12px; color: var(--text2); line-height: 1.4; }
+  .badge2 { font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 999px; margin-left: 4px; vertical-align: 1px; }
+  .b-rec { background: #DCFCE7; color: #16A34A; } .b-busy { background: #FEF3C7; color: #B45309; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="i-back" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-disc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-news" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+</defs></svg>
+<div class="wrap">
+  <h1>Giai đoạn 6b – AI Assistant: chat hỏi đáp + phân tích fan <span class="tag" style="background:#FEF3C7;color:#D97706;vertical-align:middle">BẢN 4</span></h1>
+  <p class="lead"><span class="tag">BẢN XEM TRƯỚC</span>Mockup để duyệt trước khi code. Biến AI Fan Insight (đã làm) thành một <b>hộp thoại chat</b> giữa nghệ sĩ và AI (Gemini). Nhãn <span class="tag" style="font-size:10px;border:1px dashed var(--primary)">MỚI</span> là phần thêm, <span class="tag" style="background:#FEF3C7;color:#D97706;font-size:10px">SỬA</span> là phần đổi. Nội dung trả lời trong ảnh chỉ là ví dụ.</p>
+
+  <ul class="rules" style="background:#FFFBEB;border:1px solid #FDE68A">
+    <li><b>Thay đổi ở bản 4</b> (theo câu trả lời của bạn): chọn cố định một model mà model đó quá tải → <b>báo lỗi, không trừ tin, người dùng tự đổi model</b> (C11 – có nút đổi sang model kia và gửi lại). Chỉ chế độ <b>Auto</b> tự chuyển. Cuộc trò chuyện mới mặc định <b>Auto</b>.</li>
+    <li><b>Thay đổi ở bản 3:</b> người dùng <b>tự chọn model</b> – chip <b>✦ Auto ▾</b> dưới tiêu đề mở bảng chọn (C10): <b>Auto</b> (mặc định) / <b>Gemini 3.8 Flash</b> / <b>Gemini 3.5 Flash-Lite</b>, nhớ theo từng cuộc trò chuyện. Dưới mỗi câu trả lời có <b>nhãn model đã trả lời</b>. </li>
+    <li><b>Thay đổi ở bản 2</b> (theo câu trả lời của bạn): tên chính thức <b>AI Assistant</b>; <b>gộp chung một loại lượt: 20 tin nhắn miễn phí / ngày</b>, phân tích fan tính 1 tin, hết thì <b>mua 20 tin với $3</b> (bỏ lượt phân tích riêng và giá $3 / lượt cũ); <b>nhiều cuộc trò chuyện</b> lưu 30 ngày; câu hỏi ngoài phạm vi vẫn tính 1 tin; Post to Feed mở bảng viết bài điền sẵn.</li>
+  </ul>
+
+  <h2>0. Ý tưởng</h2>
+  <ul class="rules">
+    <li><b>Một màn chat</b> thay cho màn AI Fan Insight: nghệ sĩ hỏi gì về fan, bài hát, ý tưởng, caption, thời điểm đăng bài… AI trả lời bằng <b>tiếng Việt</b>, dựa trên <b>dữ liệu thật</b> của nghệ sĩ.</li>
+    <li><b>Phân tích fan vẫn giữ nguyên cách làm</b> (Gemini, ẩn danh, kiểm tra kết quả, lưu 24 giờ) – giờ là một <b>thẻ trong cuộc chat</b>, bấm "View full report" để xem bản đầy đủ như cũ. Mỗi lần phân tích mới <b>tính 1 tin nhắn</b>.</li>
+    <li><b>Chọn model:</b> <b>Auto</b> (mặc định: 3.8 Flash, quá tải thì tự dùng 3.5 Flash-Lite); hoặc cố định <b>Gemini 3.8 Flash</b> / <b>Gemini 3.5 Flash-Lite</b> – khi model cố định quá tải thì <b>báo lỗi để người dùng tự đổi</b>, không tự chuyển. Nhớ theo từng cuộc trò chuyện. Cả hai model đều miễn phí, tính 1 tin như nhau. Phân tích fan cũng dùng model đã chọn.</li>
+    <li><b>Lượt dùng:</b> <b>20 tin nhắn miễn phí / ngày</b> cho mọi loại câu hỏi (làm mới lúc 0 giờ). Hết thì <b>mua 20 tin với $3</b> (giả lập như VIP), tin đã mua không hết hạn. AI lỗi → <b>không trừ tin</b>.</li>
+    <li><b>Gợi ý nhanh</b> (chip) giúp hỏi một chạm; sau mỗi câu trả lời có gợi ý hỏi tiếp.</li>
+    <li><b>Caption → Feed:</b> AI viết caption, nghệ sĩ bấm "Post to Feed" để mở bảng viết bài điền sẵn – <b>AI không tự đăng</b>.</li>
+    <li><b>Giữ phạm vi:</b> chỉ trả lời về âm nhạc, fan và hoạt động trên MusicStream; câu hỏi khác thì từ chối nhẹ nhàng.</li>
+    <li><b>An toàn giữ như cũ:</b> key chỉ ở máy chủ; bình luận đã ẩn danh và chỉ là dữ liệu (chống prompt injection); tin nhắn của nghệ sĩ cũng không được ghi đè luật hệ thống; không bao giờ tự thực hiện hành động.</li>
+  </ul>
+
+  <h2>1. Luồng chạy</h2>
+  
+  <div class="flowbox">
+    <div class="lane"><div class="lane-t">App</div>
+      <div class="nd app"><b>① Gửi tin</b>Ô chat / gợi ý nhanh<br><code>POST /api/studio/assistant/messages</code></div><span class="ar">→</span>
+      <div class="nd app"><b>⑧ Hiện trả lời</b>Văn bản / thẻ phân tích / caption có nút</div>
+    </div>
+    <div class="lane"><div class="lane-t">Máy chủ</div>
+      <div class="nd srv"><b>② Kiểm tra</b>Đúng nghệ sĩ? Còn tin (20 miễn phí / ngày, rồi tới tin đã mua)? Tin quá dài (&gt; 1000 ký tự)?</div><span class="ar">→</span>
+      <div class="nd srv"><b>③ Hiểu yêu cầu</b>"Phân tích fan" → bản ≤ 24 h thì trả lại (không trừ tin), không thì chạy phân tích (1 tin). Còn lại → hỏi đáp (1 tin)</div><span class="ar">→</span>
+      <div class="nd srv"><b>④ Dựng ngữ cảnh</b>Luật + hồ sơ nghệ sĩ + số liệu 30 ngày + bản phân tích gần nhất + tối đa 100 bình luận đã ẩn danh + 10 tin gần nhất</div>
+    </div>
+    <div class="lane"><div class="lane-t">Gemini</div>
+      <div class="nd ai"><b>⑤ Gọi Gemini</b>Model theo lựa chọn của cuộc chat. Auto: 3.8 Flash → bận thì 3.5 Flash-Lite. Model cố định bận → trả lỗi MODEL_BUSY (không trừ tin) để app hiện C11; trả lời tiếng Việt, chỉ về âm nhạc &amp; fan</div><span class="ar">→</span>
+      <div class="nd srv"><b>⑥ Kiểm tra</b>Bỏ link lạ, cắt độ dài, nhận caption (JSON) để hiện nút Copy / Post to Feed</div><span class="ar">→</span>
+      <div class="nd ok"><b>⑦ Lưu</b>Lưu tin nhắn + model đã trả lời (30 ngày), trừ 1 tin</div>
+    </div>
+    <div class="lane"><div class="lane-t">Khi lỗi</div>
+      <div class="nd bad"><b>Cả 2 model lỗi / chưa có key</b></div><span class="ar">→</span>
+      <div class="nd srv"><b>Không trừ tin</b>Trả thông báo "AI is busy" + bản tóm tắt cơ bản nếu cần</div>
+    </div>
+  </div>
+
+  <h2>2. Màn hình</h2>
+  <div class="grid">
+    <div class="card"><div class="phone" id="C1"><div class="statusbar">9:41<span>●●● 100%</span></div><div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><b>Artist Studio</b><span style="width:22px"></span></div>
+<div class="body">
+  <div class="head"><div class="ini">MW</div><div><div class="nm">Mer Watson <span class="vf"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></div><div class="sub">Acoustic · Pop</div></div><span class="link">View page</span></div>
+  <div class="tiles"><div class="tile" style="background:#E6FAFB"><b>6</b><span>Songs</span></div><div class="tile" style="background:#FEF3C7"><b>11.2K</b><span>Total plays</span></div><div class="tile" style="background:#F3E8FF"><b>332</b><span>Followers</span></div></div>
+  <div class="bigbtn">Upload a song</div>
+  <div class="mi"><div class="ic" style="background:#E6FAFB"><svg class="ico" style="stroke:var(--primary-dark)"><use href="#i-music"/></svg></div><div><b>My songs</b><span class="sub">5 published · 1 draft</span></div><span class="chev">›</span></div>
+  <div class="mi"><div class="ic" style="background:#E0E7FF"><svg class="ico" style="stroke:#4F46E5"><use href="#i-chart"/></svg></div><div><b>Stats</b><span class="sub">960 plays in the last 7 days</span></div><span class="chev">›</span></div>
+  <div class="mi" style="background:#FAF5FF;margin:0 -16px;padding:10px 16px"><div class="ic" style="background:linear-gradient(135deg,#7B2CBF,#10C7D5)"><svg class="ico" style="stroke:#fff"><use href="#i-spark"/></svg></div><div><b>AI Assistant</b><span class="sub">Fan insight, ideas &amp; captions – chat with AI</span></div><span class="chev">›</span><span class="newb" style="right:40px;top:6px">SỬA</span></div>
+  <div class="mi"><div class="ic" style="background:var(--soft)"><svg class="ico"><use href="#i-user"/></svg></div><div><b>Edit artist page</b><span class="sub">Photo, name, bio, genres, links</span></div><span class="chev">›</span></div>
+</div></div><div class="caption"><h3>C1 · Artist Studio</h3><span class="new" style="background:#FEF3C7;color:#D97706">SỬA</span> Mục <b>AI Fan Insight</b> đổi thành <b>AI Assistant</b> (tên đề xuất – xem câu hỏi 1): một hộp thoại chat, phân tích fan là một phần trong đó.</div></div><div class="card"><div class="phone" id="C2"><div class="statusbar">9:41<span>●●● 100%</span></div><div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><div style="text-align:center"><b>AI Assistant</b><div><span class="mchip">✦ Auto ▾</span></div></div><svg class="ico"><use href="#i-menu"/></svg></div>
+<div class="chat">
+  <div class="msg ai"><div class="who"><span class="ava"><svg viewBox="0 0 24 24"><use href="#i-spark"/></svg></span>AI Assistant</div>Chào Mer! 👋 Mình là trợ lý AI của bạn. Mình đã đọc <b>86 bình luận</b> và số liệu 30 ngày qua của bạn. Bạn muốn bắt đầu từ đâu?</div>
+  <div class="chipsrow" style="padding-left:4px">
+    <span class="qchip">📊 Phân tích fan của tôi</span>
+    <span class="qchip">💡 Gợi ý ý tưởng bài mới</span>
+    <span class="qchip">✍️ Viết caption cho bài đăng</span>
+    <span class="qchip">⏰ Nên đăng bài lúc nào?</span>
+  </div>
+</div><div class="counter">20 free messages today · a fan insight counts as 1 message</div><div class="composer"><div class="inp">Ask about your fans, songs, ideas…</div><div class="sendb"><svg viewBox="0 0 24 24"><use href="#i-send"/></svg></div></div></div><div class="caption"><h3>C2 · Bắt đầu cuộc trò chuyện</h3><span class="new">MỚI</span> Màn chat mới. <span class="new">MỚI</span> Dưới tiêu đề có nút <b>✦ Auto ▾</b> để chọn model (C10). AI chào và cho biết đã đọc bao nhiêu bình luận và số liệu. <b>4 gợi ý nhanh</b> (bấm là gửi). Ô nhập ở dưới để hỏi tự do. Dòng nhỏ: <b>số tin nhắn miễn phí còn lại</b> (chỉ một loại lượt – phân tích fan cũng tính 1 tin).</div></div><div class="card"><div class="phone" id="C3"><div class="statusbar">9:41<span>●●● 100%</span></div><div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><div style="text-align:center"><b>AI Assistant</b><div><span class="mchip">✦ Auto ▾</span></div></div><svg class="ico"><use href="#i-menu"/></svg></div>
+<div class="chat">
+  <div class="msg me">📊 Phân tích fan của tôi</div>
+  <div class="msg ai"><div class="who"><span class="ava"><svg viewBox="0 0 24 24"><use href="#i-spark"/></svg></span>AI Assistant</div>Đây là bản phân tích fan 30 ngày qua của bạn:<div class="icard"><b>Fan rất thích chất acoustic của "Velvet Sky"</b>
+  <div class="mini-bar"><i style="width:72%;background:#4ADE80"></i><i style="width:20%;background:#E2E8F0"></i><i style="width:8%;background:#FB7185"></i></div>
+  <div class="ilegend">Tích cực 72% · Trung lập 20% · Tiêu cực 8% · 86 bình luận</div>
+  <div style="font-size:12px;margin-top:6px;line-height:1.4">Các bình luận chủ yếu khen giọng hát và cảm xúc trong bài; một số ít góp ý phần mở đầu hơi nhỏ tiếng.</div>
+  <span class="linkbtn">View full report ›</span></div><span class="mtag">Gemini 3.8 Flash</span></div>
+  <div class="chipsrow" style="padding-left:4px"><span class="qchip">Vì sao fan thích Velvet Sky?</span><span class="qchip">Xử lý góp ý về intro thế nào?</span></div>
+</div><div class="counter">17 of 20 free messages left today</div><div class="composer"><div class="inp">Ask about your fans, songs, ideas…</div><div class="sendb"><svg viewBox="0 0 24 24"><use href="#i-send"/></svg></div></div></div><div class="caption"><h3>C3 · Phân tích fan ngay trong chat</h3><span class="new">MỚI</span> Bấm "Phân tích fan" (hoặc gõ "phân tích fan") → AI trả về <b>thẻ tóm tắt</b> ngay trong chat: câu tóm tắt, thanh cảm xúc, 1 câu nhận xét chung. <b>View full report</b> mở bản đầy đủ như màn I3–I4 cũ. Sau đó có gợi ý hỏi tiếp. <span class="new" style="background:#FEF3C7;color:#D97706">SỬA</span> Mỗi lần phân tích <b>tính 1 tin nhắn</b> trong 20 tin / ngày (không còn lượt riêng). Đã có bản phân tích chưa quá 24 giờ thì hiện lại bản đó, <b>không trừ tin</b>; muốn làm mới thì gõ "phân tích lại" (tính 1 tin).</div></div><div class="card"><div class="phone" id="C4"><div class="statusbar">9:41<span>●●● 100%</span></div><div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><div style="text-align:center"><b>AI Assistant</b><div><span class="mchip">✦ Auto ▾</span></div></div><svg class="ico"><use href="#i-menu"/></svg></div>
+<div class="chat">
+  <div class="msg me">Gợi ý cho mình 3 ý tưởng bài hát tiếp theo</div>
+  <div class="msg ai"><div class="who"><span class="ava"><svg viewBox="0 0 24 24"><use href="#i-spark"/></svg></span>AI Assistant</div>Dựa trên những gì fan nói, đây là 3 hướng đáng thử:
+  <ol class="ol"><li><b>Bản acoustic / live của Velvet Sky</b> – 15 fan đã yêu cầu, làm nhanh và chắc chắn được đón nhận.</li>
+  <li><b>Một bài về kỷ niệm thời sinh viên</b> – nhiều bình luận kể bài hát gắn với kỷ niệm riêng.</li>
+  <li><b>Ballad nhẹ cho đêm mưa</b> – "nghe lúc mưa đêm" là cụm fan nhắc nhiều; hợp phong cách Acoustic · Pop của bạn.</li></ol>
+  <div style="font-size:11px;color:var(--muted);margin-top:4px">Dựa trên 86 bình luận và số liệu 30 ngày.</div><span class="mtag">Gemini 3.8 Flash</span></div>
+  <div class="chipsrow" style="padding-left:4px"><span class="qchip">Viết lời mở đầu cho ý tưởng 2</span><span class="qchip">Nên ra bài vào tháng nào?</span></div>
+</div><div class="counter">16 of 20 free messages left today</div><div class="composer"><div class="inp">Ask about your fans, songs, ideas…</div><div class="sendb"><svg viewBox="0 0 24 24"><use href="#i-send"/></svg></div></div></div><div class="caption"><h3>C4 · Hỏi đáp, gợi ý ý tưởng</h3><span class="new">MỚI</span> Hỏi tự do bằng tiếng Việt. <span class="new">MỚI</span> Dưới mỗi câu trả lời có <b>nhãn model đã trả lời</b> (ở đây: Gemini 3.8 Flash). AI trả lời <b>dựa trên dữ liệu thật của nghệ sĩ</b> (bình luận đã ẩn danh, lượt nghe, nguồn, bài nổi bật) và nói rõ dựa vào đâu. Không trích nguyên văn bình luận của fan.</div></div><div class="card"><div class="phone" id="C5"><div class="statusbar">9:41<span>●●● 100%</span></div><div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><div style="text-align:center"><b>AI Assistant</b><div><span class="mchip">✦ Auto ▾</span></div></div><svg class="ico"><use href="#i-menu"/></svg></div>
+<div class="chat">
+  <div class="msg me">Viết caption cho bài đăng ra mắt bản acoustic Velvet Sky</div>
+  <div class="msg ai"><div class="who"><span class="ava"><svg viewBox="0 0 24 24"><use href="#i-spark"/></svg></span>AI Assistant</div>Đây là 2 lựa chọn:
+  <div class="caption-box">🎧 Velvet Sky (Acoustic) đã có mặt! Cảm ơn mọi người đã đòi bản này suốt tuần qua – lần này chỉ còn giọng hát và cây guitar. Nghe và kể mình nghe bạn nhớ tới điều gì nhé 💜<div class="cap-actions"><span><svg class="ico sm" style="width:11px;height:11px;vertical-align:-1px"><use href="#i-copy"/></svg> Copy</span><span class="pri">Post to Feed</span></div></div>
+  <div class="caption-box">Mưa đêm + Velvet Sky bản mộc = 🌧️🎸 Ra mắt rồi đây!<div class="cap-actions"><span>Copy</span><span class="pri">Post to Feed</span></div></div><span class="mtag">Gemini 3.8 Flash</span></div>
+</div><div class="counter">15 of 20 free messages left today</div><div class="composer"><div class="inp">Ask about your fans, songs, ideas…</div><div class="sendb"><svg viewBox="0 0 24 24"><use href="#i-send"/></svg></div></div></div><div class="caption"><h3>C5 · Viết caption → đăng lên Feed</h3><span class="new">MỚI</span> AI đưa 2 lựa chọn caption. <b>Copy</b> để chép; <b>Post to Feed</b> mở <b>bảng viết bài</b> (giai đoạn 3) với nội dung điền sẵn – nghệ sĩ xem lại, sửa, gắn bài hát rồi mới đăng. AI <b>không tự đăng</b>.</div></div><div class="card"><div class="phone" id="C6"><div class="statusbar">9:41<span>●●● 100%</span></div><div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><div style="text-align:center"><b>AI Assistant</b><div><span class="mchip">✦ Auto ▾</span></div></div><svg class="ico"><use href="#i-menu"/></svg></div>
+<div class="chat">
+  <div class="msg me">Thời tiết Hà Nội hôm nay thế nào?</div>
+  <div class="msg ai"><div class="who"><span class="ava"><svg viewBox="0 0 24 24"><use href="#i-spark"/></svg></span>AI Assistant</div>Mình chỉ hỗ trợ những gì liên quan tới âm nhạc và fan của bạn trên MusicStream – ví dụ phân tích bình luận, ý tưởng bài hát, caption, thời điểm đăng bài. Bạn muốn hỏi gì về những chủ đề đó không? 🙂<span class="mtag">Gemini 3.8 Flash</span></div>
+  <div class="msg me">Nên đăng bài lúc nào trong ngày?</div>
+  <div class="msg ai"><div class="who"><span class="ava"><svg viewBox="0 0 24 24"><use href="#i-spark"/></svg></span>AI Assistant</div><span class="typing"><i></i><i></i><i></i></span></div>
+</div><div class="counter">14 of 20 free messages left today</div><div class="composer"><div class="inp">Ask about your fans, songs, ideas…</div><div class="sendb"><svg viewBox="0 0 24 24"><use href="#i-send"/></svg></div></div></div><div class="caption"><h3>C6 · Ngoài phạm vi &amp; đang trả lời</h3><span class="new">MỚI</span> Câu hỏi không liên quan (thời tiết, bài tập, chính trị…) → AI từ chối nhẹ nhàng và gợi ý chủ đề phù hợp; <b>vẫn tính 1 tin nhắn</b> (đã chốt). Khi AI đang viết: hiện 3 chấm "đang gõ".</div></div><div class="card"><div class="phone" id="C7"><div class="statusbar">9:41<span>●●● 100%</span></div><div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><div style="text-align:center"><b>AI Assistant</b><div><span class="mchip">✦ Auto ▾</span></div></div><svg class="ico"><use href="#i-menu"/></svg></div>
+<div class="chat">
+  <div class="msg me">Viết thêm 3 caption nữa</div>
+  <div class="msg ai" style="max-width:92%;text-align:center"><div style="font-size:22px">⏳</div><b style="font-size:14px">You've used today's 20 free messages</b>
+  <div style="font-size:12px;color:var(--text2);margin:4px 0 8px">Free messages reset at midnight. Need more now?</div>
+  <div class="bigbtn" style="margin:0;padding:10px;font-size:13.5px;background:linear-gradient(135deg,#7B2CBF,#10C7D5)">Buy 20 more messages · $3</div>
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">Your chat history stays available.</div></div>
+</div><div class="counter">0 free messages left today</div><div class="composer"><div class="inp" style="background:#F3F4F6">Daily limit reached</div><div class="sendb" style="background:#CBD5E1"><svg viewBox="0 0 24 24"><use href="#i-send"/></svg></div></div></div><div class="caption"><h3>C7 · Hết tin nhắn miễn phí</h3><span class="new">MỚI</span> Hết 20 tin miễn phí trong ngày → khoá ô nhập và cho <b>mua thêm 20 tin với $3</b> (thanh toán giả lập như VIP, ghi vào Payment history là "AI Assistant – 20 extra messages"). Tin đã mua không hết hạn, chỉ dùng khi hết tin miễn phí. <b>Một loại lượt duy nhất</b> – phân tích fan cũng dùng chung.</div></div><div class="card"><div class="phone" id="C8"><div class="statusbar">9:41<span>●●● 100%</span></div><div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><div style="text-align:center"><b>AI Assistant</b><div><span class="mchip">✦ Auto ▾</span></div></div><svg class="ico"><use href="#i-menu"/></svg></div>
+<div class="dim"></div>
+<div class="drawer">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="font-size:16px">Chats</b><span class="qchip" style="padding:5px 9px">＋ New chat</span></div>
+  <div class="hist"><b>Caption ra mắt Velvet Sky</b><span>Today · 6 messages</span></div>
+  <div class="hist"><b>Ý tưởng bài hát tiếp theo</b><span>Yesterday · 4 messages</span></div>
+  <div class="hist"><b>Phân tích fan tháng 11</b><span>Nov 12 · 3 messages</span></div>
+  <div style="font-size:11px;color:var(--muted);margin-top:10px">Chats are kept for 30 days. Long-press a chat to rename or delete it.</div>
+</div>
+<div class="chat"></div><div class="counter"></div><div class="composer"><div class="inp">Ask about your fans, songs, ideas…</div><div class="sendb"><svg viewBox="0 0 24 24"><use href="#i-send"/></svg></div></div></div><div class="caption"><h3>C8 · Lịch sử trò chuyện</h3><span class="new">MỚI</span> Nút ☰ mở danh sách cuộc trò chuyện (tên tự đặt theo câu hỏi đầu), <b>＋ New chat</b> để bắt đầu mới. Lưu <b>30 ngày</b>. Bấm một cuộc để mở lại; đổi tên / xoá bằng nhấn giữ.</div></div><div class="card"><div class="phone" id="C9"><div class="statusbar">9:41<span>●●● 100%</span></div><div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><div style="text-align:center"><b>AI Assistant</b><div><span class="mchip">✦ Auto ▾</span></div></div><svg class="ico"><use href="#i-menu"/></svg></div>
+<div class="chat">
+  <div class="msg me">Fan có góp ý gì không?</div>
+  <div class="msg ai" style="border-color:#FDE68A;background:#FFFBEB"><div class="who" style="color:#92400E">⚠️ AI is busy</div><span style="color:#92400E">The AI service is busy right now, so this message wasn't counted. Tap to try again.</span>
+  <div class="cap-actions"><span class="pri" style="background:#92400E;border-color:#92400E">↻ Try again</span><span>Show basic fan summary</span></div></div>
+</div><div class="counter">14 of 20 free messages left today</div><div class="composer"><div class="inp">Ask about your fans, songs, ideas…</div><div class="sendb"><svg viewBox="0 0 24 24"><use href="#i-send"/></svg></div></div></div><div class="caption"><h3>C9 · AI lỗi / quá tải</h3><span class="new">MỚI</span> Cả 2 model Gemini đều lỗi → báo "AI is busy", <b>không trừ tin nhắn</b>, có nút thử lại. Nút "Show basic fan summary" dùng bản tóm tắt cơ bản (không cần AI) như màn I6 cũ.</div></div>
+    <div class="card"><div class="phone" id="C10"><div class="statusbar">9:41<span>●●● 100%</span></div><div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><div style="text-align:center"><b>AI Assistant</b><div><span class="mchip">✦ Auto ▾</span></div></div><svg class="ico"><use href="#i-menu"/></svg></div>
+<div class="chat"></div>
+<div class="overlay"><div class="sheet"><div class="grab"></div>
+  <h4>Choose AI model</h4>
+  <div style="font-size:12px;color:var(--text2);margin-bottom:4px">All models are free and use 1 message per question. Your choice is saved for this chat.</div>
+  <div class="mopt"><div class="r on"></div><div><b>Auto <span class="badge2 b-rec">Recommended</span></b><span>Uses Gemini 3.8 Flash, and switches to 3.5 Flash-Lite when it's busy. You always get an answer.</span></div></div>
+  <div class="mopt"><div class="r"></div><div><b>Gemini 3.8 Flash <span class="badge2 b-busy">Busy now</span></b><span>Deeper, more detailed answers. Sometimes overloaded by Google – if it's busy, you'll be asked to switch model.</span></div></div>
+  <div class="mopt"><div class="r"></div><div><b>Gemini 3.5 Flash-Lite</b><span>Faster and more stable. Shorter, simpler answers. If it's busy, you'll be asked to switch model.</span></div></div>
+</div></div></div>
+      <div class="caption"><h3>C10 · Chọn model</h3><span class="new">MỚI</span> Bấm chip <b>✦ Auto ▾</b> dưới tiêu đề. 3 lựa chọn: <b>Auto</b> (mặc định, khuyên dùng), <b>Gemini 3.8 Flash</b>, <b>Gemini 3.5 Flash-Lite</b>, mỗi cái có mô tả ngắn. Nhãn <b>"Busy now"</b> hiện khi lần gọi gần nhất model đó bị Google báo quá tải. Lựa chọn được <b>nhớ theo từng cuộc trò chuyện</b>; cuộc trò chuyện mới mặc định <b>Auto</b>. Chỉ <b>Auto</b> tự chuyển model khi bận; chọn cố định một model thì khi bận sẽ báo lỗi để bạn tự đổi (C11). Cả 3 đều miễn phí và tính 1 tin như nhau.</div></div>
+
+    <div class="card"><div class="phone" id="C11"><div class="statusbar">9:41<span>●●● 100%</span></div><div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><div style="text-align:center"><b>AI Assistant</b><div><span class="mchip">✦ Gemini 3.8 Flash ▾</span></div></div><svg class="ico"><use href="#i-menu"/></svg></div>
+<div class="chat">
+  <div class="msg me">Nên đăng bài lúc nào trong ngày?</div>
+  <div class="msg ai" style="border-color:#FDE68A;background:#FFFBEB;max-width:90%"><div class="who" style="color:#92400E">⚠️ Gemini 3.8 Flash is busy</div><span style="color:#92400E">Google says this model is overloaded right now. Your message wasn't counted. Switch to another model or try again in a moment.</span>
+  <div class="cap-actions" style="flex-wrap:wrap"><span class="pri" style="background:var(--purple);border-color:var(--purple)">Switch to Gemini 3.5 Flash-Lite &amp; resend</span><span>Switch to Auto</span><span>↻ Try again</span></div></div>
+</div>
+<div class="counter">14 of 20 free messages left today · not counted</div><div class="composer"><div class="inp">Ask about your fans, songs, ideas…</div><div class="sendb"><svg viewBox="0 0 24 24"><use href="#i-send"/></svg></div></div></div>
+      <div class="caption"><h3>C11 · Model đã chọn đang quá tải</h3><span class="new" style="background:#FEF3C7;color:#D97706">SỬA</span> Người dùng chọn cố định <b>Gemini 3.8 Flash</b> nhưng Google báo quá tải → <b>không tự chuyển model</b>: hiện thông báo lỗi (màu cam), <b>không trừ tin</b>. Ba nút: <b>Switch to Gemini 3.5 Flash-Lite &amp; resend</b> (đổi model của cuộc chat và gửi lại đúng câu hỏi), <b>Switch to Auto</b>, <b>Try again</b> (thử lại cùng model). Ở chế độ Auto thì vẫn tự chuyển như C10 mô tả.</div></div>
+
+  </div>
+
+  <h2>3. Phía máy chủ</h2>
+  <table class="api">
+    <tr><th style="width:32%">Phần</th><th>Nội dung</th></tr>
+    <tr><td>Bảng <code>AssistantChat</code>, <code>AssistantMessage</code> (mới)</td><td>Cuộc trò chuyện (nghệ sĩ, tiêu đề, <b>model đã chọn: auto | gemini-3.8-flash | gemini-3.5-flash-lite</b>, cập nhật lúc) và tin nhắn (vai trò user / ai, nội dung, loại: text | insight | captions | error, <b>model đã trả lời</b>, có phải model dự phòng không, id bản phân tích nếu có). Tự xoá sau 30 ngày.</td></tr>
+    <tr><td><code>GET /api/studio/assistant/chats</code></td><td>Danh sách cuộc trò chuyện + lượt còn lại (tin nhắn, phân tích fan).</td></tr>
+    <tr><td><code>GET /api/studio/assistant/chats/:id</code></td><td>Tin nhắn của một cuộc trò chuyện.</td></tr>
+    <tr><td><code>POST /api/studio/assistant/messages</code></td><td>Gửi tin (tạo cuộc mới nếu chưa có). "Phân tích fan" dùng lại dịch vụ phân tích hiện có; câu hỏi khác gọi Gemini với ngữ cảnh ở bước ④.</td></tr>
+    <tr><td>Lỗi <code>MODEL_BUSY</code> (mới)</td><td>Trả về khi model cố định bị quá tải / lỗi: kèm tên model và gợi ý model còn lại; tin nhắn của người dùng vẫn được lưu để gửi lại, không trừ lượt.</td></tr>
+    <tr><td><code>PATCH /api/studio/assistant/chats/:id</code></td><td>Đổi model của cuộc trò chuyện (chỉ nhận 3 giá trị trên), đổi tên.</td></tr>
+    <tr><td><code>GET /api/studio/assistant/models</code></td><td>Danh sách model cho bảng chọn + trạng thái "Busy now" (model bị quá tải trong 10 phút gần nhất).</td></tr>
+    <tr><td><code>POST /api/studio/assistant/purchase</code></td><td>Mua 20 tin nhắn với $3 (giả lập), ghi Payment history "AI Assistant – 20 extra messages".</td></tr>
+    <tr><td>Thay thế</td><td>Màn AI Fan Insight cũ và lượt phân tích riêng (3 / ngày, $3 / lượt) được gộp vào AI Assistant. Các giao dịch $3 / lượt cũ trong Payment history vẫn giữ để xem lại; lượt chưa dùng được đổi thành 20 tin nhắn.</td></tr>
+    <tr><td>Giữ nguyên</td><td>Dịch vụ phân tích fan (gom, ẩn danh, kiểm tra kết quả, bản cơ bản), Payment history, Gemini giả lập cho test, model chính + dự phòng.</td></tr>
+    <tr><td>Kiểm thử</td><td>Unit: nhận diện "phân tích fan", dựng ngữ cảnh (không lộ tên fan), giới hạn độ dài, tách caption. Integration: chọn model được lưu theo chat, model lạ bị từ chối, chế độ Auto tự chuyển model khi bận, model cố định bận → lỗi MODEL_BUSY và không trừ tin, "đổi model và gửi lại" dùng đúng câu hỏi cũ, hỏi đáp, phân tích fan tính 1 tin / bản ≤ 24 h không tính, hết 20 tin → 402, mua 20 tin rồi dùng tiếp, AI lỗi không trừ tin, câu hỏi ngoài phạm vi, chỉ thấy chat của mình, xoá sau 30 ngày. E2E: chat → phân tích → caption → Post to Feed.</td></tr>
+  </table>
+
+  <h2>4. Đã chốt</h2>
+  <ol class="confirm-list">
+    <li>Tên chức năng: <b>AI Assistant</b>.</li>
+    <li><b>Một loại lượt duy nhất: 20 tin nhắn miễn phí / ngày</b>; phân tích fan tính 1 tin (bản ≤ 24 giờ hiện lại không tính); hết thì <b>mua 20 tin với $3</b> (giả lập), tin mua không hết hạn; AI lỗi không trừ tin.</li>
+    <li><b>Nhiều cuộc trò chuyện</b>, có New chat, lưu 30 ngày.</li>
+    <li>Câu hỏi ngoài phạm vi: AI từ chối nhẹ nhàng, <b>vẫn tính 1 tin</b>.</li>
+    <li>Post to Feed: mở bảng viết bài điền sẵn, nghệ sĩ tự xem lại và đăng – AI không tự đăng.</li>
+  </ol>
+  <h2>5. Đã chốt thêm</h2>
+  <ol class="confirm-list">
+    <li>Người dùng <b>tự chọn model</b> cho từng cuộc trò chuyện: Auto / Gemini 3.8 Flash / Gemini 3.5 Flash-Lite; dưới mỗi câu trả lời ghi model đã trả lời.</li>
+    <li>Model cố định bị quá tải → <b>báo lỗi, không trừ tin, người dùng tự đổi model</b> (C11). Chỉ Auto tự chuyển.</li>
+    <li>Cuộc trò chuyện mới mặc định <b>Auto</b>.</li>
+  </ol>
+  <p class="lead" style="margin-top:12px">Nếu bản này ổn, mình bắt đầu hiện thực.</p>
+</div>
+</body>
+</html>

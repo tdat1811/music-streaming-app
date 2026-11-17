@@ -1,6 +1,10 @@
 const User = require('../models/User');
+const { logActivity } = require('../services/playEvents');
+const { lockedResponse } = require('../middleware/lockGuard');
+const Payment = require('../models/Payment');
 const bcrypt = require('bcryptjs');
-const { VALID_PLAN_IDS, PLAN_PRICES, isVipUser, VIP_REQUIRED_MESSAGE } = require('../config/plans');
+const { VALID_PLAN_IDS, VIP_PLAN_IDS, PLAN_PRICES, isVipUser, nextExpiryDate, VIP_REQUIRED_MESSAGE } = require('../config/plans');
+const Artist = require('../models/Artist');
 const { signToken } = require('../middleware/auth');
 const { makeId } = require('../utils/ids');
 // Các API cần đăng nhập lấy userId từ token (req.userId), không tin userId trong body.
@@ -71,6 +75,9 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không chính xác.' });
     }
+
+    // Tài khoản bị khoá (giai đoạn 5): không cho đăng nhập, báo lý do
+    if (user.lockedAt) return res.status(403).json(lockedResponse(user));
 
     // Không trả password hash về client
     const userObj = user.toObject();
@@ -223,13 +230,11 @@ exports.subscribe = async (req, res) => {
         message: `Gói hội viên không hợp lệ. Chỉ chấp nhận: ${VALID_PLAN_IDS.join(', ')}.`,
       });
     }
-
     const user = await User.findOne({ id: userId });
     if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
 
+    // Gói mất phí: kiểm tra và trừ số dư ví (VNĐ)
     const price = PLAN_PRICES[planId] || 0;
-
-    // Kiểm tra số dư ví nếu mua gói mất phí
     if (price > 0) {
       const currentBalance = user.balance || 0;
       if (currentBalance < price) {
@@ -239,16 +244,36 @@ exports.subscribe = async (req, res) => {
           message: `Số dư ví không đủ! Bạn hiện có ${currentBalance.toLocaleString('vi-VN')}đ, cần ${price.toLocaleString('vi-VN')}đ để thanh toán. Vui lòng nạp thêm tiền qua MoMo.`,
         });
       }
-      // Trừ tiền trong ví
       user.balance -= price;
     }
 
+    // Gói VIP có thời hạn 1 tháng kể từ khi thanh toán (còn hạn thì cộng dồn); gói Free không có hạn
+    const wasActiveVip = isVipUser(user);
+    if (VIP_PLAN_IDS.includes(planId)) {
+      user.planExpiresAt = nextExpiryDate(user.planId === planId ? user.planExpiresAt : null);
+    } else {
+      user.planExpiresAt = null;
+    }
     user.planId = planId;
     await user.save();
+    // Lịch sử thanh toán (giai đoạn 6) – chỉ ghi khi mua / gia hạn gói VIP
+    if (VIP_PLAN_IDS.includes(planId)) {
+      await Payment.create({
+        id: makeId('pay'),
+        userId,
+        type: 'vip',
+        amount: price,
+        currency: 'VND',
+        balanceAfter: user.balance || 0,
+        description: wasActiveVip ? 'VIP Premium – renew 1 month' : 'VIP Premium – 1 month',
+      });
+    }
 
     res.status(200).json({
       success: true,
-      message: `Thanh toán thành công! Đã kích hoạt gói cước ${planId}.`,
+      message: wasActiveVip && VIP_PLAN_IDS.includes(planId)
+        ? `Gia hạn gói ${planId} thành công!`
+        : `Thanh toán thành công! Đã kích hoạt gói cước ${planId}.`,
       data: user,
     });
   } catch (err) {
@@ -271,6 +296,7 @@ exports.toggleLikeSong = async (req, res) => {
       user.likedSongIds.unshift(songId);
     }
     await user.save();
+    await logActivity(isLiked ? 'unlike' : 'like', { songId, userId });
 
     res.status(200).json({
       success: true,
@@ -298,10 +324,19 @@ exports.toggleFollowArtist = async (req, res) => {
     }
     await user.save();
 
+    // Cập nhật số người theo dõi của nghệ sĩ (không để âm)
+    const artist = await Artist.findOneAndUpdate(
+      isFollowing ? { id: artistId, followersCount: { $gt: 0 } } : { id: artistId },
+      { $inc: { followersCount: isFollowing ? -1 : 1 } },
+      { new: true }
+    );
+    if (artist) await logActivity(isFollowing ? 'unfollow' : 'follow', { artistId, userId });
+
     res.status(200).json({
       success: true,
       isFollowing: !isFollowing,
       followedArtistIds: user.followedArtistIds,
+      followersCount: artist ? artist.followersCount : undefined,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -361,6 +396,9 @@ exports.downloadSong = async (req, res) => {
 };
 
 
+// Chỉ ghi 3 số cuối của số điện thoại MoMo vào lịch sử
+const maskPhone = (phone) => `•••${String(phone).trim().slice(-3)}`;
+
 // Nạp tiền qua Ví MoMo
 exports.depositMoMo = async (req, res) => {
   try {
@@ -381,6 +419,16 @@ exports.depositMoMo = async (req, res) => {
     // Cộng tiền vào tài khoản
     user.balance = (user.balance || 0) + depositAmount;
     await user.save();
+    // Ghi lịch sử ví
+    await Payment.create({
+      id: makeId('pay'),
+      userId,
+      type: 'deposit',
+      amount: depositAmount,
+      currency: 'VND',
+      balanceAfter: user.balance,
+      description: `Top up via MoMo (${maskPhone(momoPhone)})`,
+    });
 
     res.status(200).json({
       success: true,
@@ -420,6 +468,15 @@ exports.withdrawMoMo = async (req, res) => {
     // Trừ tiền tài khoản
     user.balance -= withdrawAmount;
     await user.save();
+    await Payment.create({
+      id: makeId('pay'),
+      userId,
+      type: 'withdraw',
+      amount: withdrawAmount,
+      currency: 'VND',
+      balanceAfter: user.balance,
+      description: `Withdraw to MoMo (${maskPhone(momoPhone)})`,
+    });
 
     res.status(200).json({
       success: true,

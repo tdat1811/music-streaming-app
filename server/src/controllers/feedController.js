@@ -1,7 +1,12 @@
+const { lockedUserIds } = require('../services/moderation');
 const FeedPost = require('../models/FeedPost');
 const Comment = require('../models/Comment');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const Artist = require('../models/Artist');
+const Song = require('../models/Song');
+const { validatePostInput, POST_LIMITS } = require('../utils/postValidation');
+const { notifyFollowers } = require('../services/followers');
 const { makeId } = require('../utils/ids');
 
 // userId lấy từ token đăng nhập (req.userId), không tin dữ liệu client gửi lên.
@@ -33,11 +38,141 @@ const notifyCommentReply = async ({ targetComment, rootCommentId, reply, actorId
   });
 };
 
-// Lấy danh sách bài post trên Feed
+// Lấy tên / ảnh tác giả từ Artist thật (bài cũ chưa có authorArtistId giữ nguyên tên đã lưu).
+// Nhờ vậy nghệ sĩ đổi tên hoặc ảnh đại diện thì mọi bài đăng cũ cũng hiển thị theo.
+const attachAuthors = async (posts) => {
+  const artistIds = [...new Set(posts.map((p) => p.authorArtistId).filter(Boolean))];
+  const artists = artistIds.length
+    ? await Artist.find({ id: { $in: artistIds } }).select('id name avatarImage isVerified')
+    : [];
+  const byId = new Map(artists.map((a) => [a.id, a]));
+  return posts.map((post) => {
+    const obj = post.toObject();
+    const artist = obj.authorArtistId ? byId.get(obj.authorArtistId) : null;
+    if (artist) {
+      obj.authorName = artist.name;
+      obj.authorAvatar = artist.avatarImage || obj.authorAvatar;
+      obj.authorVerified = !!artist.isVerified;
+    }
+    return obj;
+  });
+};
+exports.attachAuthors = attachAuthors;
+
+// Lấy danh sách bài post trên Feed (mới nhất trước).
+// ?scope=following: chỉ bài của nghệ sĩ người xem đang theo dõi (cần đăng nhập)
+// ?artistId=...: chỉ bài của một nghệ sĩ (Posts trên trang nghệ sĩ / "My posts")
 exports.getFeedPosts = async (req, res) => {
   try {
-    const posts = await FeedPost.find().sort({ createdAt: -1 });
-    res.status(200).json({ success: true, count: posts.length, data: posts });
+    // Bài bị admin gỡ / đang tạm ẩn (trang nghệ sĩ bị ẩn, chủ trang bị khoá) không hiện
+    const filter = { ...FeedPost.PUBLIC_POST_FILTER };
+    if (req.query.artistId) filter.authorArtistId = String(req.query.artistId);
+    if (req.query.scope === 'following') {
+      if (!req.userId) return res.status(401).json({ success: false, code: 'TOKEN_MISSING', message: 'Vui lòng đăng nhập để xem bài từ nghệ sĩ bạn theo dõi.' });
+      const me = await User.findOne({ id: req.userId }).select('followedArtistIds').lean();
+      filter.authorArtistId = { $in: me?.followedArtistIds || [] };
+    }
+    const posts = await FeedPost.find(filter).sort({ createdAt: -1 });
+    const data = await attachAuthors(posts);
+    res.status(200).json({ success: true, count: data.length, data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ---------------- Nghệ sĩ đăng / sửa / xoá bài (route đã qua requireAuth + requireRole('artist'))
+
+const findOwnArtist = (req) =>
+  req.user.artistId ? Artist.findOne({ id: req.user.artistId, ownerUserId: req.user.id }) : null;
+
+// Bài hát gắn kèm phải là bài đã đăng của chính nghệ sĩ
+const checkAttachedSong = async (artist, songId) => {
+  if (!songId) return null;
+  const song = await Song.findOne({ id: songId, artistId: artist.id, status: 'published', removedAt: null }).select('id').lean();
+  return song ? null : 'You can only attach one of your published songs.';
+};
+
+const postResponse = async (post) => (await attachAuthors([post]))[0];
+
+exports.createPost = async (req, res) => {
+  try {
+    const artist = await findOwnArtist(req);
+    if (!artist) return res.status(403).json({ success: false, message: 'Tài khoản chưa được gắn với trang nghệ sĩ nào.' });
+    if (artist.hiddenAt) {
+      return res.status(403).json({ success: false, code: 'PAGE_HIDDEN', message: 'Your artist page is hidden by a moderator. You can’t post right now.' });
+    }
+    const { errors, value } = validatePostInput(req.body);
+    const songError = await checkAttachedSong(artist, value.songId);
+    if (songError) errors.songId = songError;
+    if (Object.keys(errors).length) {
+      return res.status(400).json({ success: false, code: 'INVALID', message: Object.values(errors)[0], errors });
+    }
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const today = await FeedPost.countDocuments({ authorArtistId: artist.id, createdAt: { $gte: since } });
+    if (today >= POST_LIMITS.perDay) {
+      return res.status(429).json({ success: false, code: 'POST_LIMIT', message: `You can post at most ${POST_LIMITS.perDay} times a day.` });
+    }
+    const post = await FeedPost.create({
+      id: makeId('fp'),
+      authorArtistId: artist.id,
+      authorName: artist.name,
+      authorAvatar: artist.avatarImage || '',
+      content: value.content,
+      songId: value.songId,
+      // App tự tính "2m", "3h" từ createdAt khi timeAgo rỗng
+      timeAgo: '',
+      likes: 0,
+      likedByUserIds: [],
+      shares: 0,
+    });
+    // Báo người theo dõi (trừ khi được gọi nội bộ từ "Share to feed" – khi đó đã báo "bài hát mới")
+    if (!req.silentNotify) {
+      await notifyFollowers(artist, { type: 'artist_new_post', postId: post.id, text: value.content.slice(0, 120) });
+    }
+    res.status(201).json({ success: true, message: 'Posted.', data: await postResponse(post) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.updatePost = async (req, res) => {
+  try {
+    const artist = await findOwnArtist(req);
+    const post = artist ? await FeedPost.findOne({ id: req.params.id, authorArtistId: artist.id }) : null;
+    if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết.' });
+    if (post.removedAt) {
+      return res.status(403).json({ success: false, code: 'POST_REMOVED', message: "This post was removed by a moderator and can't be edited." });
+    }
+    const { errors, value } = validatePostInput(req.body);
+    // Bài hát đã gắn từ trước (có thể đã bị ẩn) vẫn được giữ nguyên khi sửa chữ
+    if (value.songId && value.songId !== post.songId) {
+      const songError = await checkAttachedSong(artist, value.songId);
+      if (songError) errors.songId = songError;
+    }
+    if (Object.keys(errors).length) {
+      return res.status(400).json({ success: false, code: 'INVALID', message: Object.values(errors)[0], errors });
+    }
+    post.content = value.content;
+    post.songId = value.songId;
+    post.editedAt = new Date();
+    await post.save();
+    res.status(200).json({ success: true, message: 'Saved.', data: await postResponse(post) });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Xoá bài: xoá luôn bình luận và thông báo trỏ tới bài đó
+exports.deletePost = async (req, res) => {
+  try {
+    const artist = await findOwnArtist(req);
+    const post = artist ? await FeedPost.findOneAndDelete({ id: req.params.id, authorArtistId: artist.id }) : null;
+    if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết.' });
+    const [comments] = await Promise.all([
+      Comment.deleteMany({ postId: post.id }),
+      Notification.deleteMany({ postId: post.id }),
+    ]);
+    res.status(200).json({ success: true, message: 'Deleted.', deletedComments: comments.deletedCount ?? 0 });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -89,21 +224,38 @@ exports.sharePost = async (req, res) => {
 };
 
 // Lấy danh sách bình luận của 1 bài viết (kèm nested replies)
+// Tài khoản sở hữu trang nghệ sĩ đã đăng bài: bình luận của họ (cả trả lời) có nhãn Artist
+// Đồng thời bỏ các câu trả lời bị admin gỡ hoặc của tài khoản đang bị khoá (giai đoạn 5)
+const artistMarker = async (postId, lockedIds = null) => {
+  const post = await FeedPost.findOne({ id: postId }).select('authorArtistId').lean();
+  const artist = post?.authorArtistId ? await Artist.findOne({ id: post.authorArtistId }).select('ownerUserId').lean() : null;
+  const ownerId = artist?.ownerUserId || null;
+  const locked = new Set(lockedIds || (await lockedUserIds()));
+  const mark = (c) => ({ ...c, isArtist: !!ownerId && c.userId === ownerId });
+  const visible = (c) => !c.removedAt && !(c.userId && locked.has(c.userId));
+  return (doc) => {
+    const obj = mark(doc.toObject ? doc.toObject() : doc);
+    obj.replies = (obj.replies || []).filter(visible).map(mark);
+    return obj;
+  };
+};
+
 exports.getComments = async (req, res) => {
   try {
     const { postId } = req.params;
-    const comments = await Comment.find({ postId }).sort({ createdAt: 1 });
+    const locked = await lockedUserIds();
+    // Bình luận bị gỡ (kèm cả thread trả lời) và bình luận của tài khoản bị khoá không hiện
+    const comments = await Comment.find({ postId, removedAt: null, userId: { $nin: locked } }).sort({ createdAt: 1 });
+    const markAll = await artistMarker(postId, locked);
 
     // Tính tổng số bình luận (gồm cả reply)
-    let totalCount = 0;
-    comments.forEach((c) => {
-      totalCount += 1 + (c.replies ? c.replies.length : 0);
-    });
+    const data = comments.map(markAll);
+    const totalCount = data.reduce((sum, c) => sum + 1 + (c.replies ? c.replies.length : 0), 0);
 
     res.status(200).json({
       success: true,
       totalCount,
-      data: comments,
+      data,
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -123,12 +275,17 @@ exports.addComment = async (req, res) => {
     if (!author) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng.' });
     const userName = author.name;
 
+    // Không bình luận vào bài đã bị gỡ / đang tạm ẩn
+    if (!(await FeedPost.exists({ id: postId, ...FeedPost.PUBLIC_POST_FILTER }))) {
+      return res.status(404).json({ success: false, message: 'This post is no longer available.' });
+    }
+
     const trimmedText = text.trim();
     const commentId = makeId('c');
 
     // Nếu là câu trả lời cho bình luận con (nested reply)
     if (replyTarget && replyTarget.rootCommentId) {
-      const parentComment = await Comment.findOne({ id: replyTarget.rootCommentId });
+      const parentComment = await Comment.findOne({ id: replyTarget.rootCommentId, removedAt: null });
       if (!parentComment) {
         return res.status(404).json({ success: false, message: 'Không tìm thấy bình luận gốc.' });
       }
@@ -171,7 +328,7 @@ exports.addComment = async (req, res) => {
       return res.status(201).json({
         success: true,
         message: 'Gửi phản hồi thành công!',
-        data: parentComment,
+        data: (await artistMarker(postId))(parentComment),
       });
     }
 
@@ -192,7 +349,7 @@ exports.addComment = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Gửi bình luận thành công!',
-      data: newComment,
+      data: (await artistMarker(postId))(newComment),
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

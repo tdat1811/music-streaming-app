@@ -1,10 +1,14 @@
 import { IMAGES } from '../constants/images';
+import { getRegisteredSong, isSongUnavailable } from './songRegistry';
 
 export interface Song {
   id: string;
   title: string;
   artist: string;
-  plays?: string;
+  // Nghệ sĩ sở hữu bài hát (dữ liệu từ máy chủ)
+  artistId?: string | null;
+  // Máy chủ trả số lượt nghe; dữ liệu mẫu trên máy còn dạng chuỗi "12.8M". Hiển thị bằng formatCount
+  plays?: number | string;
   duration?: string;
   coverImage: any;
   isLiked?: boolean;
@@ -16,6 +20,7 @@ export interface Album {
   id: string;
   title: string;
   artist: string;
+  artistId?: string | null;
   coverImage: any;
   songIds?: string[];
   releaseYear?: string;
@@ -35,7 +40,10 @@ export interface ChartItem {
 export interface Artist {
   id: string;
   name: string;
+  // Số người theo dõi (máy chủ). Dữ liệu mẫu cũ dùng chuỗi followers. Hiển thị bằng formatFollowers
+  followersCount?: number;
   followers?: string;
+  ownerUserId?: string | null;
   avatarImage: any;
   isFollowing?: boolean;
   bio?: string;
@@ -55,8 +63,15 @@ export interface Playlist {
 
 export interface FeedPost {
   id: string;
+  // Nghệ sĩ đăng bài; tên / ảnh tác giả do máy chủ lấy từ trang nghệ sĩ
+  authorArtistId?: string | null;
   authorName: string;
   authorAvatar: any;
+  authorVerified?: boolean;
+  // Nội dung chữ của bài (bài của nghệ sĩ); bài mẫu cũ có thể không có
+  content?: string;
+  createdAt?: string;
+  editedAt?: string | null;
   timeAgo: string;
   songId: string;
   likes: number;
@@ -77,7 +92,11 @@ export interface CommentItem {
   likedByUserIds: string[];
   replyToName?: string;
   replies?: CommentItem[];
+  // Bình luận của chính nghệ sĩ dưới bài đăng của họ (hiện nhãn Artist)
+  isArtist?: boolean;
 }
+
+export type UserRole = 'listener' | 'artist' | 'admin';
 
 export interface User {
   id: string;
@@ -86,6 +105,13 @@ export interface User {
   phone: string;
   password: string;
   planId: string | null;
+  // Ngày hết hạn gói VIP (ISO), null nếu chưa mua / gói Free
+  planExpiresAt?: string | null;
+  role?: UserRole;
+  // Trang nghệ sĩ tài khoản sở hữu (role = 'artist')
+  artistId?: string | null;
+  // Số dư ví (VNĐ) – nạp qua MoMo (giả lập), dùng mua gói VIP và gói tin nhắn AI
+  balance?: number;
   likedSongIds: string[];
   followedArtistIds: string[];
   // Riêng từng tài khoản (trước đây dùng chung cho mọi tài khoản)
@@ -1067,6 +1093,8 @@ export const SAMPLE_USERS: User[] = [
     phone: '0900000002',
     password: '123456',
     planId: 'premium',
+    // Dữ liệu mẫu khi không có máy chủ: VIP còn hạn 30 ngày kể từ lúc mở app
+    planExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     likedSongIds: ['pdt4', 'pdt5'],
     followedArtistIds: ['pa2', 'ar1'],
     likedAlbumIds: ['alb3', 'alb4'],
@@ -1099,7 +1127,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     id: 'premium',
     name: 'Gói VIP (Premium)',
     badge: 'Đặc quyền VIP',
-    price: '$9.99 / tháng',
+    price: '59.000đ / tháng',
     perks: [
       'Nghe nhạc không giới hạn KHÔNG quảng cáo (Ad-free)',
       'Chất lượng âm thanh Lossless 320 kbps đỉnh cao',
@@ -1654,8 +1682,13 @@ export const ALL_SONGS: Song[] = [
   ...EXTRA_ARTIST_SONGS,
 ];
 
+// Ưu tiên bài lấy từ máy chủ (kho songRegistry, gồm bài nghệ sĩ tải lên), rồi tới dữ liệu có sẵn;
+// bài máy chủ báo đã ẩn / xoá thì bỏ ra
 export const getSongsByIds = (songIds: string[]): Song[] =>
-  songIds.flatMap((id) => ALL_SONGS.find((song) => song.id === id) ?? []);
+  songIds.flatMap((id) => {
+    if (isSongUnavailable(id)) return [];
+    return getRegisteredSong(id) ?? ALL_SONGS.find((song) => song.id === id) ?? [];
+  });
 
 export const ARTIST_ALBUMS: Album[] = [
   ...SEED_ALBUMS,
@@ -1723,6 +1756,8 @@ export const ALL_ALBUMS: Album[] = [
 
 export const getAlbumSongIds = (album: Album): string[] => {
   if (album.songIds && album.songIds.length > 0) return album.songIds;
+  // Album từ máy chủ (có trường artistId): danh sách rỗng là rỗng thật, không đoán bài theo tên
+  if (album.songIds && album.artistId !== undefined) return [];
   const match = ALL_SONGS.filter((s) => s.artist === album.artist).map((s) => s.id);
   return match.length > 0 ? match : ['pdt1', 'pdt2', 'pdt3'];
 };

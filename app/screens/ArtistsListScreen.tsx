@@ -13,6 +13,10 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
+import { artistImageSource } from '../../src/utils/imageSource';
+import { formatFollowers } from '../../src/utils/plays';
+import { isArtistHidden } from '../../src/data/songRegistry';
+import { useSongRegistryVersion } from '../../src/hooks/useSongsByIds';
 import { ARTISTS, Artist } from '../../src/data/musicData';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { useAuth } from '../../src/context/AuthContext';
@@ -60,15 +64,19 @@ export const ArtistsListScreen: React.FC<ArtistsListScreenProps> = ({
   }, []);
 
   // Lọc theo ID nghệ sĩ hoặc theo Tên
+  const hiddenVersion = useSongRegistryVersion();
   const filteredArtists = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return artists;
-    return artists.filter(
+    // Trang nghệ sĩ đang bị ẩn (giai đoạn 5) không hiện
+    const visible = artists.filter((a) => !isArtistHidden(a));
+    if (!q) return visible;
+    return visible.filter(
       (item) =>
         item.id.toLowerCase().includes(q) ||
         item.name.toLowerCase().includes(q)
     );
-  }, [artists, searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artists, searchQuery, hiddenVersion]);
 
   // Tìm trực tiếp theo ID trên MongoDB Atlas khi bấm nút Tìm ID
   const handleSearchExactId = async () => {
@@ -105,10 +113,7 @@ export const ArtistsListScreen: React.FC<ArtistsListScreenProps> = ({
 
   const renderArtistCard = ({ item }: { item: Artist }) => {
     const isFollowing = !!currentUser?.followedArtistIds.includes(item.id);
-    const avatarSource =
-      typeof item.avatarImage === 'string'
-        ? { uri: item.avatarImage }
-        : item.avatarImage;
+    const avatarSource = artistImageSource(item.avatarImage);
 
     return (
       <TouchableOpacity
@@ -125,7 +130,9 @@ export const ArtistsListScreen: React.FC<ArtistsListScreenProps> = ({
             <Text style={styles.artistName} numberOfLines={1}>
               {item.name}
             </Text>
-            <Ionicons name="checkmark-circle" size={15} color="#00A3FF" style={styles.verifiedIcon} />
+            {item.isVerified !== false && (
+              <Ionicons name="checkmark-circle" size={15} color="#00A3FF" style={styles.verifiedIcon} accessibilityLabel="Verified artist" />
+            )}
           </View>
 
           {/* Badge hiển thị ID nghệ sĩ */}
@@ -134,7 +141,7 @@ export const ArtistsListScreen: React.FC<ArtistsListScreenProps> = ({
           </View>
 
           <Text style={styles.followersText} numberOfLines={1}>
-            {item.followers || '1.2M Followers'}
+            {formatFollowers(item) || '1.2M Followers'}
           </Text>
 
           {/* Follow Button */}

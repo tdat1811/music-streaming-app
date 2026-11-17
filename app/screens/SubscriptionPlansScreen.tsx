@@ -17,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { IMAGES } from '../../src/constants/images';
 import { SUBSCRIPTION_PLANS, SubscriptionPlan } from '../../src/data/musicData';
 import { FREE_PLAN_ID, useAuth } from '../../src/context/AuthContext';
+import { daysLeft, formatDate, nextExpiryDate } from '../../src/utils/plan';
+import { formatMoney } from '../../src/utils/insights';
 
 // Chỉ cho chọn các gói VIP. Người dùng không mua gói nào thì mặc định là thành viên thường.
 const VIP_PLANS = SUBSCRIPTION_PLANS.filter((plan) => plan.id !== FREE_PLAN_ID);
@@ -26,23 +28,30 @@ const CARD_GAP = 16;
 const CARD_INTERVAL = CARD_WIDTH + CARD_GAP;
 const PAYMENT_DURATION_MS = 1500;
 
-type PaymentStep = 'confirm' | 'processing' | 'success';
+type PaymentStep = 'confirm' | 'processing' | 'success' | 'error';
 
 interface SubscriptionPlansScreenProps {
   onBackHome?: () => void;
   onSubscribe?: () => void;
   onRequireLogin?: () => void;
+  // Mở ví để nạp tiền (khi số dư không đủ mua gói)
+  onOpenWallet?: () => void;
 }
 
 export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = ({
   onBackHome,
   onSubscribe,
   onRequireLogin,
+  onOpenWallet,
 }) => {
-  const { currentUser, activePlan, subscribe } = useAuth();
+  const { currentUser, activePlan, isVip, planExpiresAt, subscribe } = useAuth();
+  // Gói VIP đã hết hạn (vẫn còn planId nhưng quá ngày hết hạn)
+  const expiredPlanId = !isVip && planExpiresAt ? currentUser?.planId ?? null : null;
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [paymentPlan, setPaymentPlan] = useState<SubscriptionPlan | null>(null);
   const [paymentStep, setPaymentStep] = useState<PaymentStep>('confirm');
+  const [paymentError, setPaymentError] = useState<{ message: string; lowBalance: boolean } | null>(null);
+  const balance = currentUser?.balance ?? 0;
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const paymentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -76,13 +85,19 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
     if (paymentStep !== 'processing') setPaymentPlan(null);
   };
 
-  // Mô phỏng thanh toán: không thu thông tin thẻ, không gọi dịch vụ nào
+  // Thanh toán bằng số dư ví (VNĐ, nạp qua MoMo giả lập) – không thu thông tin thẻ
   const confirmPayment = () => {
     if (!paymentPlan) return;
+    setPaymentError(null);
     setPaymentStep('processing');
-    paymentTimer.current = setTimeout(() => {
-      subscribe(paymentPlan);
-      setPaymentStep('success');
+    paymentTimer.current = setTimeout(async () => {
+      const result = await subscribe(paymentPlan);
+      if (result.ok) {
+        setPaymentStep('success');
+      } else {
+        setPaymentError({ message: result.message || 'Payment failed. Please try again.', lowBalance: result.code === 'INSUFFICIENT_BALANCE' });
+        setPaymentStep('error');
+      }
     }, PAYMENT_DURATION_MS);
   };
 
@@ -119,7 +134,9 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
               scrollEventThrottle={16}
             >
               {VIP_PLANS.map((plan, index) => {
-                const isCurrent = activePlan?.id === plan.id;
+                // Gói đang dùng và còn hạn: cho phép gia hạn thêm 1 tháng
+                const isCurrent = isVip && activePlan?.id === plan.id;
+                const isExpired = expiredPlanId === plan.id;
                 return (
                   <TouchableOpacity
                     key={plan.id}
@@ -135,6 +152,17 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
                         </View>
                       )}
                     </View>
+
+                    {isCurrent && (
+                      <Text style={styles.expiryText}>
+                        Expires on {formatDate(planExpiresAt)} ({daysLeft(planExpiresAt)} days left)
+                      </Text>
+                    )}
+                    {isExpired && (
+                      <Text style={[styles.expiryText, styles.expiredText]}>
+                        Expired on {formatDate(planExpiresAt)}. Renew to unlock VIP again.
+                      </Text>
+                    )}
 
                     <View style={styles.priceRow}>
                       <View style={styles.freeBadge}>
@@ -160,13 +188,12 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
 
                     {/* Subscribe button */}
                     <TouchableOpacity
-                      style={[styles.subscribeButton, isCurrent && styles.subscribeButtonDisabled]}
+                      style={styles.subscribeButton}
                       onPress={() => startPayment(plan, index)}
-                      disabled={isCurrent}
                       activeOpacity={0.85}
                     >
                       <Text style={styles.subscribeButtonText}>
-                        {isCurrent ? 'Subscribed' : 'Subscribe now'}
+                        {isCurrent ? 'Renew +1 month' : isExpired ? 'Renew now' : 'Subscribe now'}
                       </Text>
                     </TouchableOpacity>
                   </TouchableOpacity>
@@ -216,7 +243,12 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
                 <Text style={styles.modalPlan}>{paymentPlan?.name}</Text>
                 <Text style={styles.modalPrice}>{paymentPlan?.price}</Text>
                 <Text style={styles.modalAccount}>Account: {currentUser?.email}</Text>
-                <Text style={styles.modalNote}>This is a demo. You will not be charged.</Text>
+                <Text style={styles.modalAccount}>
+                  Valid until{' '}
+                  {formatDate(nextExpiryDate(isVip && activePlan?.id === paymentPlan?.id ? planExpiresAt : null))}
+                </Text>
+                <Text style={styles.modalAccount}>Wallet balance: {formatMoney(balance)}</Text>
+                <Text style={styles.modalNote}>Paid from your wallet balance. Demo wallet – no real money is charged.</Text>
                 <TouchableOpacity style={styles.subscribeButton} onPress={confirmPayment}>
                   <Text style={styles.subscribeButtonText}>Confirm payment</Text>
                 </TouchableOpacity>
@@ -233,12 +265,36 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
               </>
             )}
 
+            {paymentStep === 'error' && (
+              <>
+                <Ionicons name="wallet-outline" size={52} color="#E11D48" />
+                <Text style={styles.modalTitle}>{paymentError?.lowBalance ? 'Not enough balance' : 'Payment failed'}</Text>
+                <Text style={styles.modalNote}>{paymentError?.message}</Text>
+                {paymentError?.lowBalance && !!onOpenWallet && (
+                  <TouchableOpacity
+                    style={styles.subscribeButton}
+                    onPress={() => {
+                      setPaymentPlan(null);
+                      onOpenWallet();
+                    }}
+                    accessibilityLabel="Top up wallet"
+                  >
+                    <Text style={styles.subscribeButtonText}>Top up wallet</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.modalCancel} onPress={() => setPaymentPlan(null)}>
+                  <Text style={styles.modalCancelText}>Close</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
             {paymentStep === 'success' && (
               <>
                 <Ionicons name="checkmark-circle" size={56} color="#7B2CBF" />
                 <Text style={styles.modalTitle}>Payment successful</Text>
                 <Text style={styles.modalNote}>
-                  Your VIP account is unlocked with the {paymentPlan?.name} plan.
+                  Your VIP account is unlocked with the {paymentPlan?.name} plan until{' '}
+                  {formatDate(planExpiresAt)}.
                 </Text>
                 <TouchableOpacity style={styles.subscribeButton} onPress={finishPayment}>
                   <Text style={styles.subscribeButtonText}>Start listening</Text>
@@ -326,6 +382,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  expiryText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#7B2CBF',
+    marginTop: -4,
+    marginBottom: 10,
+  },
+  expiredText: {
+    color: '#E11D48',
   },
   priceRow: {
     flexDirection: 'row',

@@ -6,9 +6,26 @@ export interface AppNotification {
   id: string;
   // Người nhận
   userId: string;
-  type: 'comment_reply';
+  // comment_reply: có người trả lời bình luận; artist_request_*: kết quả đăng ký làm nghệ sĩ
+  type:
+    | 'comment_reply'
+    | 'artist_request_approved'
+    | 'artist_request_rejected'
+    | 'artist_new_post'
+    | 'artist_new_song'
+    | 'content_removed'
+    | 'artist_page_hidden'
+    | 'artist_page_restored';
   actorName: string;
   postId: string;
+  requestId?: string;
+  // Thông báo từ nghệ sĩ mình theo dõi
+  artistId?: string;
+  songId?: string;
+  // Thông báo vi phạm (giai đoạn 5): loại nội dung bị gỡ, quy định, số lần vi phạm
+  targetType?: string;
+  rule?: string;
+  violationCount?: number;
   // Bình luận gốc (thread) và câu trả lời mới
   commentId: string;
   // Bình luận được trả lời (của người nhận) — nơi nháy sáng khi mở thông báo
@@ -39,7 +56,13 @@ const mapNotification = (n: any): AppNotification => ({
   userId: n.userId,
   type: n.type || 'comment_reply',
   actorName: n.actorName || 'Someone',
-  postId: n.postId,
+  postId: n.postId || '',
+  requestId: n.requestId || undefined,
+  artistId: n.artistId || undefined,
+  songId: n.songId || undefined,
+  targetType: n.targetType || undefined,
+  rule: n.rule || undefined,
+  violationCount: n.violationCount ?? 0,
   commentId: n.commentId || '',
   targetCommentId: n.targetCommentId || n.commentId || '',
   replyId: n.replyId || '',

@@ -18,6 +18,10 @@ import { IMAGES } from '../../src/constants/images';
 import { AuthInput } from '../../src/components/AuthInput';
 import { useAuth, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from '../../src/context/AuthContext';
 import { isValidPhone } from '../../src/utils/validation';
+import { daysLeft, formatDate } from '../../src/utils/plan';
+import { formatMoney } from '../../src/utils/insights';
+import { ProfileRoleCard } from '../../src/components/ProfileRoleCard';
+import { Badge } from '../../src/components/ArtistUi';
 
 
 type InfoField = 'name' | 'email' | 'phone';
@@ -29,14 +33,25 @@ interface ProfileScreenProps {
   onBack?: () => void;
   onNavigateToPlans?: () => void;
   onNavigateToLogin?: () => void;
+  onBecomeArtist?: () => void;
+  onOpenRequestStatus?: () => void;
+  onOpenStudio?: () => void;
+  onOpenMyArtistPage?: () => void;
+  // Lịch sử thanh toán (giai đoạn 6)
+  onOpenPayments?: () => void;
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onBack,
   onNavigateToPlans,
   onNavigateToLogin,
+  onBecomeArtist,
+  onOpenRequestStatus,
+  onOpenStudio,
+  onOpenMyArtistPage,
+  onOpenPayments,
 }) => {
-  const { currentUser, activePlan, isVip, updateProfile, changePassword } = useAuth();
+  const { currentUser, activePlan, isVip, planExpiresAt, updateProfile, changePassword } = useAuth();
 
   const [info, setInfo] = useState<Record<InfoField, string>>({
     name: currentUser?.name ?? '',
@@ -161,6 +176,9 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <Image source={IMAGES.homeAvatar} style={styles.avatar} fadeDuration={0} />
               <Text style={styles.summaryName}>{currentUser.name}</Text>
               <Text style={styles.summaryEmail}>{currentUser.email}</Text>
+              {currentUser.role === 'artist' && (
+                <View style={styles.roleBadge}><Badge label="Artist" tone="artist" icon="mic" /></View>
+              )}
             </View>
 
             {/* Membership */}
@@ -168,18 +186,45 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <View style={styles.planInfo}>
                 <Text style={styles.planLabel}>Membership</Text>
                 {activePlan && isVip ? (
-                  <View style={styles.vipBadge}>
-                    <Ionicons name="diamond" size={12} color="#FFFFFF" />
-                    <Text style={styles.vipBadgeText}>VIP • {activePlan.name}</Text>
-                  </View>
+                  <>
+                    <View style={styles.vipBadge}>
+                      <Ionicons name="diamond" size={12} color="#FFFFFF" />
+                      <Text style={styles.vipBadgeText}>VIP • {activePlan.name}</Text>
+                    </View>
+                    <Text style={styles.planExpiry}>
+                      Expires on {formatDate(planExpiresAt)} ({daysLeft(planExpiresAt)} days left)
+                    </Text>
+                  </>
                 ) : (
-                  <Text style={styles.planValue}>Free account</Text>
+                  <>
+                    <Text style={styles.planValue}>Free account</Text>
+                    {!!planExpiresAt && (
+                      <Text style={[styles.planExpiry, styles.planExpired]}>
+                        VIP expired on {formatDate(planExpiresAt)}
+                      </Text>
+                    )}
+                  </>
                 )}
               </View>
               <TouchableOpacity onPress={onNavigateToPlans} activeOpacity={0.7}>
-                <Text style={styles.linkText}>{isVip ? 'Change plan' : 'View plans'}</Text>
+                <Text style={styles.linkText}>{isVip ? 'Renew plan' : planExpiresAt ? 'Renew VIP' : 'View plans'}</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Ví (VNĐ, nạp MoMo giả lập) + lịch sử thanh toán: gói VIP, gói tin nhắn AI */}
+            <TouchableOpacity style={styles.paymentRow} onPress={onOpenPayments} activeOpacity={0.7} accessibilityLabel="Payment history">
+              <Ionicons name="receipt-outline" size={18} color={COLORS.textPrimary} />
+              <Text style={styles.paymentText}>Wallet & payments · {formatMoney(currentUser?.balance ?? 0)}</Text>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+            </TouchableOpacity>
+
+            {/* Vai trò: đăng ký nghệ sĩ / Artist Studio / Admin console */}
+            <ProfileRoleCard
+              onBecomeArtist={onBecomeArtist}
+              onOpenRequestStatus={onOpenRequestStatus}
+              onOpenStudio={onOpenStudio}
+              onOpenMyArtistPage={onOpenMyArtistPage}
+            />
 
             {/* Personal information */}
             <Text style={styles.sectionTitle}>Personal information</Text>
@@ -317,6 +362,9 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 2,
   },
+  roleBadge: {
+    marginTop: 8,
+  },
   planCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -350,6 +398,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 12,
   },
+  planExpiry: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  planExpired: {
+    color: '#E11D48',
+  },
   vipBadgeText: {
     fontSize: 12,
     fontWeight: '700',
@@ -360,6 +415,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
   },
+  paymentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: COLORS.border, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginTop: 12 },
+  paymentText: { flex: 1, fontSize: 14, fontWeight: '700', color: COLORS.textPrimary },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',

@@ -1,4 +1,5 @@
 import React from 'react';
+import { toImageSource } from '../utils/imageSource';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
@@ -34,7 +35,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({
       onPress={onPress}
     >
       <Image
-        source={currentTrack.coverImage}
+        source={toImageSource(currentTrack.coverImage)}
         style={styles.thumbnail}
       />
       <View style={styles.textContainer}>

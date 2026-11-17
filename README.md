@@ -71,10 +71,10 @@ npm install
 ```
 
 #### 1.2. Kiểm tra file cấu hình môi trường `.env`:
-File `server/.env` đã được cấu hình sẵn chuỗi kết nối tới cụm đám mây **MongoDB Atlas**:
+Tạo file `server/.env` (không đưa lên git) với chuỗi kết nối **MongoDB Atlas** của nhóm (hỏi trưởng nhóm, không ghi mật khẩu thật vào README):
 ```env
 PORT=5000
-MONGODB_URI=mongodb+srv://tiendat20051812_db_user:5ZN6gQZDQ4AAED78@musicappcluster.fyekgni.mongodb.net/music_streaming_db?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/music_streaming_db?retryWrites=true&w=majority
 ```
 *(Nếu bạn muốn sử dụng MongoDB cục bộ trên máy tính của mình, thay đổi thành: `MONGODB_URI=mongodb://127.0.0.1:27017/music_streaming_db`)*
 

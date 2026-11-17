@@ -13,6 +13,9 @@ const replySchema = new mongoose.Schema({
   likedByUserIds: [{ type: String }],
   replyToName: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now },
+  // Giai đoạn 5: bị admin gỡ vì vi phạm
+  removedAt: { type: Date, default: null },
+  removedViolationId: { type: String, default: null },
 });
 
 const commentSchema = new mongoose.Schema(
@@ -27,6 +30,9 @@ const commentSchema = new mongoose.Schema(
     likes: { type: Number, default: 0 },
     likedByUserIds: [{ type: String }],
     replies: [replySchema],
+    // Giai đoạn 5: bị admin gỡ vì vi phạm (cả thread trả lời cũng ẩn theo)
+    removedAt: { type: Date, default: null },
+    removedViolationId: { type: String, default: null },
   },
   {
     timestamps: true,

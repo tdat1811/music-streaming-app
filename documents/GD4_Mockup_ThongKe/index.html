@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GĐ4 – Thống kê nghệ sĩ (bản 2)</title>
+<style>
+  :root {
+    --primary: #10C7D5; --primary-dark: #0EA5B5; --text: #111216; --text2: #686A70; --muted: #9CA3AF; --icon: #4B5563;
+    --border: #E8ECF2; --soft: #F3F4F6; --purple: #7B2CBF; --red: #E11D48; --green: #16A34A; --blue: #00A3FF; --page: #EEF1F5;
+    --amber: #D97706;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--page); color: var(--text); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 48px 0 6px; }
+  .lead { color: var(--text2); margin: 0 0 8px; line-height: 1.6; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #E6FAFB; color: var(--primary-dark); margin-right: 6px; }
+  .rules { background: #fff; border-radius: 16px; padding: 8px 24px; margin-top: 16px; }
+  .rules li { margin: 10px 0; line-height: 1.55; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 28px; margin-top: 18px; }
+  .card { display: flex; flex-direction: column; align-items: center; }
+  .caption { width: 360px; margin-top: 12px; background: #fff; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: #333; }
+  .caption h3 { margin: 0 0 4px; font-size: 15px; }
+  .caption .new { background: #E6FAFB; color: var(--primary-dark); font-weight: 800; font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-right: 4px; }
+  .ref { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; margin-top: 16px; }
+  .ref img { width: 300px; border-radius: 22px; border: 8px solid #121316; }
+  .ref .note { flex: 1; min-width: 280px; background: #fff; border-radius: 14px; padding: 14px 18px; line-height: 1.6; font-size: 14.5px; }
+  .confirm-list { background: #fff; border-radius: 16px; padding: 8px 24px 8px 40px; margin-top: 16px; }
+  .confirm-list li { margin: 12px 0; line-height: 1.55; }
+  table.api { width: 100%; border-collapse: collapse; background: #fff; border-radius: 16px; overflow: hidden; margin-top: 16px; font-size: 14px; }
+  table.api th, table.api td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  table.api th { background: #1F3A68; color: #fff; }
+  code { background: #EEF2F7; border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+
+  /* ---- khung điện thoại, theo đúng các màn Studio đang chạy ---- */
+  .phone { width: 360px; height: 760px; background: #fff; border-radius: 34px; border: 10px solid #121316; position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,.12); }
+  .statusbar { height: 28px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .ico { width: 22px; height: 22px; stroke: var(--icon); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .ico.sm { width: 16px; height: 16px; } .ico.dark { stroke: var(--text); }
+  .shdr { display: flex; align-items: center; justify-content: space-between; padding: 6px 14px 8px; flex-shrink: 0; }
+  .shdr b { font-size: 18px; font-weight: 900; }
+  .body { flex: 1; overflow: hidden; padding: 0 16px; position: relative; }
+  .newbadge { position: absolute; background: #E6FAFB; color: var(--primary-dark); font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 6px; border: 1px dashed var(--primary); z-index: 2; }
+  .ini { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 16px; background: #F59E0B; flex-shrink: 0; }
+  .head { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; }
+  .head .nm { font-size: 17px; font-weight: 900; display: flex; align-items: center; gap: 5px; }
+  .vf { width: 15px; height: 15px; border-radius: 50%; background: var(--blue); display: inline-flex; align-items: center; justify-content: center; }
+  .vf svg { width: 10px; height: 10px; stroke: #fff; stroke-width: 3.5; fill: none; }
+  .sub { font-size: 12.5px; color: var(--text2); }
+  .link { color: var(--primary); font-weight: 800; font-size: 13.5px; margin-left: auto; }
+  .tiles { display: flex; gap: 8px; }
+  .tile { flex: 1; border-radius: 14px; padding: 10px 11px; }
+  .tile b { font-size: 20px; font-weight: 900; display: block; }
+  .tile span { font-size: 11.5px; color: var(--text2); }
+  .delta { font-size: 11px; font-weight: 800; margin-top: 2px; display: block; }
+  .up, span.delta.up, small.up, b.up { color: var(--green); } .down, span.delta.down, small.down, b.down { color: var(--red); } .flat, span.delta.flat { color: var(--muted); }
+  .bigbtn { background: var(--primary); color: #fff; font-weight: 900; font-size: 15px; text-align: center; border-radius: 14px; padding: 13px; margin: 12px 0 4px; }
+  .mi { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--soft); position: relative; }
+  .mi .ic { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+  .mi b { font-size: 14.5px; font-weight: 800; display: block; }
+  .mi .chev { margin-left: auto; color: var(--muted); font-size: 18px; }
+  .mi.dim { opacity: .45; }
+  .seg { display: flex; background: var(--soft); border-radius: 12px; padding: 3px; margin: 2px 0 12px; }
+  .seg div { flex: 1; text-align: center; font-size: 13px; font-weight: 800; color: var(--text2); padding: 7px 0; border-radius: 10px; }
+  .seg .on { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .k { border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; }
+  .k span { font-size: 11.5px; color: var(--text2); font-weight: 600; }
+  .k b { font-size: 20px; font-weight: 900; display: block; margin-top: 2px; }
+  .sec { display: flex; justify-content: space-between; align-items: baseline; margin: 16px 0 8px; }
+  .sec b { font-size: 15px; font-weight: 900; } .sec span { font-size: 12px; color: var(--text2); }
+  .chart { height: 130px; display: flex; align-items: flex-end; gap: 6px; border-bottom: 1px solid var(--border); position: relative; padding-top: 18px; }
+  .chart .bar { flex: 1; background: #BDEFF3; border-radius: 5px 5px 0 0; position: relative; }
+  .chart .bar.hi { background: var(--primary); }
+  .chart.thin { gap: 2px; } .chart.thin .bar { border-radius: 2px 2px 0 0; }
+  .chart .grid-l { position: absolute; left: 0; right: 0; border-top: 1px dashed #E5E7EB; font-size: 9.5px; color: var(--muted); }
+  .xl { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+  .tip { position: absolute; background: #111216; color: #fff; font-size: 11px; font-weight: 700; padding: 5px 8px; border-radius: 8px; white-space: nowrap; z-index: 3; }
+  .tip small { display: block; font-weight: 500; opacity: .75; font-size: 10px; }
+  .song { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+  .song .rk { width: 16px; font-weight: 900; font-size: 13px; color: var(--text2); text-align: center; }
+  .song img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; }
+  .song .t { flex: 1; min-width: 0; }
+  .song .t b { font-size: 13.5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .song .meter { height: 5px; border-radius: 3px; background: var(--soft); margin-top: 5px; }
+  .song .meter i { display: block; height: 100%; border-radius: 3px; background: var(--primary); }
+  .song .n { font-size: 12.5px; font-weight: 800; text-align: right; }
+  .song .n small { display: block; font-size: 10.5px; font-weight: 700; }
+  .feedbox { display: flex; gap: 8px; }
+  .feedbox div { flex: 1; background: #F9FAFB; border-radius: 12px; padding: 9px; text-align: center; }
+  .feedbox b { font-size: 16px; font-weight: 900; display: block; } .feedbox span { font-size: 11px; color: var(--text2); }
+  .info { display: flex; gap: 6px; align-items: center; font-size: 11.5px; color: var(--text2); margin-top: 10px; }
+  .overlay { position: absolute; inset: 28px 0 0 0; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; }
+  .sheet { background: #fff; width: 100%; border-radius: 22px 22px 0 0; padding: 14px 20px 26px; }
+  .grab { width: 40px; height: 4px; border-radius: 2px; background: #E5E7EB; margin: 0 auto 14px; }
+  .sheet h4 { margin: 0 0 10px; font-size: 17px; }
+  .rule { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--soft); font-size: 13.5px; line-height: 1.45; }
+  .rule:last-child { border-bottom: none; }
+  .rule .dot { width: 26px; height: 26px; border-radius: 8px; background: #E6FAFB; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; }
+  .empty { text-align: center; padding: 24px 10px 0; }
+  .empty .circle { width: 74px; height: 74px; border-radius: 50%; background: #E6FAFB; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; }
+  .empty b { font-size: 17px; font-weight: 900; display: block; margin-bottom: 6px; }
+  .empty p { margin: 0 0 14px; font-size: 13.5px; color: var(--text2); line-height: 1.5; }
+  .obtn { border: 1.5px solid var(--primary); color: var(--primary-dark); font-weight: 800; border-radius: 14px; padding: 11px; text-align: center; font-size: 14px; margin-top: 8px; }
+  .songhead { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+  .songhead img { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; }
+  .songhead b { font-size: 17px; font-weight: 900; display: block; }
+  .src { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 5px 0; }
+  .src span:first-child { width: 92px; color: var(--text2); font-weight: 600; }
+  .src .m { flex: 1; height: 8px; background: var(--soft); border-radius: 4px; } .src .m i { display: block; height: 100%; border-radius: 4px; background: var(--purple); }
+  .src b { width: 36px; text-align: right; font-size: 12.5px; }
+  .opt { border: 1px dashed #C4B5FD; border-radius: 12px; padding: 8px 10px 4px; position: relative; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="i-back" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-disc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-news" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+  <h1>Giai đoạn 4 – Thống kê cho nghệ sĩ <span class="tag" style="background:#FEF3C7;color:#D97706;vertical-align:middle">BẢN 2</span></h1>
+  <p class="lead"><span class="tag">BẢN XEM TRƯỚC</span>Mockup để duyệt trước khi code. Màu, cỡ chữ, ô số liệu và danh sách lấy theo các màn Artist Studio đang chạy. Chỗ có nhãn <span class="tag" style="font-size:10px;border:1px dashed var(--primary)">MỚI</span> là phần được thêm. Số liệu trong ảnh chỉ là ví dụ.</p>
+
+  <ul class="rules" style="background:#FFFBEB;border:1px solid #FDE68A">
+    <li><b>Thay đổi so với bản 1</b> (theo câu trả lời của bạn):</li>
+    <li>Thêm mốc <b>"All time"</b> (từ trước tới nay) bên cạnh 7 ngày và 30 ngày – màn mới <b>T6</b>.</li>
+    <li>Luật chống tăng ảo giữ như đề xuất (đã đồng ý).</li>
+    <li><b>Nguồn lượt nghe</b> ("Where plays come from") thành phần chính thức: có ở T1 (toàn bộ bài) và T3 (từng bài).</li>
+    <li>Thêm mục <b>5. Đề xuất dữ liệu demo</b> để bạn chọn.</li>
+  </ul>
+
+  <h2>0. Artist Studio hiện tại (để so sánh)</h2>
+  <div class="ref">
+    <img src="img/hien_tai_studio.png" alt="Artist Studio hiện tại">
+    <div class="note">Hiện mục <b>Stats</b> đang mờ ("Phase 4"), và 3 ô số liệu chỉ có tổng số (Songs, Total plays, Followers). Lượt nghe chỉ là một con số cộng dồn, nên chưa vẽ được biểu đồ theo ngày.
+      <br><br>Giai đoạn 4:
+      <ol style="margin:6px 0;padding-left:20px">
+        <li>ghi lại <b>từng lượt nghe</b> và <b>từng lần theo dõi / bỏ theo dõi</b> kèm thời điểm;</li>
+        <li>mở mục <b>Stats</b> trong Studio (màn T1–T5 bên dưới);</li>
+        <li>chống tăng lượt nghe ảo.</li>
+      </ol>
+      Không thay đổi gì phía người nghe.</div>
+  </div>
+
+  <h2>1. Quy tắc</h2>
+  <ul class="rules">
+    <li><b>Một lượt nghe</b> được tính khi nghe ít nhất 30 giây (hoặc nửa bài nếu bài ngắn hơn 1 phút), giống cách app đang tính.</li>
+    <li><b>Chống tăng ảo:</b> mỗi người nghe chỉ được tính <b>tối đa 1 lượt cho một bài trong 10 phút</b>. Khách chưa đăng nhập tính theo địa chỉ IP. Nghệ sĩ nghe bài của chính mình <b>không được tính</b>. Mỗi IP gọi API tính lượt nghe tối đa 60 lần / phút.</li>
+    <li>Khoảng thời gian: <b>7 ngày</b>, <b>30 ngày</b> (so với khoảng liền trước để ra % tăng / giảm) và <b>All time</b> (tổng từ trước tới nay, không có %; biểu đồ theo tháng).</li>
+    <li><b>Nguồn lượt nghe</b>: mỗi lượt nghe ghi lại bài được phát từ đâu – Search, Home &amp; Charts, Artist page, Album, Playlist, Feed, Library. Bài phát tiếp trong hàng đợi giữ nguồn của lần bấm đầu tiên.</li>
+    <li><b>Người nghe</b> = số tài khoản (hoặc IP với khách) khác nhau đã nghe ít nhất 1 bài trong khoảng thời gian.</li>
+    <li><b>Người theo dõi mới</b> = số lần theo dõi trừ số lần bỏ theo dõi trong khoảng thời gian.</li>
+    <li>Chỉ tính các bài đang hiển thị và đã ẩn; bài đã xoá thì không còn trong thống kê. Số liệu cập nhật ngay, kéo xuống để làm mới.</li>
+    <li>All time: <b>tổng lượt nghe</b> lấy đúng con số đang có của mỗi bài (gồm cả lượt nghe cũ). Lượt nghe cũ không có ngày và nguồn nên được gộp vào cột <b>"Before Nov 2026"</b> trên biểu đồ và mục <b>"Unknown"</b> ở phần nguồn.</li>
+  </ul>
+
+  <h2>2. Màn hình</h2>
+  <div class="grid">
+
+    <!-- S1 Studio updated -->
+    <div class="card">
+      <div class="phone" id="S1">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><b>Artist Studio</b><span style="width:22px"></span></div>
+        <div class="body">
+          <div class="head"><div class="ini">MW</div><div><div class="nm">Mer Watson <span class="vf"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></div><div class="sub">Acoustic · Pop</div></div><span class="link">View page</span></div>
+          <div class="tiles" style="position:relative">
+            <div class="tile" style="background:#E6FAFB"><b>6</b><span>Songs</span></div>
+            <div class="tile" style="background:#FEF3C7"><b>12.4K</b><span>Total plays</span><span class="delta up">▲ 18% this week</span></div>
+            <div class="tile" style="background:#F3E8FF"><b>342</b><span>Followers</span><span class="delta up">+27 this week</span></div>
+            <span class="newbadge" style="right:0;bottom:-10px">MỚI</span>
+          </div>
+          <div class="bigbtn">Upload a song</div>
+          <div class="mi"><div class="ic" style="background:#E6FAFB"><svg class="ico" style="stroke:var(--primary-dark)"><use href="#i-music"/></svg></div><div><b>My songs</b><span class="sub">5 published · 1 draft</span></div><span class="chev">›</span></div>
+          <div class="mi"><div class="ic" style="background:#FCE7F3"><svg class="ico" style="stroke:#DB2777"><use href="#i-disc"/></svg></div><div><b>Albums</b><span class="sub">1 album</span></div><span class="chev">›</span></div>
+          <div class="mi"><div class="ic" style="background:#FEF3C7"><svg class="ico" style="stroke:var(--amber)"><use href="#i-news"/></svg></div><div><b>Posts</b><span class="sub">4 posts on the Feed</span></div><span class="chev">›</span></div>
+          <div class="mi" style="background:#F2FDFE;margin:0 -16px;padding:10px 16px"><div class="ic" style="background:#E0E7FF"><svg class="ico" style="stroke:#4F46E5"><use href="#i-chart"/></svg></div><div><b>Stats</b><span class="sub">1,248 plays in the last 7 days</span></div><span class="chev">›</span><span class="newbadge" style="right:40px;top:6px">MỚI</span></div>
+          <div class="mi"><div class="ic" style="background:var(--soft)"><svg class="ico"><use href="#i-user"/></svg></div><div><b>Edit artist page</b><span class="sub">Photo, name, bio, genres, links</span></div><span class="chev">›</span></div>
+          <div class="mi dim"><div class="ic" style="background:var(--soft)"><svg class="ico"><use href="#i-spark"/></svg></div><div><b>AI Fan Insight</b><span class="sub">Phase 6</span></div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>S1 · Artist Studio</h3>Giữ nguyên màn hiện tại. <span class="new">MỚI</span> Mục <b>Stats</b> hết mờ, dòng phụ ghi lượt nghe 7 ngày qua. <span class="new">MỚI</span> Dưới ô Total plays và Followers có thêm dòng nhỏ <b>thay đổi trong tuần</b> (xanh khi tăng, đỏ khi giảm).</div>
+    </div>
+
+    <!-- T1 Stats 7 days -->
+    <div class="card">
+      <div class="phone" id="T1">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><b>Stats</b><svg class="ico"><use href="#i-info"/></svg></div>
+        <div class="body">
+          <div class="seg"><div class="on">7 days</div><div>30 days</div><div>All time</div></div>
+          <div class="grid2">
+            <div class="k"><span>Plays</span><b>1,248</b><span class="delta up">▲ 18% vs prev. 7 days</span></div>
+            <div class="k"><span>Listeners</span><b>342</b><span class="delta up">▲ 9%</span></div>
+            <div class="k"><span>New followers</span><b>+27</b><span class="delta down">▼ 4%</span></div>
+            <div class="k"><span>Song likes</span><b>+64</b><span class="delta flat">— same as before</span></div>
+          </div>
+          <div class="sec"><b>Plays per day</b><span>Nov 10 – Nov 16</span></div>
+          <div class="chart" style="height:80px">
+            <div class="bar" style="height:44%"></div><div class="bar" style="height:56%"></div><div class="bar" style="height:38%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:70%"></div><div class="bar" style="height:92%"></div><div class="bar hi" style="height:80%"></div>
+          </div>
+          <div class="xl"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+          <div class="sec"><b>Top songs</b><span>by plays</span></div>
+          <div class="song"><span class="rk">1</span><img src="img/track1.png"><div class="t"><b>Mùa thu Hà Nội</b><div class="meter"><i style="width:100%"></i></div></div><div class="n">612<small class="up">▲ 32%</small></div></div>
+          <div class="song"><span class="rk">2</span><img src="img/c1.png"><div class="t"><b>Sunday Morning</b><div class="meter"><i style="width:58%"></i></div></div><div class="n">354<small class="up">▲ 5%</small></div></div>
+          <div class="sec" style="position:relative"><b>Where plays come from <span class="newbadge" style="position:static;margin-left:4px">MỚI</span></b><span>all songs</span></div>
+          <div class="src"><span>Search</span><div class="m"><i style="width:41%"></i></div><b>41%</b></div>
+          <div class="src"><span>Feed</span><div class="m"><i style="width:27%"></i></div><b>27%</b></div>
+          <div class="src"><span>Artist page</span><div class="m"><i style="width:19%"></i></div><b>19%</b></div>
+          <div class="src"><span>Other</span><div class="m"><i style="width:13%"></i></div><b>13%</b></div>
+                  </div>
+      </div>
+      <div class="caption"><h3>T1 · Stats – 7 ngày</h3><span class="new">MỚI</span> Chọn <b>7 ngày / 30 ngày</b>. 4 ô số: lượt nghe, người nghe, người theo dõi mới, lượt thích bài hát, kèm % so với khoảng trước. <b>Biểu đồ cột</b> lượt nghe theo ngày (hôm nay tô đậm). <b>Top bài hát</b> theo lượt nghe (kéo xuống xem tới 5 bài); bấm một bài để xem chi tiết (T3). <span class="new">MỚI</span> <b>Where plays come from</b>: tỉ lệ lượt nghe theo nguồn; 3 nguồn lớn nhất, còn lại gộp "Other". Kéo xuống thêm phần người theo dõi và Feed (T2).</div>
+    </div>
+
+    <!-- T2 30 days + tooltip + feed engagement -->
+    <div class="card">
+      <div class="phone" id="T2">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><b>Stats</b><svg class="ico"><use href="#i-info"/></svg></div>
+        <div class="body">
+          <div class="seg"><div>7 days</div><div class="on">30 days</div><div>All time</div></div>
+          <div class="grid2">
+            <div class="k"><span>Plays</span><b>4,903</b><span class="delta up">▲ 41% vs prev. 30 days</span></div>
+            <div class="k"><span>Listeners</span><b>1,027</b><span class="delta up">▲ 22%</span></div>
+          </div>
+          <div class="sec"><b>Plays per day</b><span>Oct 18 – Nov 16</span></div>
+          <div class="chart thin" id="bars30">
+            <div class="tip" style="left:178px;top:-8px">Nov 6 · 286 plays<small>Released "Mùa thu Hà Nội"</small></div>
+          </div>
+          <div class="xl"><span>Oct 18</span><span>Oct 28</span><span>Nov 7</span><span>Nov 16</span></div>
+          <div class="sec"><b>Followers</b><span>342 total</span></div>
+          <div class="feedbox"><div><b class="up">+61</b><span>followed</span></div><div><b class="down">−9</b><span>unfollowed</span></div><div><b>+52</b><span>net</span></div></div>
+          <div class="sec" style="position:relative"><b>Feed</b><span>your 4 posts</span></div>
+          <div class="feedbox"><div><b>186</b><span>likes</span></div><div><b>43</b><span>comments</span></div><div><b>17</b><span>shares</span></div></div>
+          <div class="info"><svg class="ico sm"><use href="#i-info"/></svg>Daily stats since Nov 1, 2026.</div>
+        </div>
+      </div>
+      <div class="caption"><h3>T2 · Stats – 30 ngày (phần dưới)</h3>Biểu đồ 30 cột. <span class="new">MỚI</span> <b>Bấm vào một cột</b> để xem số lượt nghe ngày đó; ngày có ra bài mới thì ghi tên bài. Phần <b>Followers</b>: số người theo dõi / bỏ theo dõi. Phần <b>Feed</b>: tổng thích, bình luận, chia sẻ trên các bài đăng trong khoảng thời gian. Dòng cuối cho biết thống kê theo ngày bắt đầu từ khi nào.</div>
+    </div>
+
+    <!-- T3 song detail -->
+    <div class="card">
+      <div class="phone" id="T3">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><b>Song stats</b><span style="width:22px"></span></div>
+        <div class="body">
+          <div class="songhead"><img src="img/track1.png"><div><b>Mùa thu Hà Nội</b><span class="sub">Released Nov 6, 2026 · 03:20</span></div></div>
+          <div class="seg"><div class="on">7 days</div><div>30 days</div><div>All time</div></div>
+          <div class="grid2">
+            <div class="k"><span>Plays</span><b>612</b><span class="delta up">▲ 32%</span></div>
+            <div class="k"><span>All-time plays</span><b>2,140</b></div>
+            <div class="k"><span>Liked by</span><b>+38</b></div>
+            <div class="k"><span>Added to playlists</span><b>+21</b></div>
+          </div>
+          <div class="sec"><b>Plays per day</b><span>Nov 10 – Nov 16</span></div>
+          <div class="chart" style="height:100px">
+            <div class="bar" style="height:40%"></div><div class="bar" style="height:52%"></div><div class="bar" style="height:46%"></div><div class="bar" style="height:64%"></div><div class="bar" style="height:72%"></div><div class="bar" style="height:96%"></div><div class="bar hi" style="height:84%"></div>
+          </div>
+          <div class="xl"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+          <div class="sec" style="position:relative"><b>Where plays come from</b><span>this song</span></div>
+          <div>
+            <div class="src"><span>Search</span><div class="m"><i style="width:46%"></i></div><b>46%</b></div>
+            <div class="src"><span>Feed</span><div class="m"><i style="width:24%"></i></div><b>24%</b></div>
+            <div class="src"><span>Artist page</span><div class="m"><i style="width:18%"></i></div><b>18%</b></div>
+            <div class="src"><span>Playlists</span><div class="m"><i style="width:12%"></i></div><b>12%</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>T3 · Chi tiết một bài hát</h3>Mở khi bấm bài trong <b>Top songs</b> (T1) hoặc chọn <b>"Stats"</b> trong menu ⋯ ở My songs. Có lượt nghe trong khoảng, tổng lượt nghe từ trước tới nay, số người thích bài và số lần được thêm vào playlist, cùng biểu đồ theo ngày. <span class="new">MỚI</span> <b>Where plays come from</b> của riêng bài này, đủ các nguồn. Chọn <b>All time</b> thì số ô "Plays" là tổng từ trước tới nay.</div>
+    </div>
+
+    <!-- T6 all time -->
+    <div class="card">
+      <div class="phone" id="T6">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><b>Stats</b><svg class="ico"><use href="#i-info"/></svg></div>
+        <div class="body">
+          <div class="seg"><div>7 days</div><div>30 days</div><div class="on">All time <span class="newbadge" style="position:static">MỚI</span></div></div>
+          <div class="grid2">
+            <div class="k"><span>Total plays</span><b>12.4K</b><span class="sub" style="font-size:11px">since Mar 2025</span></div>
+            <div class="k"><span>Listeners</span><b>2,315</b><span class="sub" style="font-size:11px">since Nov 1, 2026</span></div>
+            <div class="k"><span>Followers</span><b>342</b><span class="sub" style="font-size:11px">+412 / −70</span></div>
+            <div class="k"><span>Song likes</span><b>1,086</b><span class="sub" style="font-size:11px">across 6 songs</span></div>
+          </div>
+          <div class="sec"><b>Plays per month</b><span>last 12 months</span></div>
+          <div class="chart" style="height:80px;gap:5px" id="barsAll"></div>
+          <div class="xl"><span>Before</span><span>Feb</span><span>May</span><span>Aug</span><span>Nov</span></div>
+          <div class="sec"><b>All-time top songs</b><span>total plays</span></div>
+          <div class="song"><span class="rk">1</span><img src="img/c3.png"><div class="t"><b>Reflection (Acoustic)</b><div class="meter"><i style="width:100%"></i></div></div><div class="n">5,210</div></div>
+          <div class="song"><span class="rk">2</span><img src="img/track1.png"><div class="t"><b>Mùa thu Hà Nội</b><div class="meter"><i style="width:41%"></i></div></div><div class="n">2,140</div></div>
+          <div class="sec"><b>Where plays come from</b><span>all time</span></div>
+          <div class="src"><span>Search</span><div class="m"><i style="width:22%"></i></div><b>22%</b></div>
+          <div class="src"><span>Feed</span><div class="m"><i style="width:14%"></i></div><b>14%</b></div>
+          <div class="src"><span>Unknown</span><div class="m"><i style="width:48%;background:#C4B5FD"></i></div><b>48%</b></div>
+        </div>
+      </div>
+      <div class="caption"><h3>T6 · Stats – All time (từ trước tới nay)</h3><span class="new">MỚI</span> Chọn <b>All time</b>. Ô số là <b>tổng</b>, không có %. Mỗi ô ghi rõ tính từ khi nào: "Total plays" gồm cả lượt nghe cũ; "Listeners" chỉ đếm được từ khi bắt đầu ghi chi tiết. <b>Biểu đồ theo tháng</b> (12 tháng gần nhất); cột xám đầu tiên <b>"Before"</b> là lượt nghe cũ không rõ ngày. Top bài theo tổng lượt nghe. Lượt nghe cũ không rõ nguồn nằm ở mục <b>"Unknown"</b>.</div>
+    </div>
+
+    <!-- T4 empty -->
+    <div class="card">
+      <div class="phone" id="T4">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><b>Stats</b><svg class="ico"><use href="#i-info"/></svg></div>
+        <div class="body">
+          <div class="seg"><div class="on">7 days</div><div>30 days</div><div>All time</div></div>
+          <div class="grid2">
+            <div class="k"><span>Plays</span><b>0</b></div>
+            <div class="k"><span>Listeners</span><b>0</b></div>
+            <div class="k"><span>New followers</span><b>+2</b></div>
+            <div class="k"><span>Song likes</span><b>0</b></div>
+          </div>
+          <div class="empty">
+            <div class="circle"><svg class="ico" style="width:34px;height:34px;stroke:var(--primary-dark)"><use href="#i-chart"/></svg></div>
+            <b>No plays yet</b>
+            <p>Your chart will appear here once fans start listening. Share your songs to reach more people.</p>
+            <div class="bigbtn" style="margin:0">Upload a song</div>
+            <div class="obtn">Post on the Feed</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>T4 · Chưa có lượt nghe</h3>Nghệ sĩ mới hoặc chưa có bài đã đăng. Vẫn hiện 4 ô số (người theo dõi có thể đã tăng). Thay biểu đồ bằng lời nhắc và 2 nút: <b>Upload a song</b> (mở màn tải bài) và <b>Post on the Feed</b> (mở Feed với ô viết bài).</div>
+    </div>
+
+    <!-- T5 info sheet -->
+    <div class="card">
+      <div class="phone" id="T5">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="shdr"><svg class="ico dark"><use href="#i-back"/></svg><b>Stats</b><svg class="ico"><use href="#i-info"/></svg></div>
+        <div class="body"><div class="seg"><div class="on">7 days</div><div>30 days</div><div>All time</div></div></div>
+        <div class="overlay">
+          <div class="sheet">
+            <div class="grab"></div>
+            <h4>How stats are counted</h4>
+                        <div class="rule"><div class="dot">⏱</div><div>The same listener is counted <b>at most once per song every 10 minutes</b>, so replays and bots can't inflate your numbers.</div></div>
+            <div class="rule"><div class="dot">🎤</div><div>Your own plays are not counted.</div></div>
+            <div class="rule"><div class="dot">%</div><div>Changes compare with the previous period of the same length. <b>All time</b> shows totals only.</div></div>
+            <div class="rule"><div class="dot">🧭</div><div><b>Sources</b> show where fans started playing: Search, Home &amp; Charts, your page, albums, playlists, the Feed or their library.</div></div>
+            <div class="rule"><div class="dot">📅</div><div>Daily stats start on <b>Nov 1, 2026</b>. Older plays are only included in your all-time total.</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>T5 · "How stats are counted"</h3>Bấm nút <b>ⓘ</b> góc phải màn Stats. Giải thích ngắn cách tính để nghệ sĩ hiểu vì sao số lượt nghe không tăng mỗi lần bấm phát.</div>
+    </div>
+  </div>
+
+  <h2>3. Phía máy chủ (không có màn hình)</h2>
+  <table class="api">
+    <tr><th style="width:30%">Phần</th><th>Nội dung</th></tr>
+    <tr><td>Bảng <code>PlayEvent</code> (mới)</td><td>Mỗi lượt nghe hợp lệ: bài hát, nghệ sĩ, người nghe (hoặc IP đã mã hoá với khách), thời điểm. Có chỉ mục theo nghệ sĩ + thời gian để truy vấn nhanh. <code>Song.plays</code> vẫn tăng như cũ.</td></tr>
+    <tr><td>Bảng <code>FollowEvent</code> (mới)</td><td>Ghi mỗi lần theo dõi / bỏ theo dõi để đếm người theo dõi mới theo ngày.</td></tr>
+    <tr><td>Thích bài / thêm vào playlist</td><td>Ghi thời điểm (bảng sự kiện nhỏ) để đếm "Liked by" và "Added to playlists" theo khoảng thời gian.</td></tr>
+    <tr><td><code>POST /api/songs/:id/play</code> (sửa)</td><td>Thêm luật chống tăng ảo: 1 lượt / người / bài / 10 phút, bỏ qua lượt nghe của chính nghệ sĩ, giới hạn 60 yêu cầu / phút / IP. Lượt bị bỏ qua vẫn trả 200 nhưng ghi <code>counted: false</code>.</td></tr>
+    <tr><td><code>GET /api/studio/stats?range=7|30|all</code> (mới)</td><td>Ô số + % thay đổi (7/30), lượt nghe theo ngày (7/30) hoặc theo tháng (all), top bài, nguồn lượt nghe, người theo dõi, tương tác Feed.</td></tr>
+    <tr><td>Nguồn lượt nghe</td><td><code>POST /api/songs/:id/play</code> nhận thêm <code>source</code> (search, home, artist, album, playlist, feed, library). App truyền nguồn khi bắt đầu phát từ mỗi màn; giá trị lạ được lưu là <code>other</code>.</td></tr>
+    <tr><td><code>GET /api/studio/stats/songs/:id?range=7|30|all</code> (mới)</td><td>Thống kê một bài (T3). Chỉ xem được bài của chính mình.</td></tr>
+    <tr><td>Dữ liệu demo</td><td>Xem mục 5.</td></tr>
+    <tr><td>Kiểm thử</td><td>Unit test: tính % thay đổi, gộp theo ngày, luật 10 phút. Integration: lượt nghe trùng không được tính, nghệ sĩ không xem được thống kê của người khác. E2E: nghe bài bằng tài khoản người nghe rồi kiểm tra số trên màn Stats.</td></tr>
+  </table>
+
+  <h2>4. Đã chốt</h2>
+  <ol class="confirm-list">
+    <li>Khoảng thời gian: <b>7 ngày, 30 ngày, All time</b>.</li>
+    <li>Chống tăng ảo: <b>1 lượt / người / bài / 10 phút</b>, khách tính theo IP, không tính lượt nghe của chính nghệ sĩ.</li>
+    <li><b>Có</b> làm nguồn lượt nghe.</li>
+  </ol>
+
+  <h2>5. Đề xuất dữ liệu demo</h2>
+  <table class="api">
+    <tr><th style="width:24%">Cách</th><th>Làm thế nào</th><th style="width:28%">Ưu / nhược</th></tr>
+    <tr><td><b>A. Lệnh riêng <code>npm run seed:stats</code></b> <span class="tag" style="font-size:11px">ĐỀ XUẤT</span></td>
+      <td>Chạy sau <code>npm run seed</code>. Tạo lượt nghe, lượt theo dõi, lượt thích giả lập trong <b>90 ngày</b> cho các bài của <b>Mer Watson</b> (và 1–2 nghệ sĩ mẫu khác): số liệu tăng dần, cuối tuần nhiều hơn, nhảy vọt vào ngày ra bài mới; nguồn phân bổ ngẫu nhiên theo tỉ lệ hợp lý. Mọi bản ghi có cờ <code>demo: true</code>; <code>npm run seed:stats -- --clear</code> xoá sạch. <b>Từ chối chạy</b> khi chuỗi kết nối là Atlas (<code>mongodb+srv</code>), trừ khi thêm cờ <code>--allow-remote</code>.</td>
+      <td>✔ Không đụng dữ liệu thật, bật / tắt được, an toàn với Atlas.<br>✘ Phải nhớ chạy thêm 1 lệnh trước khi demo.</td></tr>
+    <tr><td>B. Gộp vào <code>npm run seed</code></td>
+      <td>Lệnh seed hiện có tạo luôn lịch sử 90 ngày.</td>
+      <td>✔ Tiện, 1 lệnh là xong.<br>✘ Seed chậm hơn; ai seed cũng có số liệu giả, khó tách khi muốn kiểm tra số thật.</td></tr>
+    <tr><td>C. Không tạo dữ liệu giả</td>
+      <td>Demo bằng cách dùng vài tài khoản nghe thật trước buổi demo.</td>
+      <td>✔ Số liệu thật 100%.<br>✘ Biểu đồ gần như trống, chỉ có 1–2 cột hôm nay.</td></tr>
+  </table>
+  <p class="lead" style="margin-top:12px">Mình đề xuất <b>cách A</b>. Test tự động (Jest, E2E) <b>không</b> dùng dữ liệu demo mà tự tạo số liệu riêng để kiểm tra chính xác từng con số.</p>
+</div>
+
+<script>
+  // 30 cột cho T2 (dữ liệu ví dụ: tăng dần, nhảy vọt ngày 6/11 khi ra bài mới)
+  const vals = [40,52,38,61,44,58,70,49,55,63,72,66,80,74,90,85,100,96,286,210,170,150,162,140,175,190,168,182,205,214];
+  const max = Math.max(...vals);
+  const box = document.getElementById('bars30');
+  const months = [3900, 310, 290, 330, 360, 340, 380, 420, 450, 480, 560, 1180, 3600];
+  const mMax = Math.max(...months);
+  const boxAll = document.getElementById('barsAll');
+  months.forEach((v, i) => {
+    const b = document.createElement('div');
+    b.className = 'bar' + (i === months.length - 1 ? ' hi' : '');
+    if (i === 0) b.style.background = '#E5E7EB';
+    b.style.height = (v / mMax * 100) + '%';
+    boxAll.appendChild(b);
+  });
+  vals.forEach((v, i) => {
+    const b = document.createElement('div');
+    b.className = 'bar' + (i === 18 ? ' hi' : '');
+    b.style.height = (v / max * 100) + '%';
+    box.appendChild(b);
+  });
+</script>
+</body>
+</html>

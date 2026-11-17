@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GĐ1 – Luồng Artist & Admin</title>
+<style>
+  :root {
+    --primary: #10C7D5; --primary-dark: #0EA5B5; --text: #111216; --text2: #686A70; --muted: #9CA3AF;
+    --border: #E8ECF2; --soft: #F3F4F6; --purple: #7B2CBF; --red: #E11D48; --green: #16A34A; --amber: #D97706;
+    --page: #EEF1F5;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--page); color: var(--text); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 48px 0 6px; }
+  .lead { color: var(--text2); margin: 0 0 8px; line-height: 1.6; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #E6FAFB; color: var(--primary-dark); margin-right: 6px; }
+  .tag.v2 { background: #FEF3C7; color: var(--amber); }
+
+  .changes { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 14px; padding: 6px 22px; margin-top: 16px; font-size: 14.5px; }
+  .changes li { margin: 8px 0; line-height: 1.5; }
+
+  .flow { background: #fff; border-radius: 16px; padding: 20px; margin-top: 16px; overflow-x: auto; }
+  .lane { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+  .lane-title { width: 130px; font-weight: 800; font-size: 13px; color: var(--text2); flex-shrink: 0; }
+  .node { border: 2px solid var(--border); border-radius: 12px; padding: 8px 12px; font-size: 13px; font-weight: 600; background: #fff; }
+  .node b { color: var(--primary-dark); margin-right: 4px; }
+  .node.admin { border-color: #E9D5FF; background: #FAF5FF; } .node.admin b { color: var(--purple); }
+  .node.ok { border-color: #BBF7D0; background: #F0FDF4; } .node.bad { border-color: #FECDD3; background: #FFF1F2; }
+  .arrow { color: var(--muted); font-weight: 800; }
+
+  .rules { background: #fff; border-radius: 16px; padding: 8px 24px; margin-top: 16px; }
+  .rules li { margin: 10px 0; line-height: 1.55; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 28px; margin-top: 18px; }
+  .card { display: flex; flex-direction: column; align-items: center; }
+  .caption { width: 360px; margin-top: 12px; background: #fff; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: #333; }
+  .caption h3 { margin: 0 0 4px; font-size: 15px; }
+  .caption.wide { width: 100%; max-width: 1180px; }
+  .stack { display: flex; flex-direction: column; gap: 36px; margin-top: 18px; align-items: center; }
+
+  .phone { width: 360px; height: 760px; background: #fff; border-radius: 34px; border: 10px solid #121316; position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,.12); }
+  .statusbar { height: 28px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .screen { flex: 1; overflow: hidden; padding: 4px 18px 0; display: flex; flex-direction: column; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; height: 44px; flex-shrink: 0; }
+  .topbar .title { font-size: 17px; font-weight: 800; }
+  .ico { width: 24px; height: 24px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .ico.sm { width: 16px; height: 16px; } .ico.xs { width: 13px; height: 13px; }
+  .muted { color: var(--text2); font-size: 13px; }
+  .section-title { font-size: 15px; font-weight: 800; margin: 16px 0 8px; }
+
+  .avatar { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 22px; flex-shrink: 0; }
+  .av-a { background: linear-gradient(135deg, #F59E0B, #EC4899); } .av-b { background: linear-gradient(135deg, #6366F1, #10C7D5); }
+  .av-c { background: linear-gradient(135deg, #10B981, #0EA5B5); } .av-d { background: linear-gradient(135deg, #7B2CBF, #EC4899); }
+  .avatar.s32 { width: 32px; height: 32px; font-size: 12px; } .avatar.s40 { width: 40px; height: 40px; font-size: 15px; }
+  .avatar.s48 { width: 48px; height: 48px; font-size: 17px; } .avatar.s80 { width: 80px; height: 80px; font-size: 28px; }
+  .avatar.s96 { width: 96px; height: 96px; font-size: 32px; }
+
+  .box { border: 1px solid var(--border); border-radius: 16px; padding: 14px; background: #fff; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .between { justify-content: space-between; }
+  .link { color: var(--primary); font-weight: 700; font-size: 14px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .b-artist { background: #E6FAFB; color: var(--primary-dark); }
+  .b-pending { background: #FEF3C7; color: var(--amber); }
+  .b-bad { background: #FFE4E6; color: var(--red); }
+  .b-grey { background: var(--soft); color: var(--text2); }
+
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 48px; border-radius: 14px; font-weight: 800; font-size: 15px; border: none; width: 100%; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-outline { background: #fff; color: var(--text); border: 1.5px solid var(--border); }
+  .btn-ghost { background: transparent; color: var(--text2); height: 40px; font-weight: 600; }
+
+  .promo { border-radius: 18px; padding: 16px; color: #fff; background: linear-gradient(135deg, #4E2A84, #9B30FF); }
+  .promo h4 { margin: 0; font-size: 16px; } .promo p { margin: 0 0 12px; font-size: 13px; opacity: .9; line-height: 1.45; }
+  .promo .btn { height: 40px; background: #fff; color: #4E2A84; font-size: 14px; }
+
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--text2); margin-bottom: 5px; }
+  .input { border: 1px solid var(--border); border-radius: 12px; min-height: 44px; padding: 11px 13px; font-size: 14px; color: var(--text); background: #fff; }
+  .input.area { min-height: 72px; line-height: 1.4; }
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip { border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 600; color: var(--text2); }
+  .chip.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .check { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; color: var(--text2); line-height: 1.45; }
+  .cb { width: 18px; height: 18px; border-radius: 5px; background: var(--primary); flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+
+  .steps { display: flex; gap: 6px; margin: 4px 0 14px; } .steps i { flex: 1; height: 4px; border-radius: 2px; background: var(--border); } .steps i.on { background: var(--primary); }
+
+  .timeline { position: relative; margin: 6px 0 0 6px; }
+  .tl { display: flex; gap: 12px; padding-bottom: 18px; position: relative; }
+  .tl:not(:last-child)::before { content: ""; position: absolute; left: 11px; top: 24px; bottom: 0; width: 2px; background: var(--border); }
+  .tl .dot { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; z-index: 1; }
+  .tl .dot.done { background: var(--primary); } .tl .dot.now { background: #FEF3C7; border: 2px solid var(--amber); } .tl .dot.todo { background: var(--soft); border: 2px solid var(--border); }
+  .tl .dot.bad { background: var(--red); }
+  .tl b { font-size: 14px; } .tl .muted { font-size: 12px; }
+
+  .reason { background: #FFF1F2; border: 1px solid #FECDD3; border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.5; color: #9F1239; }
+  .info { background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 12px; padding: 12px; font-size: 12.5px; line-height: 1.5; color: #075985; }
+  .okbox { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 12px; padding: 10px 12px; font-size: 13px; color: #166534; }
+
+  .tabbar { height: 62px; border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; flex-shrink: 0; background: #fff; }
+  .tabbar div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .tabbar .ico { stroke: var(--muted); width: 22px; height: 22px; }
+
+  .notif { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--soft); }
+  .notif .icn { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .notif p { margin: 0; font-size: 13.5px; line-height: 1.4; } .notif.unread { background: #F2FDFE; margin: 0 -18px; padding: 12px 18px; }
+
+  .menu-item { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--soft); }
+  .menu-item .mi { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .menu-item .t { flex: 1; } .menu-item .t b { font-size: 14px; display: block; } .menu-item .t span { font-size: 12px; color: var(--text2); }
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--soft); font-size: 13px; }
+  .kv span { color: var(--text2); } .kv b { text-align: right; }
+  .footer-actions { display: flex; gap: 10px; padding: 12px 0 14px; margin-top: auto; }
+  .count { min-width: 22px; height: 22px; border-radius: 11px; background: var(--red); color: #fff; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; }
+
+  /* ---------- Admin trong app ---------- */
+  .b-admin { background: #F3E8FF; color: var(--purple); }
+  .b-ok { background: #DCFCE7; color: var(--green); }
+  .dim { opacity: .45; }
+  .stat { flex: 1; border-radius: 14px; padding: 12px; }
+  .stat .n { font-size: 24px; font-weight: 900; } .stat .l { font-size: 11.5px; color: var(--text2); font-weight: 600; }
+  .seg { display: flex; background: var(--soft); border-radius: 12px; padding: 4px; margin: 6px 0 12px; }
+  .seg div { flex: 1; text-align: center; font-size: 12.5px; font-weight: 700; padding: 8px 0; border-radius: 9px; color: var(--text2); }
+  .seg .on { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .req { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--soft); align-items: center; }
+  .req .t { flex: 1; min-width: 0; } .req .t b { font-size: 14px; display: block; } .req .t span { font-size: 12px; color: var(--text2); }
+  .search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 999px; height: 42px; padding: 0 14px; color: var(--muted); font-size: 13.5px; }
+  .overlay { position: absolute; inset: 28px 0 0 0; background: rgba(0,0,0,.5); display: flex; align-items: flex-end; }
+  .sheet { background: #fff; width: 100%; border-radius: 22px 22px 0 0; padding: 18px 18px 22px; }
+  .sheet h4 { margin: 0 0 6px; font-size: 18px; }
+  .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--border); margin: 0 auto 14px; }
+  .ul-check { margin: 10px 0 14px; padding: 0; list-style: none; }
+  .ul-check li { display: flex; gap: 8px; font-size: 13px; line-height: 1.45; margin: 8px 0; }
+  .radio-line { display: flex; gap: 10px; align-items: center; font-size: 13.5px; padding: 8px 0; }
+  .radio-line .r { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted); flex-shrink: 0; }
+  .radio-line .r.on { border: 6px solid var(--red); }
+  .toggle { width: 44px; height: 26px; border-radius: 13px; background: #CBD5E1; position: relative; flex-shrink: 0; }
+  .toggle::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+
+  .confirm-list { background: #fff; border-radius: 16px; padding: 8px 24px; margin-top: 16px; }
+  .confirm-list li { margin: 12px 0; line-height: 1.55; }
+  table.api { width: 100%; border-collapse: collapse; background: #fff; border-radius: 16px; overflow: hidden; margin-top: 16px; font-size: 14px; }
+  table.api th, table.api td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  table.api th { background: #1F3A68; color: #fff; }
+  code { background: #EEF2F7; border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+    <symbol id="i-feed" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/></symbol>
+    <symbol id="i-lib" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <h1>Giai đoạn 1 – Luồng đăng ký nghệ sĩ và Admin duyệt (trong app)</h1>
+  <p class="lead"><span class="tag">BẢN XEM TRƯỚC</span><span class="tag v2">BẢN 3</span>Mockup giao diện để nhóm duyệt trước khi code. Chữ trên giao diện để tiếng Anh như app hiện tại; ghi chú bên dưới mỗi màn bằng tiếng Việt.</p>
+
+  <ul class="changes">
+    <li><b>Thay đổi qua các bản</b>:</li>
+    <li><b>Bản 3 (bản này):</b> Admin <b>dùng chung app</b>. Admin đăng nhập app như mọi người và vào "Admin console" từ Profile (màn B1–B6). Web Admin riêng của bản 2 đã được bỏ.</li>
+    <li><b>Từ bản 2, vẫn giữ:</b>
+      <ul>
+        <li>bỏ chức năng "nhận trang có sẵn": người dùng chỉ tạo trang nghệ sĩ mới, đăng ký gồm 2 bước;</li>
+        <li>đăng ký phải được Admin duyệt;</li>
+        <li>chữ trên giao diện để tiếng Anh.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>1. Sơ đồ luồng</h2>
+  <div class="flow">
+    <div class="lane">
+      <div class="lane-title">App · Người nghe</div>
+      <div class="node"><b>A1</b>Profile: "Become an artist"</div><span class="arrow">→</span>
+      <div class="node"><b>A2</b>Điền hồ sơ nghệ sĩ (1/2)</div><span class="arrow">→</span>
+      <div class="node"><b>A3</b>Xem lại và gửi (2/2)</div><span class="arrow">→</span>
+      <div class="node"><b>A4</b>Đang chờ duyệt (có thể huỷ)</div>
+    </div>
+    <div class="lane">
+      <div class="lane-title">App · Admin</div>
+      <div class="node admin"><b>B1</b>Profile: "Admin console"</div><span class="arrow">→</span>
+      <div class="node admin"><b>B2</b>Bảng điều khiển</div><span class="arrow">→</span>
+      <div class="node admin"><b>B3</b>Danh sách yêu cầu</div><span class="arrow">→</span>
+      <div class="node admin"><b>B4</b>Chi tiết yêu cầu</div><span class="arrow">→</span>
+      <div class="node ok"><b>B5</b>Duyệt</div><span class="arrow">/</span>
+      <div class="node bad"><b>B6</b>Từ chối (bắt buộc lý do)</div>
+    </div>
+    <div class="lane">
+      <div class="lane-title">App · Kết quả</div>
+      <div class="node ok"><b>A6</b>Thông báo "được duyệt" → Profile có huy hiệu Artist và lối vào Artist Studio</div>
+      <span class="arrow">|</span>
+      <div class="node bad"><b>A5</b>Thông báo "bị từ chối" → xem lý do → sửa và gửi lại (về A2)</div>
+    </div>
+  </div>
+
+  <h2>2. Quy tắc nghiệp vụ</h2>
+  <ul class="rules">
+    <li>Chỉ tài khoản <b>listener</b> mới thấy nút đăng ký. Tài khoản đã là artist hoặc admin thì không.</li>
+    <li>Mỗi tài khoản chỉ có <b>1 yêu cầu đang chờ</b>. Muốn sửa nội dung thì huỷ yêu cầu rồi gửi lại.</li>
+    <li>Người dùng luôn <b>tạo trang nghệ sĩ mới</b>. <b>Nghệ danh không được trùng</b> với trang đã có hoặc với yêu cầu khác đang chờ. Khi so trùng, hệ thống bỏ qua khác biệt chữ hoa/thường và có dấu/không dấu.</li>
+    <li><b>Khi Admin duyệt</b>, hệ thống làm cùng lúc 4 việc (nếu một việc lỗi thì không việc nào được lưu):
+      <ul>
+        <li>tạo trang <code>Artist</code> mới từ hồ sơ;</li>
+        <li>gán <code>ownerUserId</code> của trang là tài khoản người gửi;</li>
+        <li>đổi tài khoản sang <code>role = artist</code> và gán <code>artistId</code>;</li>
+        <li>gửi thông báo cho người dùng.</li>
+      </ul>
+      Trang mới mặc định <b>chưa có tick xanh</b>; Admin có thể bật khi duyệt. Người dùng không cần đăng nhập lại.</li>
+    <li><b>Khi Admin từ chối</b>: bắt buộc chọn lý do; nếu chọn "Other" thì bắt buộc ghi thêm. Người dùng thấy lý do, sửa hồ sơ rồi gửi lại.</li>
+    <li><b>Admin dùng chung app</b>: đăng nhập như người dùng thường, vẫn nghe nhạc bình thường; Profile có thêm thẻ "Admin console". Server kiểm tra <code>role = admin</code> ở từng API admin, nên tài khoản thường không gọi được dù tự sửa app. Admin đầu tiên được tạo bằng script <code>npm run make-admin -- &lt;email&gt;</code>; trong app không có nút "đăng ký admin".</li>
+  </ul>
+
+  <h2>3. App – phía người nghe (A1–A6)</h2>
+  <div class="grid">
+
+    <div class="card">
+      <div class="phone" id="A1">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Profile</span><span style="width:24px"></span></div>
+          <div style="text-align:center;margin:6px 0 14px">
+            <div class="avatar s80 av-a" style="margin:0 auto 8px">LN</div>
+            <div style="font-size:19px;font-weight:800">Lan Nguyen</div>
+            <div class="muted">lan@example.com</div>
+          </div>
+          <div class="box row between" style="margin-bottom:14px">
+            <div><div class="muted" style="font-weight:600">Membership</div><div style="font-weight:800;margin-top:4px">Free account</div></div>
+            <span class="link">View plans</span>
+          </div>
+          <div class="promo">
+            <div class="row" style="gap:8px;margin-bottom:6px"><svg class="ico sm" style="stroke:#fff"><use href="#i-mic"/></svg><h4>Are you an artist?</h4></div>
+            <p>Create your artist page, upload your songs and talk with your fans.</p>
+            <div class="btn">Become an artist</div>
+          </div>
+          <div class="section-title">Personal information</div>
+          <div class="field"><label>Full name</label><div class="input">Lan Nguyen</div></div>
+          <div class="field"><label>Email</label><div class="input">lan@example.com</div></div>
+        </div>
+        <div class="tabbar"><div><svg class="ico"><use href="#i-home"/></svg>Home</div><div><svg class="ico"><use href="#i-search"/></svg>Search</div><div><svg class="ico"><use href="#i-feed"/></svg>Feed</div><div><svg class="ico"><use href="#i-lib"/></svg>Library</div></div>
+      </div>
+      <div class="caption"><h3>A1 · Profile của người nghe</h3>Thẻ <b>"Are you an artist?"</b> nằm ngay dưới thẻ Membership. Bấm "Become an artist" để mở form A2.</div>
+    </div>
+
+    <div class="card">
+      <div class="phone" id="A2">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Become an artist</span><span style="width:24px"></span></div>
+          <div class="steps"><i class="on"></i><i></i></div>
+          <div class="row" style="margin-bottom:12px">
+            <div class="avatar av-a" style="position:relative">LN<span style="position:absolute;right:-2px;bottom:-2px;width:24px;height:24px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center"><svg class="ico xs" style="stroke:#fff"><use href="#i-camera"/></svg></span></div>
+            <div><b style="font-size:14px">Profile photo</b><div class="muted" style="font-size:12px">Optional · JPG/PNG, up to 5 MB</div></div>
+          </div>
+          <div class="field"><label>Stage name *</label><div class="input">Lan Ng.</div><div class="hint">2–50 characters. Must be unique.</div></div>
+          <div class="field"><label>Genres * (up to 3)</label>
+            <div class="chips"><span class="chip on">Pop</span><span class="chip on">Ballad</span><span class="chip">R&amp;B</span><span class="chip">Rap</span><span class="chip">Indie</span><span class="chip">EDM</span><span class="chip">Lo-fi</span></div>
+          </div>
+          <div class="field"><label>Short bio *</label><div class="input area">Singer-songwriter from Hà Nội. Writing honest songs about growing up.</div><div class="hint" style="text-align:right">68 / 500</div></div>
+          <div class="field"><label>Social links (optional)</label><div class="input row" style="gap:8px"><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-link"/></svg>instagram.com/lanng.music</div></div>
+          <div class="footer-actions"><div class="btn btn-primary">Continue</div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>A2 · Hồ sơ nghệ sĩ (bước 1/2)</h3>Mở thẳng form, không còn màn chọn cách bắt đầu. Bắt buộc: <b>nghệ danh</b>, <b>thể loại (1–3)</b>, <b>tiểu sử</b>. Không bắt buộc: ảnh đại diện và link mạng xã hội. Link giúp Admin xác minh nhanh hơn.</div>
+    </div>
+
+    <div class="card">
+      <div class="phone" id="A3">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Review &amp; submit</span><span style="width:24px"></span></div>
+          <div class="steps"><i class="on"></i><i class="on"></i></div>
+          <div class="box" style="margin:2px 0 12px">
+            <div class="row" style="margin-bottom:8px"><div class="avatar s48 av-a">LN</div><div><b>Lan Ng.</b><div class="muted">New artist page</div></div><span class="link" style="margin-left:auto;font-size:13px">Edit</span></div>
+            <div class="kv"><span>Genres</span><b>Pop, Ballad</b></div>
+            <div class="kv"><span>Bio</span><b style="font-weight:600;max-width:190px">Singer-songwriter from Hà Nội…</b></div>
+            <div class="kv" style="border:none"><span>Social</span><b>instagram.com/lanng.music</b></div>
+          </div>
+          <div class="check" style="margin-bottom:12px"><div class="cb"><svg class="ico xs" style="stroke:#fff;stroke-width:3"><use href="#i-check"/></svg></div><span>I confirm I own the rights to the music I will upload and that this information is true.</span></div>
+          <div class="info">An admin will review your request, usually within 1–2 days. You'll get a notification with the result.</div>
+          <div class="section-title" style="font-size:12px;color:var(--text2);margin-top:14px">EXAMPLE – NAME ALREADY TAKEN</div>
+          <div class="reason" style="font-size:12.5px">"Mer Watson" is already used by another artist page. Please go back and choose a different stage name.</div>
+          <div class="footer-actions"><div class="btn btn-primary">Submit request</div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>A3 · Xem lại và gửi (bước 2/2)</h3>Tóm tắt hồ sơ, có ô <b>cam kết bản quyền</b> (bắt buộc tích). Nếu nghệ danh trùng, server trả lỗi và app hiện hộp đỏ như ví dụ; người dùng bấm "Edit" để quay lại A2.</div>
+    </div>
+
+    <div class="card">
+      <div class="phone" id="A4">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Artist request</span><span style="width:24px"></span></div>
+          <div style="text-align:center;margin:10px 0 16px">
+            <div style="width:72px;height:72px;border-radius:50%;background:#FEF3C7;margin:0 auto 10px;display:flex;align-items:center;justify-content:center"><svg class="ico" style="stroke:var(--amber);width:34px;height:34px"><use href="#i-clock"/></svg></div>
+            <div style="font-size:20px;font-weight:900">Request sent!</div>
+            <div class="muted" style="margin-top:4px">We'll notify you when an admin reviews it.</div>
+          </div>
+          <div class="box">
+            <div class="row between" style="margin-bottom:12px"><b>Lan Ng.</b><span class="badge b-pending">Pending review</span></div>
+            <div class="timeline">
+              <div class="tl"><div class="dot done"><svg class="ico xs" style="stroke:#fff;stroke-width:3"><use href="#i-check"/></svg></div><div><b>Submitted</b><div class="muted">16/11/2026 · 10:24</div></div></div>
+              <div class="tl"><div class="dot now"></div><div><b>Under review</b><div class="muted">Usually 1–2 days</div></div></div>
+              <div class="tl"><div class="dot todo"></div><div><b>Result</b><div class="muted">Approved or needs changes</div></div></div>
+            </div>
+          </div>
+          <div class="footer-actions" style="flex-direction:column;gap:4px"><div class="btn btn-outline">Back to profile</div><div class="btn btn-ghost" style="color:var(--red)">Cancel request</div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>A4 · Đã gửi, đang chờ duyệt</h3>Hiện ngay sau khi gửi; mở lại được từ Profile (A4b). Người dùng <b>huỷ được yêu cầu</b> khi đang chờ, có hỏi xác nhận trước khi huỷ.</div>
+    </div>
+
+    <div class="card">
+      <div class="phone" id="A4b">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Profile</span><span style="width:24px"></span></div>
+          <div style="text-align:center;margin:6px 0 14px">
+            <div class="avatar s80 av-a" style="margin:0 auto 8px">LN</div>
+            <div style="font-size:19px;font-weight:800">Lan Nguyen</div>
+            <div class="muted">lan@example.com</div>
+          </div>
+          <div class="box row between" style="margin-bottom:14px">
+            <div><div class="muted" style="font-weight:600">Membership</div><div style="font-weight:800;margin-top:4px">Free account</div></div>
+            <span class="link">View plans</span>
+          </div>
+          <div class="box row" style="border-color:#FDE68A;background:#FFFBEB">
+            <svg class="ico" style="stroke:var(--amber)"><use href="#i-clock"/></svg>
+            <div style="flex:1"><b style="font-size:14px">Artist request pending</b><div class="muted" style="font-size:12px">Sent 16/11/2026 · Lan Ng.</div></div>
+            <svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg>
+          </div>
+          <div class="section-title">Personal information</div>
+          <div class="field"><label>Full name</label><div class="input">Lan Nguyen</div></div>
+        </div>
+        <div class="tabbar"><div><svg class="ico"><use href="#i-home"/></svg>Home</div><div><svg class="ico"><use href="#i-search"/></svg>Search</div><div><svg class="ico"><use href="#i-feed"/></svg>Feed</div><div><svg class="ico"><use href="#i-lib"/></svg>Library</div></div>
+      </div>
+      <div class="caption"><h3>A4b · Profile khi đang chờ duyệt</h3>Thẻ ở A1 được thay bằng thẻ trạng thái màu vàng. Bấm vào thẻ để mở lại A4.</div>
+    </div>
+
+    <div class="card">
+      <div class="phone" id="A5">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Artist request</span><span style="width:24px"></span></div>
+          <div class="box" style="margin-top:6px">
+            <div class="row between" style="margin-bottom:12px"><b>Lan Ng.</b><span class="badge b-bad">Needs changes</span></div>
+            <div class="timeline">
+              <div class="tl"><div class="dot done"><svg class="ico xs" style="stroke:#fff;stroke-width:3"><use href="#i-check"/></svg></div><div><b>Submitted</b><div class="muted">16/11/2026 · 10:24</div></div></div>
+              <div class="tl"><div class="dot done"><svg class="ico xs" style="stroke:#fff;stroke-width:3"><use href="#i-check"/></svg></div><div><b>Reviewed</b><div class="muted">17/11/2026 · 08:10</div></div></div>
+              <div class="tl"><div class="dot bad"><svg class="ico xs" style="stroke:#fff;stroke-width:3"><use href="#i-x"/></svg></div><div><b>Not approved</b><div class="muted">See the reason below</div></div></div>
+            </div>
+          </div>
+          <div class="section-title">Reason from admin</div>
+          <div class="reason"><b>Incomplete information.</b><br>Your bio is too short to introduce your music. Please add a few lines about your style and add a social link if you have one.</div>
+          <div class="footer-actions" style="flex-direction:column;gap:4px"><div class="btn btn-primary">Edit &amp; resubmit</div><div class="btn btn-ghost">Back to profile</div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>A5 · Bị từ chối</h3>Mở từ thông báo hoặc từ thẻ trạng thái trên Profile. Hiện <b>lý do</b> Admin đã ghi. "Edit &amp; resubmit" mở lại A2 với dữ liệu cũ đã điền sẵn.</div>
+    </div>
+
+    <div class="card">
+      <div class="phone" id="A6">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Notifications</span><span class="link" style="font-size:13px">Mark all read</span></div>
+          <div class="notif unread">
+            <div class="icn" style="background:#DCFCE7"><svg class="ico sm" style="stroke:var(--green);stroke-width:3"><use href="#i-check"/></svg></div>
+            <div><p><b>You're now an artist! 🎉</b> Your request for <b>Lan Ng.</b> was approved. Open Artist Studio to set up your page.</p><div class="muted" style="font-size:11.5px;margin-top:3px">2 min ago</div></div>
+          </div>
+          <div class="notif">
+            <div class="avatar s40 av-c">JS</div>
+            <div><p><b>Jason Smith</b> replied to your comment: "Agree, the chorus is amazing!"</p><div class="muted" style="font-size:11.5px;margin-top:3px">1 h ago</div></div>
+          </div>
+          <div style="height:14px"></div>
+          <div class="section-title" style="margin-top:4px">Profile after approval</div>
+          <div class="box">
+            <div class="row" style="margin-bottom:10px"><div class="avatar s48 av-a">LN</div><div style="flex:1"><b>Lan Nguyen</b><div style="margin-top:4px"><span class="badge b-artist"><svg class="ico xs" style="stroke:var(--primary-dark)"><use href="#i-mic"/></svg>Artist · Lan Ng.</span></div></div></div>
+            <div class="menu-item" style="padding:10px 0"><div class="mi" style="background:#E6FAFB"><svg class="ico sm" style="stroke:var(--primary-dark)"><use href="#i-music"/></svg></div><div class="t"><b>Artist Studio</b><span>Upload songs, stats (Phase 2)</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+            <div class="menu-item" style="padding:10px 0;border:none"><div class="mi" style="background:var(--soft)"><svg class="ico sm"><use href="#i-user"/></svg></div><div class="t"><b>View my artist page</b><span>How listeners see you</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>A6 · Được duyệt</h3>Có thông báo mới, dùng chung chuông thông báo hiện có. Trên Profile, thẻ đăng ký được thay bằng <b>huy hiệu Artist</b> và 2 lối vào. Ở giai đoạn 1, "Artist Studio" chỉ mở trang "sắp có"; nội dung thật làm ở giai đoạn 2.</div>
+    </div>
+  </div>
+
+  <h2>4. App – phía Admin (B1–B6)</h2>
+  <p class="lead">Admin dùng chính app này, không có web riêng. Các màn admin mở từ Profile và có cùng phong cách với phần còn lại của app.</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="phone" id="B1">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Profile</span><span style="width:24px"></span></div>
+          <div style="text-align:center;margin:6px 0 14px">
+            <div class="avatar s80 av-b" style="margin:0 auto 8px">AD</div>
+            <div style="font-size:19px;font-weight:800">Admin Team</div>
+            <div style="margin-top:6px"><span class="badge b-admin"><svg class="ico xs" style="stroke:var(--purple)"><use href="#i-shield"/></svg>Admin</span></div>
+          </div>
+          <div class="box row" style="border-color:#E9D5FF;background:#FAF5FF">
+            <div style="width:40px;height:40px;border-radius:12px;background:var(--purple);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg class="ico sm" style="stroke:#fff"><use href="#i-shield"/></svg></div>
+            <div style="flex:1"><b style="font-size:14px">Admin console</b><div class="muted" style="font-size:12px">3 artist requests waiting</div></div>
+            <div class="count">3</div>
+          </div>
+          <div class="box row between" style="margin-top:12px">
+            <div><div class="muted" style="font-weight:600">Membership</div><div style="font-weight:800;margin-top:4px">Free account</div></div>
+            <span class="link">View plans</span>
+          </div>
+          <div class="section-title">Personal information</div>
+          <div class="field"><label>Full name</label><div class="input">Admin Team</div></div>
+        </div>
+        <div class="tabbar"><div><svg class="ico"><use href="#i-home"/></svg>Home</div><div><svg class="ico"><use href="#i-search"/></svg>Search</div><div><svg class="ico"><use href="#i-feed"/></svg>Feed</div><div><svg class="ico"><use href="#i-lib"/></svg>Library</div></div>
+      </div>
+      <div class="caption"><h3>B1 · Profile của Admin</h3>Admin đăng nhập app như mọi người. Profile có <b>huy hiệu Admin</b> và thẻ tím <b>"Admin console"</b> kèm số yêu cầu đang chờ. Tài khoản thường không thấy thẻ này.</div>
+    </div>
+
+    <div class="card">
+      <div class="phone" id="B2">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Admin console</span><span style="width:24px"></span></div>
+          <div class="row" style="gap:10px;margin:6px 0 4px">
+            <div class="stat" style="background:#FEF3C7"><div class="n">3</div><div class="l">Pending requests</div></div>
+            <div class="stat" style="background:#E6FAFB"><div class="n">14</div><div class="l">Artists</div></div>
+            <div class="stat" style="background:#F3E8FF"><div class="n">128</div><div class="l">Users</div></div>
+          </div>
+          <div class="section-title">Manage</div>
+          <div class="menu-item"><div class="mi" style="background:#FEF3C7"><svg class="ico sm" style="stroke:var(--amber)"><use href="#i-mic"/></svg></div><div class="t"><b>Artist requests</b><span>Approve or reject new artists</span></div><div class="count">3</div></div>
+          <div class="menu-item dim"><div class="mi" style="background:var(--soft)"><svg class="ico sm"><use href="#i-users"/></svg></div><div class="t"><b>Users &amp; roles</b><span>Phase 5</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+          <div class="menu-item dim"><div class="mi" style="background:var(--soft)"><svg class="ico sm"><use href="#i-music"/></svg></div><div class="t"><b>Content moderation</b><span>Hide songs / comments · Phase 5</span></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+          <div class="section-title">Recently reviewed</div>
+          <div class="req"><div class="avatar s40 av-c">HV</div><div class="t"><b>Hà Vy</b><span>Approved · 2 days ago</span></div><span class="badge b-ok">Approved</span></div>
+          <div class="req"><div class="avatar s40 av-d">DJ</div><div class="t"><b>DJ Mix 99</b><span>Rejected · 3 days ago</span></div><span class="badge b-bad">Rejected</span></div>
+        </div>
+      </div>
+      <div class="caption"><h3>B2 · Admin console</h3>Có 3 ô số liệu lấy trực tiếp từ CSDL. Giai đoạn 1 chỉ mở mục <b>Artist requests</b>; "Users &amp; roles" và "Content moderation" để mờ, làm ở giai đoạn 5. Phía dưới là các yêu cầu vừa xử lý.</div>
+    </div>
+
+    <div class="card">
+      <div class="phone" id="B3">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Artist requests</span><span style="width:24px"></span></div>
+          <div class="seg"><div class="on">Pending (3)</div><div>Approved</div><div>Rejected</div></div>
+          <div class="search"><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-search"/></svg>Search stage name or email</div>
+          <div class="req" style="margin-top:6px"><div class="avatar s48 av-d">TK</div><div class="t"><b>T.K Beats</b><span>tk.beats@gmail.com · 1 day ago</span><div style="margin-top:4px"><span class="badge b-grey">Rap · EDM</span> <span class="badge b-grey">No links</span></div></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+          <div class="req"><div class="avatar s48 av-c">QA</div><div class="t"><b>Quang Anh</b><span>qa.music@gmail.com · 5 h ago</span><div style="margin-top:4px"><span class="badge b-grey">Rap</span> <span class="badge b-artist">2 links</span></div></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+          <div class="req"><div class="avatar s48 av-a">LN</div><div class="t"><b>Lan Ng.</b><span>lan@example.com · 2 h ago</span><div style="margin-top:4px"><span class="badge b-grey">Pop · Ballad</span> <span class="badge b-artist">1 link</span></div></div><svg class="ico sm" style="stroke:var(--muted)"><use href="#i-right"/></svg></div>
+          <div class="hint" style="text-align:center;margin-top:14px">Oldest first · pull down to refresh</div>
+        </div>
+      </div>
+      <div class="caption"><h3>B3 · Danh sách yêu cầu</h3>Có 3 tab Pending / Approved / Rejected và ô tìm theo nghệ danh hoặc email. Yêu cầu <b>cũ nhất xếp trước</b>. Nhãn "links" cho biết nhanh người gửi có link mạng xã hội hay không.</div>
+    </div>
+
+    <div class="card">
+      <div class="phone" id="B4">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Request detail</span><span class="badge b-pending">Pending</span></div>
+          <div class="row" style="margin:6px 0 8px"><div class="avatar av-a">LN</div><div><div style="font-size:18px;font-weight:900">Lan Ng.</div><div style="margin-top:4px" class="row"><span class="badge b-grey">Pop</span><span class="badge b-grey">Ballad</span></div></div></div>
+          <div style="font-size:13px;line-height:1.5;margin-bottom:8px">Singer-songwriter from Hà Nội. Writing honest songs about growing up.</div>
+          <div class="row" style="font-size:13px;margin-bottom:10px"><svg class="ico sm" style="stroke:var(--primary)"><use href="#i-link"/></svg><span class="link" style="font-size:13px">instagram.com/lanng.music</span></div>
+          <div class="okbox" style="font-size:12.5px"><b>✓ Stage name available</b></div>
+          <div class="section-title">Applicant account</div>
+          <div class="kv"><span>Name</span><b>Lan Nguyen</b></div>
+          <div class="kv"><span>Email</span><b>lan@example.com</b></div>
+          <div class="kv"><span>Member since</span><b>02/10/2026</b></div>
+          <div class="kv" style="border:none"><span>Previous requests</span><b>None</b></div>
+          <div class="footer-actions"><div class="btn btn-outline" style="color:var(--red)">Reject</div><div class="btn btn-primary">Approve</div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>B4 · Chi tiết yêu cầu</h3>Phần trên là <b>bản xem trước trang nghệ sĩ</b> (ảnh, nghệ danh, thể loại, tiểu sử, link) kèm kết quả kiểm tra trùng nghệ danh. Phần dưới là thông tin tài khoản người gửi và số lần đã gửi trước đó. Hai nút Approve / Reject nằm ở cuối màn.</div>
+    </div>
+
+    <div class="card">
+      <div class="phone" id="B5">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Request detail</span><span class="badge b-pending">Pending</span></div>
+          <div class="row" style="margin:6px 0 10px"><div class="avatar av-a">LN</div><div><div style="font-size:18px;font-weight:900">Lan Ng.</div><div class="muted">New artist page</div></div></div>
+        </div>
+        <div class="overlay">
+          <div class="sheet">
+            <div class="grab"></div>
+            <h4>Approve "Lan Ng."?</h4>
+            <div class="muted">This will:</div>
+            <ul class="ul-check">
+              <li><svg class="ico sm" style="stroke:var(--green);stroke-width:3"><use href="#i-check"/></svg><span>Create a new artist page <b>Lan Ng.</b></span></li>
+              <li><svg class="ico sm" style="stroke:var(--green);stroke-width:3"><use href="#i-check"/></svg><span>Change <b>lan@example.com</b> to role <b>Artist</b> and link it to the page</span></li>
+              <li><svg class="ico sm" style="stroke:var(--green);stroke-width:3"><use href="#i-check"/></svg><span>Send the user a notification</span></li>
+            </ul>
+            <div class="row between box" style="padding:10px 12px;margin-bottom:14px"><div><b style="font-size:13.5px">Verified badge ✓</b><div class="muted" style="font-size:12px">Show a blue tick on the page</div></div><div class="toggle"></div></div>
+            <div class="btn btn-primary">Approve</div>
+            <div class="btn btn-ghost">Cancel</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>B5 · Xác nhận duyệt</h3>Bảng xác nhận trượt từ dưới lên, nói rõ hệ thống sẽ làm gì. Công tắc <b>tick xanh</b> mặc định tắt. Duyệt xong thì quay về B3, yêu cầu chuyển sang tab Approved. Nếu một admin khác đã xử lý yêu cầu trước đó, app báo lỗi và tải lại danh sách.</div>
+    </div>
+
+    <div class="card">
+      <div class="phone" id="B6">
+        <div class="statusbar"><span>9:41</span><span>●●● 100%</span></div>
+        <div class="screen">
+          <div class="topbar"><svg class="ico"><use href="#i-back"/></svg><span class="title">Request detail</span><span class="badge b-pending">Pending</span></div>
+          <div class="row" style="margin:6px 0 10px"><div class="avatar av-a">LN</div><div><div style="font-size:18px;font-weight:900">Lan Ng.</div><div class="muted">New artist page</div></div></div>
+        </div>
+        <div class="overlay">
+          <div class="sheet">
+            <div class="grab"></div>
+            <h4>Reject request</h4>
+            <div class="muted" style="margin-bottom:4px">Choose a reason. The user will see it.</div>
+            <div class="radio-line"><div class="r"></div>Stage name not appropriate</div>
+            <div class="radio-line"><div class="r on"></div>Incomplete information</div>
+            <div class="radio-line"><div class="r"></div>Inappropriate content in bio or photo</div>
+            <div class="radio-line"><div class="r"></div>Other (note required)</div>
+            <div class="field" style="margin-top:6px"><label>Note to the user</label><div class="input area">Your bio is too short to introduce your music. Please add a few lines about your style.</div></div>
+            <div class="btn" style="background:var(--red);color:#fff">Reject request</div>
+            <div class="btn btn-ghost">Cancel</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>B6 · Từ chối</h3>Bắt buộc chọn 1 lý do; nếu chọn "Other" thì bắt buộc ghi thêm. Người dùng thấy đúng nội dung này ở màn A5.</div>
+    </div>
+  </div>
+
+  <h2>5. Phần sẽ làm khi hiện thực (sau khi duyệt mockup)</h2>
+  <table class="api">
+    <tr><th style="width:24%">Hạng mục</th><th>Chi tiết</th></tr>
+    <tr><td>Dữ liệu</td><td>Model mới <code>ArtistRequest</code>: <code>userId</code>, <code>stageName</code>, <code>genres</code>, <code>bio</code>, <code>avatarImage</code>, <code>socialLinks</code>, <code>status</code> (pending/approved/rejected/cancelled), <code>rejectReason</code>, <code>rejectNote</code>, <code>reviewedBy</code>, <code>reviewedAt</code>, <code>createdArtistId</code>. Notification có thêm loại <code>artist_request_approved</code> và <code>artist_request_rejected</code>.</td></tr>
+    <tr><td>API cho app</td><td><code>POST /api/artist-requests</code> (gửi), <code>GET /api/artist-requests/me</code> (trạng thái), <code>DELETE /api/artist-requests/me</code> (huỷ), <code>POST /api/artist-requests/avatar</code> (tải ảnh đại diện).</td></tr>
+    <tr><td>API cho Admin</td><td>
+      <ul style="margin:0;padding-left:18px">
+        <li><code>GET /api/admin/summary</code></li>
+        <li><code>GET /api/admin/artist-requests?status=&amp;q=&amp;page=</code></li>
+        <li><code>GET /api/admin/artist-requests/:id</code></li>
+        <li><code>POST …/:id/approve</code> { verified }</li>
+        <li><code>POST …/:id/reject</code> { reason, note }</li>
+      </ul>
+      Tất cả dùng <code>requireAuth + requireRole('admin')</code>. Thao tác duyệt chạy trong <b>transaction</b>, nên không có trường hợp đổi role mà chưa tạo trang.</td></tr>
+    <tr><td>Script</td><td><code>npm run make-admin -- &lt;email&gt;</code>: nâng một tài khoản có sẵn lên admin.</td></tr>
+    <tr><td>App</td><td>Màn hình mới:
+      <ul style="margin:4px 0 0;padding-left:18px">
+        <li>Người nghe: <code>ArtistRequest</code> (A2–A3, 2 bước), <code>ArtistRequestStatus</code> (A4, A5), <code>StudioComingSoon</code>.</li>
+        <li>Admin: <code>AdminConsole</code> (B2), <code>AdminRequests</code> (B3), <code>AdminRequestDetail</code> (B4–B6).</li>
+      </ul>
+      AuthContext thêm <code>isArtist</code> và <code>isAdmin</code>; AccessContext thêm <code>ensureArtist</code> và <code>ensureAdmin</code>; sửa Profile (A1, A4b, A6, B1) và NotificationsScreen.</td></tr>
+    <tr><td>Kiểm thử</td><td>Unit test cho kiểm tra form và quy tắc chuyển trạng thái. Integration test cho:
+      <ul style="margin:4px 0 0;padding-left:18px">
+        <li>gửi yêu cầu, gửi khi đang có yêu cầu chờ (bị chặn), huỷ yêu cầu;</li>
+        <li>nghệ danh trùng (bị chặn);</li>
+        <li>duyệt: role, trang nghệ sĩ và thông báo cùng được tạo;</li>
+        <li>từ chối mà không có lý do (bị chặn);</li>
+        <li>tài khoản không phải admin gọi API admin (403);</li>
+        <li>hai admin cùng duyệt một yêu cầu (chỉ lần đầu thành công).</li>
+      </ul></td></tr>
+  </table>
+
+  <h2>6. Cần bạn xác nhận</h2>
+  <ol class="confirm-list">
+    <li>Bộ lý do từ chối ở B6 đã đủ chưa? Có muốn thêm hay bớt lý do nào không?</li>
+    <li>Có màn hình hoặc trường thông tin nào muốn thêm, bớt hay sửa không?</li>
+    <li>Nếu đồng ý với bản này, mình bắt đầu code giai đoạn 1 theo đúng mockup.</li>
+  </ol>
+</div>
+</body>
+</html>

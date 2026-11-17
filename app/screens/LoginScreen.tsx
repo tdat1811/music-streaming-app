@@ -99,6 +99,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     setError('');
     try {
       const success = await login(email, password);
+      // Chuỗi = lý do từ máy chủ (VD tài khoản bị khoá)
+      if (typeof success === 'string') {
+        setError(success);
+        setLoading(false);
+        return;
+      }
       if (!success) {
         setError('Email or password is incorrect.');
         setLoading(false);

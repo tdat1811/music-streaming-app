@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GĐ3 – Bảng tin (dùng lại Feed)</title>
+<style>
+  :root {
+    --primary: #10C7D5; --primary-dark: #0EA5B5; --text: #111216; --text2: #686A70; --muted: #9CA3AF; --icon: #4B5563;
+    --border: #E8ECF2; --soft: #F3F4F6; --purple: #7B2CBF; --red: #E11D48; --green: #16A34A; --blue: #00A3FF; --page: #EEF1F5;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: var(--page); color: var(--text); }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 48px 0 6px; }
+  .lead { color: var(--text2); margin: 0 0 8px; line-height: 1.6; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #E6FAFB; color: var(--primary-dark); margin-right: 6px; }
+  .tag.v2 { background: #FEF3C7; color: #D97706; }
+  .changes { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 14px; padding: 6px 22px; margin-top: 16px; font-size: 14.5px; }
+  .changes li { margin: 8px 0; line-height: 1.5; }
+  .rules { background: #fff; border-radius: 16px; padding: 8px 24px; margin-top: 16px; }
+  .rules li { margin: 10px 0; line-height: 1.55; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 28px; margin-top: 18px; }
+  .card { display: flex; flex-direction: column; align-items: center; }
+  .caption { width: 360px; margin-top: 12px; background: #fff; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: #333; }
+  .caption h3 { margin: 0 0 4px; font-size: 15px; }
+  .caption .new { background: #E6FAFB; color: var(--primary-dark); font-weight: 800; font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-right: 4px; }
+  .ref { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; margin-top: 16px; }
+  .ref img { width: 300px; border-radius: 22px; border: 8px solid #121316; }
+  .ref .note { flex: 1; min-width: 280px; background: #fff; border-radius: 14px; padding: 14px 18px; line-height: 1.6; font-size: 14.5px; }
+
+  /* ---- khung điện thoại + thành phần giống hệt Feed hiện tại ---- */
+  .phone { width: 360px; height: 760px; background: #fff; border-radius: 34px; border: 10px solid #121316; position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,.12); }
+  .statusbar { height: 28px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .ico { width: 22px; height: 22px; stroke: var(--icon); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .ico.sm { width: 16px; height: 16px; } .ico.dark { stroke: var(--text); }
+  .fhead { display: flex; justify-content: space-between; align-items: center; padding: 6px 16px 4px; }
+  .fhead b { font-size: 26px; font-weight: 900; }
+  .ftabs { display: flex; gap: 22px; padding: 0 16px; border-bottom: 1px solid var(--soft); }
+  .ftabs div { font-size: 14.5px; font-weight: 700; color: var(--muted); padding: 8px 0 9px; }
+  .ftabs .on { color: var(--text); border-bottom: 2.5px solid var(--primary); }
+  .scroll { flex: 1; overflow: hidden; padding: 0 16px; }
+  .newbadge { position: absolute; background: #E6FAFB; color: var(--primary-dark); font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 6px; border: 1px dashed var(--primary); }
+  .composer { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 999px; padding: 6px 6px 6px 8px; margin: 12px 0 4px; position: relative; }
+  .composer span { flex: 1; color: var(--muted); font-size: 14px; }
+  .composer .pbtn { background: var(--primary); color: #fff; font-weight: 800; font-size: 13px; padding: 7px 14px; border-radius: 999px; }
+  .av { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #E5E7EB; }
+  .av-l { position: relative; }
+  .av-l::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: #10B981; border: 2px solid #fff; }
+  .ini { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 13px; background: linear-gradient(135deg, #F59E0B, #EC4899); flex-shrink: 0; }
+  .ini.s30 { width: 30px; height: 30px; font-size: 11px; }
+  .post { padding: 14px 0 6px; position: relative; }
+  .phd { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .pn { font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 4px; }
+  .vf { width: 15px; height: 15px; border-radius: 50%; background: var(--blue); display: inline-flex; align-items: center; justify-content: center; }
+  .vf svg { width: 10px; height: 10px; stroke: #fff; stroke-width: 3.5; fill: none; }
+  .pt { font-size: 12.5px; color: var(--text2); margin-top: 1px; }
+  .ptext { font-size: 14.5px; line-height: 1.5; margin: 0 0 10px; }
+  .media { border-radius: 12px; overflow: hidden; position: relative; height: 210px; }
+  .media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .media .bn { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.55); color: #fff; padding: 10px 14px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .media .bn b { font-size: 17px; font-weight: 900; display: block; } .media .bn span { font-size: 12.5px; }
+  .media .gone { position: absolute; inset: 0; background: #F3F4F6; display: flex; align-items: center; justify-content: center; color: var(--text2); font-weight: 700; font-size: 13.5px; gap: 6px; }
+  .acts { display: flex; align-items: center; gap: 20px; padding: 10px 2px 4px; color: var(--icon); font-size: 14px; font-weight: 600; }
+  .acts .r { display: flex; align-items: center; gap: 6px; }
+  .acts .more { margin-left: auto; font-size: 20px; letter-spacing: 1px; font-weight: 900; }
+  .edited { font-size: 12px; color: var(--muted); }
+  .mini { height: 54px; background: #121316; display: flex; align-items: center; gap: 10px; padding: 0 12px; color: #fff; flex-shrink: 0; }
+  .mini img { width: 36px; height: 36px; border-radius: 6px; }
+  .mini b { font-size: 13.5px; display: block; } .mini span { font-size: 12px; opacity: .8; }
+  .tabbar { height: 60px; border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; flex-shrink: 0; background: #fff; }
+  .tabbar div { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .tabbar .ico { stroke: var(--muted); width: 22px; height: 22px; }
+  .tabbar .on { color: var(--primary); } .tabbar .on .ico { stroke: var(--primary); }
+
+  /* bảng trượt (giống sheet bình luận hiện tại) */
+  .overlay { position: absolute; inset: 28px 0 0 0; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; }
+  .overlay.center { align-items: center; padding: 0 26px; }
+  .sheet { background: #fff; width: 100%; border-radius: 22px 22px 0 0; display: flex; flex-direction: column; }
+  .sheet.tall { height: 86%; }
+  .shead { display: flex; justify-content: space-between; align-items: flex-start; padding: 16px 16px 10px; border-bottom: 1px solid var(--soft); }
+  .shead b { font-size: 17px; font-weight: 800; display: block; } .shead span { font-size: 12.5px; color: var(--text2); }
+  .sbody { flex: 1; padding: 6px 16px; overflow: hidden; }
+  .sfoot { border-top: 1px solid var(--soft); padding: 10px 16px 16px; }
+  .crow { display: flex; gap: 10px; padding: 9px 0; }
+  .crow .cb { flex: 1; font-size: 14px; line-height: 1.45; }
+  .crow .cb b { font-weight: 800; }
+  .cmeta { display: flex; gap: 14px; font-size: 12px; color: var(--text2); margin-top: 3px; font-weight: 600; }
+  .heart { width: 16px; height: 16px; stroke: var(--muted); fill: none; stroke-width: 2; margin-top: 4px; }
+  .reply { margin-left: 46px; }
+  .art { background: #F2FDFE; border: 1px solid #BDEFF3; border-radius: 12px; padding: 8px 10px; margin-left: -4px; }
+  .achip { display: inline-flex; align-items: center; gap: 3px; background: #E6FAFB; color: var(--primary-dark); font-size: 10.5px; font-weight: 900; padding: 1px 7px; border-radius: 999px; vertical-align: 1px; }
+  .mention { color: var(--primary-dark); font-weight: 700; }
+  .inrow { display: flex; align-items: center; gap: 8px; }
+  .inbox { flex: 1; border: 1px solid var(--border); border-radius: 999px; padding: 10px 14px; font-size: 14px; color: var(--muted); }
+  .send { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; }
+  .send .ico { stroke: #fff; width: 16px; height: 16px; }
+  .area { border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; font-size: 14.5px; line-height: 1.5; min-height: 120px; }
+  .hint { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+  .songrow { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 12px; padding: 8px; margin-top: 10px; }
+  .songrow img { width: 42px; height: 42px; border-radius: 8px; object-fit: cover; }
+  .songrow b { font-size: 13.5px; display: block; } .songrow span { font-size: 12px; color: var(--text2); }
+  .btn { display: flex; align-items: center; justify-content: center; height: 46px; border-radius: 14px; font-weight: 800; font-size: 15px; width: 100%; }
+  .btn-primary { background: var(--primary); color: #fff; } .btn-danger { background: var(--red); color: #fff; } .btn-ghost { color: var(--text2); height: 40px; font-weight: 600; }
+  .opt { display: flex; align-items: center; gap: 14px; padding: 14px 4px; border-bottom: 1px solid var(--soft); font-size: 15px; font-weight: 600; }
+  .opt:last-child { border-bottom: none; }
+  .dialog { background: #fff; width: 100%; border-radius: 20px; padding: 22px; }
+  .dialog h4 { margin: 0 0 6px; font-size: 18px; }
+  .nrow { display: flex; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #F3F4F6; align-items: flex-start; }
+  .nrow.unread { background: #ECFEFF; }
+  .nrow p { margin: 0; font-size: 14px; line-height: 1.4; } .nrow .tm { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .nic { width: 36px; height: 36px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .nic .ico { stroke: #fff; width: 18px; height: 18px; }
+  .udot { width: 9px; height: 9px; border-radius: 50%; background: #EF4444; margin-top: 6px; flex-shrink: 0; }
+  .toggle { width: 42px; height: 24px; border-radius: 12px; background: var(--primary); position: relative; flex-shrink: 0; }
+  .toggle::after { content: ""; position: absolute; left: 21px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+  .box { border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+  .label { font-size: 12.5px; font-weight: 700; color: var(--text2); margin: 12px 0 6px; }
+  .input { border: 1px solid var(--border); border-radius: 12px; padding: 11px 13px; font-size: 14px; }
+
+  .confirm-list { background: #fff; border-radius: 16px; padding: 8px 24px; margin-top: 16px; }
+  .confirm-list li { margin: 12px 0; line-height: 1.55; }
+  table.api { width: 100%; border-collapse: collapse; background: #fff; border-radius: 16px; overflow: hidden; margin-top: 16px; font-size: 14px; }
+  table.api th, table.api td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.5; }
+  table.api th { background: #1F3A68; color: #fff; }
+  code { background: #EEF2F7; border-radius: 6px; padding: 1px 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="i-feed" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/></symbol>
+  <symbol id="i-lib" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+  <h1>Giai đoạn 3 – Bảng tin (dùng lại giao diện Feed hiện có)</h1>
+  <p class="lead"><span class="tag">BẢN XEM TRƯỚC</span><span class="tag v2">BẢN 2</span>Mockup để duyệt trước khi code. Ảnh, màu, cỡ chữ, thẻ bài đăng, sheet bình luận, nút ♡ 💬 ⋯ lấy theo đúng Feed đang chạy. Chỗ có nhãn <span class="tag" style="font-size:10px;border:1px dashed var(--primary)">MỚI</span> là phần được thêm.</p>
+
+  <ul class="changes">
+    <li><b>Thay đổi so với bản 1</b> (theo góp ý "tận dụng Feed hiện có"):</li>
+    <li>Nghệ sĩ <b>đăng bài ngay trên màn Feed</b> (thanh "What's new…" ở đầu Feed), không cần màn soạn bài riêng trong Studio.</li>
+    <li>"Bài đăng của tôi" chính là <b>màn Feed lọc theo nghệ sĩ</b>, dùng lại thẻ bài đăng có sẵn; sửa / xoá qua nút <b>⋯</b> đang có ở mỗi bài.</li>
+    <li>Viết bài dùng <b>sheet trượt lên</b> giống sheet bình luận hiện tại; trả lời bình luận dùng đúng sheet bình luận, chỉ thêm nhãn Artist.</li>
+    <li>Thông báo dùng đúng màn Notifications hiện có, thêm 2 loại dòng.</li>
+  </ul>
+
+  <h2>0. Feed hiện tại (để so sánh)</h2>
+  <div class="ref">
+    <img src="img/hien_tai_feed.png" alt="Feed hiện tại">
+    <div class="note">Đây là ảnh chụp <b>màn Feed đang chạy</b>. Giai đoạn 3 giữ nguyên các phần sau:
+      <ul style="margin:6px 0;padding-left:18px">
+        <li>tiêu đề "Feed" và nút làm mới;</li>
+        <li>dòng tác giả (ảnh, tên, tick xanh, "Posted a track · thời gian");</li>
+        <li>thẻ bài hát (ảnh lớn, dải tối ghi tên bài / ca sĩ / lượt nghe / thời lượng);</li>
+        <li>hàng nút ♡ 💬 chia sẻ ⋯, mini player, thanh tab.</li>
+      </ul>
+      Chỉ thêm:
+      <ol style="margin:6px 0;padding-left:20px">
+        <li>tab For you / Following;</li>
+        <li>dòng chữ của bài đăng (nằm trên thẻ bài hát);</li>
+        <li>bài chỉ có chữ (không có thẻ bài hát);</li>
+        <li>thanh đăng bài cho nghệ sĩ;</li>
+        <li>mục Edit / Delete trong menu ⋯ với bài của chính mình.</li>
+      </ol></div>
+  </div>
+
+  <h2>1. Quy tắc</h2>
+  <ul class="rules">
+    <li>Chỉ <b>nghệ sĩ</b> thấy thanh "What's new…" và đăng được bài. Người nghe vẫn thích, bình luận, chia sẻ như hiện tại.</li>
+    <li>Bài đăng có chữ (1–1000 ký tự) và/hoặc <b>1 bài hát đã đăng</b> của chính nghệ sĩ; không được trống cả hai. Tối đa <b>10 bài / ngày</b>.</li>
+    <li>Người theo dõi nhận thông báo khi nghệ sĩ <b>đăng bài</b> hoặc <b>đăng bài hát mới</b> (mỗi bài hát chỉ báo 1 lần).</li>
+    <li>Sửa bài thì bài ghi "· edited". Xoá bài thì xoá cả bình luận, có hỏi xác nhận. Bài hát gắn kèm bị ẩn thì thẻ bài hát hiện "Song unavailable".</li>
+    <li>Bình luận của nghệ sĩ dưới bài của chính họ có nhãn <b>✓ Artist</b> và nền xanh nhạt.</li>
+  </ul>
+
+  <h2>2. Màn hình</h2>
+  <div class="grid">
+
+    <!-- F1 artist feed with composer -->
+    <div class="card">
+      <div class="phone" id="F1">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="fhead"><b>Feed</b><svg class="ico dark"><use href="#i-refresh"/></svg></div>
+        <div class="ftabs" style="position:relative"><div class="on">For you</div><div>Following</div><span class="newbadge" style="right:16px;top:8px">MỚI</span></div>
+        <div class="scroll">
+          <div class="composer"><div class="ini s30">AS</div><span>What's new, Ashley?</span><div class="pbtn">Post</div><span class="newbadge" style="right:-4px;top:-10px">MỚI</span></div>
+          <div class="post">
+            <div class="phd"><div class="av-l"><img class="av" src="img/av1.png"></div><div><div class="pn">Soundwave <span class="vf"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></div><div class="pt">Posted a track &nbsp;•&nbsp; 3d</div></div></div>
+            <div class="media"><img src="img/track1.png"><div class="bn"><div><b>Reflection</b><span>Christina Aguilera</span></div><span>▶ 1.2M • 03:36</span></div></div>
+            <div class="acts"><span class="r"><svg class="ico"><use href="#i-heart"/></svg>20</span><span class="r"><svg class="ico"><use href="#i-chat"/></svg>2</span><span class="r"><svg class="ico"><use href="#i-share"/></svg>5</span><span class="more">···</span></div>
+          </div>
+        </div>
+        <div class="mini"><img src="img/track2.png"><div style="flex:1"><b>FLOWER</b><span>Jessica Gonzalez</span></div></div>
+        <div class="tabbar"><div><svg class="ico"><use href="#i-home"/></svg>Home</div><div><svg class="ico"><use href="#i-search"/></svg>Search</div><div class="on"><svg class="ico"><use href="#i-feed"/></svg>Feed</div><div><svg class="ico"><use href="#i-lib"/></svg>Library</div></div>
+      </div>
+      <div class="caption"><h3>F1 · Feed khi đăng nhập bằng nghệ sĩ</h3>Giữ nguyên Feed hiện tại. <span class="new">MỚI</span> 2 tab <b>For you / Following</b> ngay dưới tiêu đề. <span class="new">MỚI</span> Thanh <b>"What's new, Ashley?"</b> ở đầu danh sách, <b>chỉ tài khoản nghệ sĩ</b> mới thấy; bấm vào mở sheet viết bài (F2).</div>
+    </div>
+
+    <!-- F2 composer sheet -->
+    <div class="card">
+      <div class="phone" id="F2">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="fhead"><b>Feed</b><svg class="ico dark"><use href="#i-refresh"/></svg></div>
+        <div class="overlay">
+          <div class="sheet tall">
+            <div class="shead"><div><b>New post</b><span>Ashley S. · to your 28 followers</span></div><svg class="ico dark"><use href="#i-x"/></svg></div>
+            <div class="sbody" style="padding-top:12px">
+              <div class="area">So excited to share "Mùa thu Hà Nội" with you all! Recorded it on a rainy night last October 🍂</div>
+              <div class="hint" style="text-align:right">98 / 1000</div>
+              <div class="songrow"><img src="img/track1.png"><div style="flex:1"><b>Mùa thu Hà Nội</b><span>Ashley S. · 03:20</span></div><svg class="ico sm"><use href="#i-x"/></svg></div>
+              <div class="songrow" style="border-style:dashed;justify-content:center;color:var(--primary-dark);font-weight:700;font-size:13.5px;gap:6px;opacity:.5"><svg class="ico sm" style="stroke:var(--primary-dark)"><use href="#i-music"/></svg>Attach one of your songs</div>
+              <div class="hint">One published song per post (optional).</div>
+            </div>
+            <div class="sfoot"><div class="btn btn-primary">Post</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>F2 · Viết bài (sheet trượt lên)</h3>Cùng kiểu với <b>sheet bình luận</b> đang có: góc bo, tiêu đề, nút ✕, khu nhập liệu ở dưới. Gồm ô chữ có đếm ký tự, <b>gắn 1 bài hát</b> (bấm "Attach…" để chọn trong các bài đã đăng; khi đã gắn thì nút này mờ đi), nút Post. Đăng xong bài hiện ngay đầu Feed.</div>
+    </div>
+
+    <!-- F3 following tab with new post types -->
+    <div class="card">
+      <div class="phone" id="F3">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="fhead"><b>Feed</b><svg class="ico dark"><use href="#i-refresh"/></svg></div>
+        <div class="ftabs"><div>For you</div><div class="on">Following</div></div>
+        <div class="scroll">
+          <div class="post">
+            <div class="phd"><div class="ini">AS</div><div><div class="pn">Ashley S. <span class="vf"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></div><div class="pt">Posted a track &nbsp;•&nbsp; 2h</div></div></div>
+            <p class="ptext" style="position:relative">So excited to share "Mùa thu Hà Nội" with you all! Recorded it on a rainy night 🍂<span class="newbadge" style="right:0;top:-14px">MỚI</span></p>
+            <div class="media" style="height:170px"><img src="img/track1.png"><div class="bn"><div><b>Mùa thu Hà Nội</b><span>Ashley S.</span></div><span>▶ 1.2K • 03:20</span></div></div>
+            <div class="acts"><span class="r"><svg class="ico"><use href="#i-heart"/></svg>124</span><span class="r"><svg class="ico"><use href="#i-chat"/></svg>38</span><span class="r"><svg class="ico"><use href="#i-share"/></svg>12</span><span class="more">···</span></div>
+          </div>
+          <div class="post" style="border-top:1px solid var(--soft)">
+            <div class="phd"><div class="ini">AS</div><div><div class="pn">Ashley S. <span class="vf"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></div><div class="pt">Shared an update &nbsp;•&nbsp; 3d <span class="edited">· edited</span></div></div></div>
+            <p class="ptext" style="position:relative">Thank you for 1,000 plays! Working on something new for December ✨<span class="newbadge" style="right:0;top:-14px">MỚI</span></p>
+            <div class="acts"><span class="r"><svg class="ico"><use href="#i-heart"/></svg>56</span><span class="r"><svg class="ico"><use href="#i-chat"/></svg>3</span><span class="r"><svg class="ico"><use href="#i-share"/></svg>1</span></div>
+          </div>
+        </div>
+        <div class="tabbar"><div><svg class="ico"><use href="#i-home"/></svg>Home</div><div><svg class="ico"><use href="#i-search"/></svg>Search</div><div class="on"><svg class="ico"><use href="#i-feed"/></svg>Feed</div><div><svg class="ico"><use href="#i-lib"/></svg>Library</div></div>
+      </div>
+      <div class="caption"><h3>F3 · Tab Following, bài có chữ và bài chỉ có chữ</h3>Thẻ bài vẫn như cũ. <span class="new">MỚI</span> <b>Chữ của bài</b> nằm giữa dòng tác giả và thẻ bài hát. <span class="new">MỚI</span> Bài <b>chỉ có chữ</b> ("Shared an update") dùng cùng dòng tác giả và hàng nút, chỉ không có thẻ bài hát. Bấm tên hoặc ảnh tác giả để mở trang nghệ sĩ.</div>
+    </div>
+
+    <!-- F4 own post menu -->
+    <div class="card">
+      <div class="phone" id="F4">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="fhead"><b>Feed</b><svg class="ico dark"><use href="#i-refresh"/></svg></div>
+        <div class="scroll">
+          <div class="post">
+            <div class="phd"><div class="ini">AS</div><div><div class="pn">Ashley S.</div><div class="pt">Posted a track • 2h</div></div></div>
+            <p class="ptext">So excited to share "Mùa thu Hà Nội"…</p>
+          </div>
+        </div>
+        <div class="overlay">
+          <div class="sheet" style="padding:8px 16px 18px">
+            <div style="width:40px;height:4px;border-radius:2px;background:var(--border);margin:6px auto 8px"></div>
+            <div class="opt" style="position:relative"><svg class="ico dark"><use href="#i-edit"/></svg>Edit post<span class="newbadge" style="right:0;top:16px">MỚI</span></div>
+            <div class="opt" style="color:var(--red);position:relative"><svg class="ico" style="stroke:var(--red)"><use href="#i-trash"/></svg>Delete post<span class="newbadge" style="right:0;top:16px">MỚI</span></div>
+            <div class="opt"><svg class="ico dark"><use href="#i-list"/></svg>Add song to playlist</div>
+            <div class="opt"><svg class="ico dark"><use href="#i-share"/></svg>Share song</div>
+            <div class="btn btn-ghost">Cancel</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>F4 · Nút ⋯ trên bài của chính mình</h3>Dùng lại menu <b>⋯</b> đang có ở mỗi bài (hiện mở các thao tác với bài hát). <span class="new">MỚI</span> Với bài của chính nghệ sĩ thì thêm 2 dòng đầu: <b>Edit post</b> (mở lại sheet F2 với dữ liệu cũ) và <b>Delete post</b> (hỏi xác nhận, xem F5). Với bài của người khác, menu giữ như cũ.</div>
+    </div>
+
+    <!-- F5 delete confirm -->
+    <div class="card">
+      <div class="phone" id="F5">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="fhead"><b>Feed</b><svg class="ico dark"><use href="#i-refresh"/></svg></div>
+        <div class="scroll"><div class="post"><div class="phd"><div class="ini">AS</div><div><div class="pn">Ashley S.</div><div class="pt">Posted a track • 2h</div></div></div></div></div>
+        <div class="overlay center">
+          <div class="dialog">
+            <h4>Delete this post?</h4>
+            <div style="color:var(--text2);line-height:1.5;margin-bottom:16px;font-size:14px">The post and its 38 comments will be removed. Your song stays in My songs.</div>
+            <div class="btn btn-danger">Delete post</div>
+            <div class="btn btn-ghost">Cancel</div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>F5 · Xác nhận xoá bài</h3>Dùng cùng kiểu hộp xác nhận với "Delete playlist?" đang có. Ghi rõ số bình luận sẽ bị xoá theo, và nói rõ bài hát <b>không</b> bị xoá.</div>
+    </div>
+
+    <!-- F6 comments with artist badge -->
+    <div class="card">
+      <div class="phone" id="F6">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div class="fhead"><b>Feed</b><svg class="ico dark"><use href="#i-refresh"/></svg></div>
+        <div class="overlay">
+          <div class="sheet tall">
+            <div class="shead"><div><b>38 comments</b><span>Mùa thu Hà Nội • Ashley S.</span></div><svg class="ico dark"><use href="#i-x"/></svg></div>
+            <div class="sbody">
+              <div class="crow"><img class="av" src="img/jason.png"><div class="cb"><b>Jason Smith</b> The chorus gave me chills 😭 any acoustic version coming?<div class="cmeta"><span>1h</span><span>12 likes</span><span>Reply</span></div></div><svg class="heart"><use href="#i-heart"/></svg></div>
+              <div class="crow reply"><div class="ini s30">AS</div><div class="cb art"><b>Ashley S.</b> <span class="achip">✓ Artist</span> <span class="mention">@Jason Smith</span> Yes!! Recording it next week, stay tuned 🎸<div class="cmeta"><span>20m</span><span>30 likes</span><span>Reply</span></div></div><svg class="heart"><use href="#i-heart"/></svg></div>
+              <div class="crow"><img class="av" src="img/sally.png"><div class="cb"><b>Sally Lee</b> Nghe đi nghe lại cả ngày không chán ❤️<div class="cmeta"><span>3h</span><span>8 likes</span><span>Reply</span></div></div><svg class="heart"><use href="#i-heart"/></svg></div>
+              <div class="crow"><img class="av" src="img/mike.png"><div class="cb"><b>Michael</b> Đây là bài hay nhất năm nay 🔥<div class="cmeta"><span>5h</span><span>3 likes</span><span>Reply</span></div></div><svg class="heart"><use href="#i-heart"/></svg></div>
+            </div>
+            <div class="sfoot"><div class="inrow"><div class="ini s30">AS</div><div class="inbox">Write a comment...</div><div class="send"><svg class="ico"><use href="#i-send"/></svg></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>F6 · Sheet bình luận (có sẵn) + nhãn Artist</h3>Giữ nguyên sheet bình luận: tiêu đề "N comments", tên bài, dòng "Tên + nội dung", "thời gian · likes · Reply", trả lời có <b>@tên</b>, ô "Write a comment...". <span class="new">MỚI</span> Bình luận của chính nghệ sĩ có nhãn <b>✓ Artist</b> và nền xanh nhạt.</div>
+    </div>
+
+    <!-- F7 notifications -->
+    <div class="card">
+      <div class="phone" id="F7">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid #F3F4F6"><svg class="ico dark"><use href="#i-back"/></svg><b style="font-size:20px;flex:1">Notifications</b><span style="color:var(--primary);font-weight:700;font-size:13px">Mark all read</span></div>
+        <div class="nrow unread" style="position:relative"><div class="ini">AS</div><div style="flex:1"><p><b>Ashley S.</b> released a new song: <b>Sunday Morning</b> 🎵</p><div class="tm">5m</div></div><div class="udot"></div><span class="newbadge" style="right:28px;top:6px">MỚI</span></div>
+        <div class="nrow unread" style="position:relative"><div class="ini">AS</div><div style="flex:1"><p><b>Ashley S.</b> posted: "So excited to share "Mùa thu Hà Nội" with you all!…"</p><div class="tm">2h</div></div><div class="udot"></div><span class="newbadge" style="right:28px;top:6px">MỚI</span></div>
+        <div class="nrow"><div class="nic"><svg class="ico"><use href="#i-chat"/></svg></div><div style="flex:1"><p><b>Ashley S.</b> replied to your comment</p><p style="color:#4B5563;font-size:13px;margin-top:3px">"Yes!! Recording it next week, stay tuned 🎸"</p><div class="tm">20m</div></div></div>
+      </div>
+      <div class="caption"><h3>F7 · Màn Notifications (có sẵn) + 2 loại mới</h3>Dùng lại màn Notifications và kiểu dòng hiện tại (nền xanh khi chưa đọc, chấm đỏ). <span class="new">MỚI</span> "released a new song": bấm vào thì <b>phát bài</b>. <span class="new">MỚI</span> "posted": bấm vào thì mở Feed, cuộn tới bài và nháy sáng bài đó, giống thông báo bình luận đang làm.</div>
+    </div>
+
+    <!-- F8 upload share to feed -->
+    <div class="card">
+      <div class="phone" id="F8">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px"><svg class="ico dark"><use href="#i-x"/></svg><b style="font-size:17px">Upload a song</b><span style="width:22px"></span></div>
+        <div style="padding:0 16px;flex:1;display:flex;flex-direction:column">
+          <div class="songrow" style="margin-top:0"><div style="width:42px;height:42px;border-radius:12px;background:var(--primary);display:flex;align-items:center;justify-content:center"><svg class="ico sm" style="stroke:#fff"><use href="#i-music"/></svg></div><div style="flex:1"><b>sunday-morning.mp3</b><span>5.1 MB · duration is read automatically</span></div></div>
+          <div class="label">Title *</div><div class="input">Sunday Morning</div>
+          <div class="label">When ready</div>
+          <div class="box" style="border:2px solid var(--primary);background:#F2FDFE;padding:10px"><b style="font-size:13px">● Publish now</b><div style="color:var(--text2);font-size:11.5px">Everyone can listen</div></div>
+          <div class="box" style="margin-top:12px;background:#F0FDF4;border-color:#BBF7D0;display:flex;align-items:center;justify-content:space-between;position:relative">
+            <div><b style="font-size:13.5px">Share to feed</b><div style="color:var(--text2);font-size:12px">Post "New song out now!" with this song</div></div><div class="toggle"></div>
+            <span class="newbadge" style="right:8px;top:-9px">MỚI</span>
+          </div>
+          <div class="hint" style="margin-top:8px">Your 28 followers will be notified when the song is published.</div>
+          <div style="margin-top:auto;padding:12px 0 14px"><div class="btn btn-primary">Upload</div></div>
+        </div>
+      </div>
+      <div class="caption"><h3>F8 · Tải bài hát (màn giai đoạn 2) + "Share to feed"</h3>Giữ nguyên màn tải bài. <span class="new">MỚI</span> Công tắc <b>"Share to feed"</b> (mặc định bật, chỉ hiện khi chọn Publish now): tải xong tự đăng một bài kèm bài hát lên Feed. Người theo dõi luôn nhận thông báo "bài hát mới".</div>
+    </div>
+
+    <!-- F9 my posts = filtered feed -->
+    <div class="card">
+      <div class="phone" id="F9">
+        <div class="statusbar">9:41<span>●●● 100%</span></div>
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 16px 6px"><svg class="ico dark"><use href="#i-back"/></svg><b style="font-size:22px;font-weight:900;flex:1">My posts</b><svg class="ico dark"><use href="#i-refresh"/></svg></div>
+        <div class="scroll">
+          <div class="composer" style="margin-top:4px"><div class="ini s30">AS</div><span>What's new, Ashley?</span><div class="pbtn">Post</div></div>
+          <div class="post">
+            <div class="phd"><div class="ini">AS</div><div><div class="pn">Ashley S. <span class="vf"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></span></div><div class="pt">Posted a track • 2h <span class="edited">· edited</span></div></div></div>
+            <p class="ptext">So excited to share "Mùa thu Hà Nội" with you all!</p>
+            <div class="media" style="height:150px"><img src="img/track1.png"><div class="bn"><div><b>Mùa thu Hà Nội</b><span>Ashley S.</span></div><span>▶ 1.2K • 03:20</span></div></div>
+            <div class="acts"><span class="r"><svg class="ico"><use href="#i-heart"/></svg>124</span><span class="r"><svg class="ico"><use href="#i-chat"/></svg>38</span><span class="r"><svg class="ico"><use href="#i-share"/></svg>12</span><span class="more">···</span></div>
+          </div>
+          <div class="post" style="border-top:1px solid var(--soft)">
+            <div class="phd"><div class="ini">AS</div><div><div class="pn">Ashley S.</div><div class="pt">Posted a track • 1w</div></div></div>
+            <p class="ptext">Old song is back soon…</p>
+            <div class="media" style="height:70px"><div class="gone"><svg class="ico sm"><use href="#i-music"/></svg>Song unavailable</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption"><h3>F9 · "My posts" = Feed lọc theo nghệ sĩ</h3>Không làm màn mới: mục <b>Posts</b> trong Artist Studio (và "See all posts" trên trang nghệ sĩ) mở <b>chính màn Feed</b>, chỉ lọc bài của nghệ sĩ đó, tiêu đề đổi thành "My posts" hoặc tên nghệ sĩ. Bài có bài hát đã bị ẩn thì thẻ bài hát hiện "Song unavailable".</div>
+    </div>
+  </div>
+
+  <h2>3. Phần sẽ làm khi hiện thực</h2>
+  <table class="api">
+    <tr><th style="width:24%">Hạng mục</th><th>Chi tiết</th></tr>
+    <tr><td>Server</td><td>
+      <ul style="margin:0;padding-left:18px">
+        <li><code>POST / PUT / DELETE /api/feed/posts</code> (chỉ nghệ sĩ, chỉ bài của mình; giới hạn 10 bài / ngày; xoá thì xoá cả bình luận);</li>
+        <li><code>GET /api/feed/posts?scope=following | artistId=</code>;</li>
+        <li>bình luận trả cờ <code>isArtist</code>;</li>
+        <li>thông báo <code>artist_new_post</code> và <code>artist_new_song</code> gửi cho người theo dõi (mỗi bài hát chỉ báo 1 lần);</li>
+        <li>tải bài nhận thêm <code>shareToFeed</code>.</li>
+      </ul></td></tr>
+    <tr><td>App (sửa màn có sẵn, không thêm màn mới)</td><td>
+      <ul style="margin:0;padding-left:18px">
+        <li><b>FeedScreen:</b> thêm tab, thanh đăng bài, chữ của bài, bài chỉ có chữ, chế độ lọc theo nghệ sĩ.</li>
+        <li><b>Mới (component):</b> <code>ComposePostSheet</code> (F2), dùng chung kiểu sheet với bình luận.</li>
+        <li><b>Menu ⋯:</b> thêm Edit / Delete cho bài của mình.</li>
+        <li><b>FeedComments:</b> nhãn Artist.</li>
+        <li><b>Notifications:</b> 2 loại mới.</li>
+        <li><b>UploadSong:</b> công tắc Share to feed.</li>
+        <li><b>ArtistStudio và ArtistProfile:</b> lối vào "My posts" / "See all posts".</li>
+      </ul></td></tr>
+    <tr><td>Kiểm thử</td><td>
+      <ul style="margin:0;padding-left:18px">
+        <li><b>Unit:</b> kiểm tra bài đăng.</li>
+        <li><b>Integration:</b>
+          <ul style="padding-left:18px">
+            <li>quyền đăng / sửa / xoá; giới hạn 10 bài;</li>
+            <li>gắn bài hát của người khác hoặc bài nháp → chặn;</li>
+            <li>thông báo chỉ tới người theo dõi; bài hát mới chỉ báo 1 lần;</li>
+            <li>tab Following đúng.</li>
+          </ul></li>
+        <li><b>E2E:</b> nghệ sĩ đăng bài trên Feed → người nghe nhận thông báo, mở bài, bình luận → nghệ sĩ trả lời có nhãn Artist.</li>
+      </ul></td></tr>
+  </table>
+
+  <h2>4. Cần bạn xác nhận</h2>
+  <ol class="confirm-list">
+    <li>Nghệ sĩ <b>đăng bài ngay trên Feed</b> (thanh "What's new…"), và "My posts" là Feed lọc theo nghệ sĩ. Bạn đồng ý không?</li>
+    <li>Có làm 2 tab <b>For you / Following</b> không?</li>
+    <li>Chưa làm <b>đính kèm ảnh</b> vào bài đăng (chỉ chữ + bài hát). Được không?</li>
+    <li>Giới hạn <b>10 bài / ngày</b>, luôn báo khi có bài hát mới, và "Share to feed" mặc định bật. Bạn đồng ý không?</li>
+  </ol>
+</div>
+</body>
+</html>

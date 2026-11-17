@@ -8,7 +8,8 @@ import {
   User,
   USER_PLAYLISTS,
 } from '../data/musicData';
-import { api, isApiError, setAuthToken } from '../services/api';
+import { api, isApiError, setAuthToken, lockedNotice } from '../services/api';
+import { isPlanActive, nextExpiryDate } from '../utils/plan';
 
 // Quy tắc kiểm tra dữ liệu nhập nằm ở utils/validation.ts; export lại để các màn hình cũ vẫn dùng được
 export { MIN_PASSWORD_LENGTH, EMAIL_PATTERN } from '../utils/validation';
@@ -23,15 +24,22 @@ interface ProfileUpdates {
 interface AuthContextType {
   currentUser: User | null;
   activePlan: SubscriptionPlan | null;
-  // Đang dùng gói VIP (không tính gói Free)
+  // Đang dùng gói VIP còn hạn (không tính gói Free)
   isVip: boolean;
+  // Ngày hết hạn gói VIP (ISO) hoặc null
+  planExpiresAt: string | null;
+  // Tài khoản nghệ sĩ (role = 'artist') / quản trị viên (role = 'admin')
+  isArtist: boolean;
+  isAdmin: boolean;
   userPlaylists: Playlist[];
   likedAlbumIds: string[];
   downloadedSongIds: string[];
-  login: (email: string, password: string) => Promise<boolean>;
+  // true = thành công; false = sai email / mật khẩu; chuỗi = lý do cần hiện (VD tài khoản bị khoá)
+  login: (email: string, password: string) => Promise<boolean | string>;
   signUp: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  subscribe: (plan: SubscriptionPlan) => void;
+  // Mua / đổi gói: trừ số dư ví (VNĐ). ok = false kèm lý do (VD INSUFFICIENT_BALANCE – ví không đủ tiền)
+  subscribe: (plan: SubscriptionPlan) => Promise<{ ok: boolean; message?: string; code?: string }>;
   updateProfile: (updates: ProfileUpdates) => Promise<boolean>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   forgotPassword: (email: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
@@ -42,6 +50,8 @@ interface AuthContextType {
   addSongToPlaylist: (playlistId: string, songId: string) => boolean;
   removeSongFromPlaylist: (playlistId: string, songId: string) => void;
   deletePlaylist: (playlistId: string) => void;
+  // Trả về null nếu đổi tên được, ngược lại là thông báo lỗi để hiển thị
+  renamePlaylist: (playlistId: string, title: string) => Promise<string | null>;
   toggleLikeAlbum: (albumId: string) => void;
   isAlbumLiked: (albumId: string) => boolean;
   downloadSong: (songId: string) => void;
@@ -69,6 +79,10 @@ const mapDbUser = (dbUser: any): User => ({
   phone: dbUser.phone || '',
   password: '***',
   planId: dbUser.planId || null,
+  planExpiresAt: dbUser.planExpiresAt || null,
+  role: dbUser.role || 'listener',
+  artistId: dbUser.artistId || null,
+  balance: dbUser.balance || 0,
   likedSongIds: dbUser.likedSongIds || [],
   followedArtistIds: dbUser.followedArtistIds || [],
   likedAlbumIds: dbUser.likedAlbumIds || [],
@@ -85,6 +99,7 @@ const mapDbPlaylist = (p: any): Playlist => ({
 });
 
 const DUPLICATE_PLAYLIST_MESSAGE = 'You already have a playlist with this name.';
+export const MAX_PLAYLIST_TITLE_LENGTH = 100;
 
 // Gọi API ngay sau khi đã cập nhật giao diện. Nếu máy chủ từ chối thì hoàn tác;
 // nếu chỉ mất kết nối thì giữ thay đổi trên máy (chế độ dự phòng).
@@ -111,8 +126,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const currentUser = users.find((user) => user.id === currentUserId) ?? null;
   const activePlan = SUBSCRIPTION_PLANS.find((plan) => plan.id === currentUser?.planId) ?? null;
-  // Gói "free" vẫn là thành viên thường; các gói còn lại (hiện là "premium") là VIP
-  const isVip = activePlan !== null && activePlan.id !== FREE_PLAN_ID;
+  // Gói "free" vẫn là thành viên thường; gói VIP (hiện là "premium") chỉ có hiệu lực khi còn hạn
+  const planExpiresAt = currentUser?.planExpiresAt ?? null;
+  const isVip = activePlan !== null && activePlan.id !== FREE_PLAN_ID && isPlanActive(activePlan.id, planExpiresAt);
+  const isArtist = currentUser?.role === 'artist';
+  const isAdmin = currentUser?.role === 'admin';
   const userPlaylists = playlists.filter((playlist) => playlist.ownerId === currentUserId);
   const likedAlbumIds = currentUser?.likedAlbumIds ?? [];
   const downloadedSongIds = currentUser?.downloadedSongIds ?? [];
@@ -147,7 +165,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPlaylists((prev) => prev.map((pl) => (pl.id === playlistId ? change(pl) : pl)));
 
   // Đăng nhập qua Backend API (mật khẩu được xác thực bằng bcrypt trên server)
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<boolean | string> => {
     try {
       const response: any = await api.auth.login({ email, password });
       if (response?.success && response?.data) {
@@ -158,6 +176,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return false;
     } catch (err) {
+      // Tài khoản bị khoá (giai đoạn 5): hiện lý do thay vì "sai mật khẩu"
+      if (isApiError(err) && err.code === 'ACCOUNT_LOCKED') return lockedNotice(err.message);
       // Máy chủ đã trả lời là sai thông tin: không được đăng nhập bằng dữ liệu trên máy
       if (isApiError(err)) return false;
       console.log('Login offline:', err);
@@ -214,13 +234,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUserId(null);
   };
 
-  const subscribe = (plan: SubscriptionPlan) => {
-    if (!currentUserId) return;
-    const previousPlanId = currentUser?.planId ?? null;
-    updateCurrentUser(() => ({ planId: plan.id }));
-    syncOrRevert(api.auth.subscribe(currentUserId, plan.id), () =>
-      updateCurrentUser(() => ({ planId: previousPlanId }))
-    );
+  // Gói VIP có hạn 1 tháng kể từ khi thanh toán (còn hạn thì cộng dồn) và trừ số dư ví (VNĐ).
+  // Cập nhật giao diện ngay, sau đó lấy ngày hết hạn + số dư chính xác do máy chủ tính; máy chủ từ chối
+  // (VD ví không đủ tiền) thì hoàn tác và trả lý do để màn mua gói hiện.
+  const subscribe = async (plan: SubscriptionPlan): Promise<{ ok: boolean; message?: string; code?: string }> => {
+    if (!currentUserId) return { ok: false, message: 'Please log in first.' };
+    const userId = currentUserId;
+    const previous = { planId: currentUser?.planId ?? null, planExpiresAt: currentUser?.planExpiresAt ?? null };
+    const isFree = plan.id === FREE_PLAN_ID;
+    updateCurrentUser(() => ({
+      planId: plan.id,
+      planExpiresAt: isFree
+        ? null
+        : nextExpiryDate(previous.planId === plan.id ? previous.planExpiresAt : null).toISOString(),
+    }));
+    try {
+      const res: any = await api.auth.subscribe(userId, plan.id);
+      if (res?.data && userId === currentUserIdRef.current) {
+        updateCurrentUser(() => ({
+          planId: res.data.planId ?? null,
+          planExpiresAt: res.data.planExpiresAt ?? null,
+          balance: res.data.balance ?? 0,
+        }));
+      }
+      return { ok: true };
+    } catch (err) {
+      if (isApiError(err)) {
+        console.log('Máy chủ từ chối, hoàn tác:', err.message);
+        updateCurrentUser(() => previous);
+        return { ok: false, message: err.message, code: err.code };
+      }
+      // Không kết nối được máy chủ: giữ thay đổi trên máy như chế độ offline
+      return { ok: true };
+    }
   };
 
   // Cập nhật thông tin cá nhân qua Backend API
@@ -385,6 +431,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const renamePlaylist = async (playlistId: string, title: string): Promise<string | null> => {
+    const playlist = playlists.find((pl) => pl.id === playlistId && pl.ownerId === currentUserId);
+    if (!playlist) return 'Playlist not found.';
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) return 'Please enter a playlist name.';
+    if (trimmedTitle.length > MAX_PLAYLIST_TITLE_LENGTH) {
+      return `Playlist name must be at most ${MAX_PLAYLIST_TITLE_LENGTH} characters.`;
+    }
+    const isDuplicate = userPlaylists.some(
+      (pl) => pl.id !== playlistId && pl.title.toLowerCase() === trimmedTitle.toLowerCase()
+    );
+    if (isDuplicate) return DUPLICATE_PLAYLIST_MESSAGE;
+    if (trimmedTitle === playlist.title) return null;
+
+    const previousTitle = playlist.title;
+    updatePlaylist(playlistId, (pl) => ({ ...pl, title: trimmedTitle }));
+    if (!onlineSession.current) return null;
+    try {
+      await api.playlists.rename(playlistId, trimmedTitle);
+      return null;
+    } catch (err) {
+      // Máy chủ từ chối: hoàn tác và hiện đúng thông báo; mất kết nối thì giữ tên mới trên máy
+      if (isApiError(err)) {
+        updatePlaylist(playlistId, (pl) => ({ ...pl, title: previousTitle }));
+        return err.message;
+      }
+      return null;
+    }
+  };
+
   const toggleLikeAlbum = (albumId: string) => {
     if (!currentUserId) return;
     const flip = () =>
@@ -437,6 +513,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentUser,
         activePlan,
         isVip,
+        planExpiresAt,
+        isArtist,
+        isAdmin,
         userPlaylists,
         likedAlbumIds,
         downloadedSongIds,
@@ -444,6 +523,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addSongToPlaylist,
         removeSongFromPlaylist,
         deletePlaylist,
+        renamePlaylist,
         toggleLikeAlbum,
         isAlbumLiked,
         downloadSong,

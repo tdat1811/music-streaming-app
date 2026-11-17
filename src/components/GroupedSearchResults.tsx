@@ -5,7 +5,8 @@ import { COLORS } from '../constants/theme';
 import { Album, Artist, Song } from '../data/musicData';
 import { useAuth } from '../context/AuthContext';
 import { useAccess } from '../context/AccessContext';
-import { toImageSource } from '../utils/imageSource';
+import { artistImageSource, toImageSource } from '../utils/imageSource';
+import { formatFollowers } from '../utils/plays';
 import { SongItem } from './SongItem';
 import { SongActionModal } from './SongActionModal';
 
@@ -98,13 +99,13 @@ export const GroupedSearchResults: React.FC<GroupedSearchResultsProps> = ({
                 onPress={() => onSelectArtist?.(artist)}
                 activeOpacity={0.7}
               >
-                <Image source={toImageSource(artist.avatarImage)} style={styles.artistAvatar} />
+                <Image source={artistImageSource(artist.avatarImage)} style={styles.artistAvatar} />
                 <View style={styles.artistInfo}>
                   <Text style={styles.artistName} numberOfLines={1}>{artist.name}</Text>
-                  {!!artist.followers && (
+                  {!!formatFollowers(artist) && (
                     <View style={styles.followersRow}>
                       <Ionicons name="person-outline" size={13} color={COLORS.textSecondary} style={{ marginRight: 4 }} />
-                      <Text style={styles.followersText}>{artist.followers}</Text>
+                      <Text style={styles.followersText}>{formatFollowers(artist)}</Text>
                     </View>
                   )}
                 </View>

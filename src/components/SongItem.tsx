@@ -2,6 +2,8 @@ import React, { memo } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants/theme';
+import { formatCount } from '../utils/plays';
+import { toImageSource } from '../utils/imageSource';
 import { Song } from '../data/musicData';
 
 interface SongItemProps {
@@ -20,7 +22,10 @@ export const SongItem: React.FC<SongItemProps> = memo(({
   onPress,
   onRightActionPress,
 }) => {
-  const imageSource = typeof song.coverImage === 'string' ? { uri: song.coverImage } : song.coverImage;
+  // Ảnh từ máy chủ có thể là đường dẫn tương đối (/covers/...): toImageSource ghép địa chỉ máy chủ
+  const imageSource = toImageSource(song.coverImage);
+  // plays có thể là 0 (bài mới tải lên): vẫn hiển thị, nhưng không render số 0 trần ngoài <Text>
+  const hasPlays = song.plays !== undefined && song.plays !== null && song.plays !== '';
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
       {rank !== undefined && (
@@ -42,12 +47,12 @@ export const SongItem: React.FC<SongItemProps> = memo(({
             ? `${song.artist}  •  ${song.songCount} songs`
             : song.artist}
         </Text>
-        {!song.isPlaylist && (song.plays || song.duration) && (
+        {!song.isPlaylist && (hasPlays || !!song.duration) && (
           <View style={styles.metaRow}>
             <Ionicons name="play" size={10} color={COLORS.textMuted} style={styles.playIcon} />
-            {song.plays && <Text style={styles.metaText}>{song.plays}</Text>}
-            {song.plays && song.duration && <Text style={styles.dot}>•</Text>}
-            {song.duration && <Text style={styles.metaText}>{song.duration}</Text>}
+            {hasPlays && <Text style={styles.metaText}>{formatCount(song.plays)}</Text>}
+            {hasPlays && !!song.duration && <Text style={styles.dot}>•</Text>}
+            {!!song.duration && <Text style={styles.metaText}>{song.duration}</Text>}
           </View>
         )}
       </View>

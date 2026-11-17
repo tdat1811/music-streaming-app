@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from "expo-audio";
 import { PLAYLIST_DETAILS_TRACKS, Song } from "../data/musicData";
-import { resolveServerUrl, SERVER_ORIGIN } from "../services/api";
+import { getPlaySource } from '../utils/playSource';
+import { api, isServerRelativeUrl, resolveServerUrl, SERVER_ORIGIN } from "../services/api";
 
-import { parseDuration, shuffleTracks } from "../utils/player";
+import { parseDuration, shouldCountPlay, shuffleTracks } from "../utils/player";
 // Hàm xử lý thuần nằm ở utils/player.ts (để kiểm thử đơn vị); export lại cho các màn hình đang dùng
 export { parseDuration, shuffleTracks };
 
@@ -61,6 +62,18 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const awaitingPlaybackRef = useRef<boolean>(false);
   const hasFinishedRef = useRef<boolean>(false);
   const repeatCountRef = useRef<number>(0);
+  // Đã gửi lượt nghe cho lần phát hiện tại chưa (mỗi lần phát chỉ tính 1 lượt)
+  const playCountedRef = useRef<boolean>(false);
+  // Nguồn của lần bấm phát gần nhất (bài phát tiếp trong hàng đợi giữ nguồn này)
+  const playSourceRef = useRef<string>('other');
+
+  // Nghe đủ lâu (xem shouldCountPlay) thì báo máy chủ tăng lượt nghe; lỗi mạng thì bỏ qua
+  const countPlayIfNeeded = (currentSec: number, durationSec: number) => {
+    const song = currentTrackRef.current;
+    if (!song || playCountedRef.current || !shouldCountPlay(currentSec, durationSec)) return;
+    playCountedRef.current = true;
+    api.songs.recordPlay(song.id, playSourceRef.current).catch(() => {});
+  };
 
   const getQueue = () => (isShuffleRef.current ? shuffledQueueRef.current : playlistRef.current);
 
@@ -86,6 +99,7 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setPositionMillis(0);
     setDurationMillis(parseDuration(song.duration));
     repeatCountRef.current = 0;
+    playCountedRef.current = false;
 
     releasePlayer();
 
@@ -93,7 +107,11 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     let audioUri = `${SERVER_ORIGIN}/audio/${song.id}.m4a`;
 
     // Nếu song có audioUrl trực tiếp (không phải iTunes preview 30s) thì dùng
-    if (song.audioUrl && !song.audioUrl.includes('itunes.apple.com') && song.audioUrl.startsWith('http')) {
+    if (
+      song.audioUrl &&
+      !song.audioUrl.includes('itunes.apple.com') &&
+      (song.audioUrl.startsWith('http') || isServerRelativeUrl(song.audioUrl))
+    ) {
       audioUri = resolveServerUrl(song.audioUrl);
     }
 
@@ -107,6 +125,7 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
       subRef.current = player.addListener("playbackStatusUpdate", (status) => {
         setPositionMillis(Math.floor(status.currentTime * 1000));
+        if (status.playing) countPlayIfNeeded(status.currentTime, status.duration);
         if (status.duration > 0) {
           setDurationMillis(Math.floor(status.duration * 1000));
         }
@@ -141,6 +160,8 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     const player = playerRef.current;
     setPositionMillis(0);
     hasFinishedRef.current = false;
+    // Nghe lại từ đầu (lặp bài) được tính là lượt nghe mới
+    playCountedRef.current = false;
     awaitingPlaybackRef.current = shouldPlay;
     if (!player) {
       setIsPlaying(shouldPlay);
@@ -205,6 +226,8 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const playSong = async (song: Song, newPlaylist?: Song[]) => {
     if (newPlaylist && newPlaylist.length > 0) {
+      // Người dùng bấm phát từ một màn hình: ghi lại màn đó làm nguồn lượt nghe
+      playSourceRef.current = getPlaySource();
       playlistRef.current = newPlaylist;
       if (isShuffleRef.current) {
         shuffledQueueRef.current = buildShuffledQueue(song, newPlaylist);

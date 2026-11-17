@@ -1,5 +1,5 @@
-// Kiểm thử đơn vị: lượt nghe và xếp hạng bảng xếp hạng (sheet UT04, UT05)
-import { parsePlays, sortByPlays } from '../plays';
+// Kiểm thử đơn vị: lượt nghe và xếp hạng bảng xếp hạng (sheet UT04, UT05, UT18)
+import { formatCount, formatFollowers, parsePlays, sortByPlays } from '../plays';
 
 describe('UT04 – parsePlays(plays)', () => {
   it.each([
@@ -41,5 +41,34 @@ describe('UT05 – sortByPlays(songs)', () => {
     const ketQua = sortByPlays(input);
     expect(ids(ketQua)).toEqual(['q', 'p']);
     expect(ids(input)).toEqual(['p', 'q']);
+  });
+});
+
+describe('UT18 – formatCount(value) / formatFollowers(artist)', () => {
+  it.each([
+    ['UTCID01', 12_800_000, '12.8M'],
+    ['UTCID02', 950_000, '950K'],
+    ['UTCID03', 1_000_000, '1M'],          // tròn số: không có ".0"
+    ['UTCID04', 999_999, '999.9K'],        // cắt bớt, không làm tròn lên thành 1000K
+    ['UTCID05', 1_500, '1.5K'],
+    ['UTCID06', 999, '999'],
+    ['UTCID07', 0, '0'],                   // bài mới tải lên
+    ['UTCID08', 2_500_000_000, '2.5B'],
+    ['UTCID09', '12.8M', '12.8M'],         // dữ liệu cũ dạng chuỗi
+    ['UTCID10', -5, '0'],
+    ['UTCID11', undefined, '0'],
+  ])('%s: formatCount(%p) = %p', (_ma, vao, ra) => {
+    expect(formatCount(vao)).toBe(ra);
+  });
+
+  it.each([
+    ['UTCID12', { followersCount: 85_400_000 }, '85.4M Followers'],
+    ['UTCID13', { followersCount: 0 }, '0 Followers'],
+    ['UTCID14', { followers: '1.2M Followers' }, '1.2M Followers'],     // dữ liệu mẫu cũ
+    ['UTCID15', { followersCount: 10, followers: '1M Followers' }, '10 Followers'], // ưu tiên số
+    ['UTCID16', {}, ''],
+    ['UTCID17', null, ''],
+  ])('%s: formatFollowers(%j) = %p', (_ma, artist, ra) => {
+    expect(formatFollowers(artist)).toBe(ra);
   });
 });

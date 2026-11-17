@@ -4,7 +4,9 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
-import { Album, ALL_ALBUMS, ARTISTS } from '../../src/data/musicData';
+import { Album, ALL_ALBUMS } from '../../src/data/musicData';
+import { useArtists } from '../../src/hooks/useArtists';
+import { useAlbums } from '../../src/hooks/useAlbums';
 import { BottomTabBar, TabName } from '../../src/components/BottomTabBar';
 import { GroupedSearchResults } from '../../src/components/GroupedSearchResults';
 import { useAudioPlayer } from '../../src/context/AudioPlayerContext';
@@ -47,13 +49,17 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
 
   const isSearching = query.trim() !== '';
   const songs = useSongSearch(query);
+  // Gồm cả album trên máy chủ (VD album nghệ sĩ tạo); phải khai báo trước khi dùng
+  const allAlbums = useAlbums();
   const albums = useMemo(
-    () => (isSearching ? fuzzySearch(ALL_ALBUMS, query, (a) => [a.title, a.artist]) : []),
-    [query, isSearching]
+    () => (isSearching ? fuzzySearch(allAlbums, query, (a) => [a.title, a.artist]) : []),
+    [query, isSearching, allAlbums]
   );
+  // Gồm cả nghệ sĩ trên máy chủ (VD nghệ sĩ mới được Admin duyệt)
+  const allArtists = useArtists();
   const artists = useMemo(
-    () => (isSearching ? fuzzySearch(ARTISTS, query, (a) => [a.name]) : []),
-    [query, isSearching]
+    () => (isSearching ? fuzzySearch(allArtists, query, (a) => [a.name]) : []),
+    [query, isSearching, allArtists]
   );
 
   const show = (filter: SearchFilter) => activeFilter === 'All' || activeFilter === filter;

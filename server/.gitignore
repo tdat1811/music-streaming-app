@@ -12,3 +12,12 @@ coverage/
 
 # Kết quả thực tế do test tích hợp ghi ra
 tests/output/
+
+# File nghệ sĩ tải lên (tên theo id bài hát s_xxx), không đưa vào git
+public/audio/s_*
+public/covers/
+public/avatars/
+
+# Đồ thị kiến thức do /graphify tự sinh (dựng lại được)
+graphify-out/
+

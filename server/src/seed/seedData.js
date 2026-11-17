@@ -12,6 +12,19 @@ const Playlist = require('../models/Playlist');
 const Chart = require('../models/Chart');
 const FeedPost = require('../models/FeedPost');
 const Comment = require('../models/Comment');
+const { parseCount, buildArtistResolver } = require('../utils/legacyData');
+const { addMonths, PLAN_DURATION_MONTHS } = require('../config/plans');
+const PlayEvent = require('../models/PlayEvent');
+const ActivityEvent = require('../models/ActivityEvent');
+const { buildDemoStats, DEMO_DAYS } = require('./demoStats');
+const Report = require('../models/Report');
+const Violation = require('../models/Violation');
+const AdminAction = require('../models/AdminAction');
+const Notification = require('../models/Notification');
+const { buildDemoModeration } = require('./demoModeration');
+const { buildInsightComments } = require('./demoInsightComments');
+const Insight = require('../models/Insight');
+const Payment = require('../models/Payment');
 
 dotenv.config();
 
@@ -36,12 +49,58 @@ const users = [
     phone: '0900000002',
     password: '123456',
     planId: 'premium',
+    // Gói VIP còn hạn 1 tháng kể từ lúc nạp dữ liệu (tính trong seedDatabase)
+    planExpiresAt: null,
     likedSongIds: ['s5', 's8', 's12', 's30', 's35'],
     followedArtistIds: ['art2', 'art5', 'art8'],
     likedAlbumIds: ['alb3', 'alb4'],
     downloadedSongIds: ['s5', 's8'],
   },
+  {
+    // Tài khoản nghệ sĩ mẫu: sở hữu trang nghệ sĩ "Mer Watson" (art10), dùng thử Artist Studio
+    id: 'u3',
+    name: 'Mer Watson',
+    email: 'mer@example.com',
+    phone: '0900000003',
+    password: '123456',
+    planId: null,
+    role: 'artist',
+    artistId: 'art10',
+    likedSongIds: [],
+    followedArtistIds: [],
+    likedAlbumIds: [],
+    downloadedSongIds: [],
+  },
+  {
+    // Tài khoản quản trị mẫu: vào "Admin console" trong Profile để duyệt đăng ký nghệ sĩ
+    id: 'u4',
+    name: 'Admin Team',
+    email: 'admin@example.com',
+    phone: '0900000004',
+    password: '123456',
+    planId: null,
+    role: 'admin',
+    likedSongIds: [],
+    followedArtistIds: [],
+    likedAlbumIds: [],
+    downloadedSongIds: [],
+  },
 ];
+
+// Chủ sở hữu các trang nghệ sĩ (Artist.id -> User.id)
+const ARTIST_OWNERS = { art10: 'u3' };
+
+// Thống kê giả lập cho nghệ sĩ dùng thử (màn Stats trong Artist Studio có biểu đồ khi demo).
+// - legacyPlays: lượt nghe "cũ" của từng bài trước khi có thống kê theo ngày (cột "Before" ở All time)
+// - weight: độ phổ biến tương đối khi chia lượt nghe giả lập
+// - newSong: bài mới ra cách đây vài ngày → tạo cột nhảy vọt trên biểu đồ
+const DEMO_STATS = {
+  art10: {
+    songs: { s42: { legacyPlays: 4200, weight: 5 }, s43: { legacyPlays: 2600, weight: 3 } },
+    newSong: { id: 's44', daysAgo: 5 },
+    legacyFollowers: 180,
+  },
+};
 
 // 2. DANH SÁCH BÀI HÁT (52 BÀI HÁT ĐA DẠNG)
 const songs = [
@@ -1077,6 +1136,9 @@ const comments = [
   },
 ];
 
+// Tài khoản người nghe trong dữ liệu mẫu (không gồm nghệ sĩ / admin)
+const userDocsRaw = () => users.filter((u) => !u.role || u.role === 'listener');
+
 async function seedDatabase() {
   try {
     await connectDB();
@@ -1091,14 +1153,84 @@ async function seedDatabase() {
       Chart.deleteMany(),
       FeedPost.deleteMany(),
       Comment.deleteMany(),
+      PlayEvent.deleteMany(),
+      ActivityEvent.deleteMany(),
+      Report.deleteMany(),
+      Violation.deleteMany(),
+      AdminAction.deleteMany(),
+      Notification.deleteMany(),
+      Insight.deleteMany(),
+      Payment.deleteMany(),
     ]);
 
     console.log('🌱 Đang chèn 52 bài hát, 12 albums, 12 artists, 8 charts...');
 
+    // Chuyển dữ liệu mẫu sang kiểu mới: lượt nghe / người theo dõi dạng số,
+    // bài hát / album / bài đăng liên kết nghệ sĩ bằng artistId, gói VIP có ngày hết hạn
+    const resolveArtistId = buildArtistResolver(artists);
+    const artistDocs = artists.map(({ followers, ...a }) => ({
+      ...a,
+      followersCount: parseCount(followers),
+      ownerUserId: ARTIST_OWNERS[a.id] || null,
+    }));
+    const songDocs = songs.map((song) => ({
+      ...song,
+      plays: parseCount(song.plays),
+      artistId: resolveArtistId(song.artist),
+      status: 'published',
+    }));
+    // ---- Thống kê giả lập 90 ngày cho nghệ sĩ dùng thử ----
+    const now = new Date();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const demoPlayEvents = [];
+    const demoActivityEvents = [];
+    const listenerIds = userDocsRaw().map((u) => u.id);
+    Object.entries(DEMO_STATS).forEach(([artistId, cfg]) => {
+      const demo = buildDemoStats({
+        artistId,
+        songs: Object.entries(cfg.songs).map(([id, v]) => ({ id, weight: v.weight })),
+        newSong: cfg.newSong,
+        userIds: listenerIds,
+        now,
+      });
+      demoPlayEvents.push(...demo.playEvents);
+      demoActivityEvents.push(...demo.activityEvents);
+      songDocs.forEach((song) => {
+        if (song.artistId !== artistId) return;
+        const isNew = cfg.newSong && cfg.newSong.id === song.id;
+        const legacy = isNew ? 0 : cfg.songs[song.id]?.legacyPlays ?? 0;
+        song.plays = legacy + (demo.playsBySong[song.id] || 0);
+        // Bài cũ ra từ hơn 1 năm trước; bài mới ra đúng ngày có cột nhảy vọt
+        const released = new Date(now.getTime() - (isNew ? cfg.newSong.daysAgo : 400) * DAY_MS);
+        song.createdAt = released;
+        song.followersNotifiedAt = released;
+      });
+      const artistDoc = artistDocs.find((a) => a.id === artistId);
+      if (artistDoc) artistDoc.followersCount = cfg.legacyFollowers + demo.netFollowers;
+    });
+
+    // ---- Dữ liệu mẫu cho khu Admin (giai đoạn 5) ----
+    const moderation = buildDemoModeration({ now });
+    // ---- Bình luận mẫu cho AI Fan Insight (giai đoạn 6): ~80 bình luận dưới bài của Mer Watson ----
+    const merPost = feedPosts.find((p) => p.authorName === 'Mer Watson');
+    const insightComments = merPost ? buildInsightComments({ now, postId: merPost.id }) : [];
+    artistDocs.push(...moderation.artists);
+    songDocs.push(...moderation.songs);
+
+    const albumDocs = albums.map((album) => ({ ...album, artistId: resolveArtistId(album.artist) }));
+    const feedPostDocs = feedPosts.map((post) => ({ ...post, authorArtistId: resolveArtistId(post.authorName) }));
+    const planExpiresAt = addMonths(new Date(), PLAN_DURATION_MONTHS);
+    const userDocs = [...users, ...moderation.users].map((u) => ({
+      role: 'listener',
+      artistId: null,
+      ...u,
+      planExpiresAt: u.planId === 'premium' ? planExpiresAt : null,
+    }));
+
     // Hash mật khẩu của tất cả user mẫu bằng bcrypt trước khi lưu vào DB
     const SALT_ROUNDS = 10;
     const usersWithHashedPasswords = await Promise.all(
-      users.map(async (user) => ({
+      userDocs.map(async (user) => ({
         ...user,
         password: await bcrypt.hash(user.password, SALT_ROUNDS),
       }))
@@ -1107,13 +1239,19 @@ async function seedDatabase() {
 
     await Promise.all([
       User.insertMany(usersWithHashedPasswords),
-      Song.insertMany(songs),
-      Album.insertMany(albums),
-      Artist.insertMany(artists),
+      Song.insertMany(songDocs),
+      Album.insertMany(albumDocs),
+      Artist.insertMany(artistDocs),
       Playlist.insertMany(playlists),
       Chart.insertMany(charts),
-      FeedPost.insertMany(feedPosts),
-      Comment.insertMany(comments),
+      FeedPost.insertMany(feedPostDocs),
+      Comment.insertMany([...comments, ...moderation.comments, ...insightComments]),
+      Violation.insertMany(moderation.violations),
+      Report.insertMany(moderation.reports),
+      Notification.insertMany(moderation.notifications),
+      AdminAction.insertMany(moderation.adminActions),
+      PlayEvent.insertMany(demoPlayEvents),
+      ActivityEvent.insertMany(demoActivityEvents),
     ]);
 
     console.log('========================================================');
@@ -1124,6 +1262,9 @@ async function seedDatabase() {
     console.log(`✅ ${charts.length} Bảng xếp hạng (Charts Top 50 các nước)`);
     console.log(`✅ ${playlists.length} Playlists theo chủ đề (Chill, Gym, Study...)`);
     console.log(`✅ ${feedPosts.length} Bài viết Feed & Bình luận`);
+    console.log(`✅ AI Fan Insight: ${insightComments.length} bình luận mẫu dưới bài của Mer Watson`);
+    console.log(`✅ Khu Admin: ${moderation.users.length} tài khoản mẫu (3/3 vi phạm, khoá vĩnh viễn, khoá tay), ${moderation.reports.filter((r) => r.status === 'open').length} báo cáo đang chờ`);
+    console.log(`✅ ${demoPlayEvents.length} lượt nghe + ${demoActivityEvents.length} tương tác giả lập trong ${DEMO_DAYS} ngày (thống kê của Mer Watson)`);
     console.log('========================================================');
 
     process.exit(0);

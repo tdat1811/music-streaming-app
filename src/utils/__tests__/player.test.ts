@@ -1,5 +1,5 @@
-// Kiểm thử đơn vị: trình phát nhạc (sheet UT06, UT07)
-import { parseDuration, shuffleTracks } from '../player';
+// Kiểm thử đơn vị: trình phát nhạc (sheet UT06, UT07, UT20)
+import { parseDuration, shouldCountPlay, shuffleTracks } from '../player';
 
 describe('UT06 – parseDuration(d)', () => {
   it.each([
@@ -37,5 +37,20 @@ describe('UT07 – shuffleTracks(tracks)', () => {
 
   it('UTCID03: một bài thì giữ nguyên', () => {
     expect(shuffleTracks([track('s1')]).map((t) => t.id)).toEqual(['s1']);
+  });
+});
+
+describe('UT20 – shouldCountPlay(currentSec, durationSec)', () => {
+  it.each([
+    ['UTCID01', 30, 200, true],     // đủ 30 giây
+    ['UTCID02', 29.9, 200, false],  // chưa đủ 30 giây
+    ['UTCID03', 20, 40, true],      // bài 40 giây: nửa bài = 20 giây
+    ['UTCID04', 19, 40, false],
+    ['UTCID05', 30, 0, true],       // chưa biết thời lượng: dùng mốc 30 giây
+    ['UTCID06', 10, NaN, false],
+    ['UTCID07', 0, 200, false],     // chưa phát
+    ['UTCID08', NaN, 200, false],
+  ])('%s: shouldCountPlay(%p, %p) = %p', (_ma, current, duration, mongDoi) => {
+    expect(shouldCountPlay(current, duration)).toBe(mongDoi);
   });
 });

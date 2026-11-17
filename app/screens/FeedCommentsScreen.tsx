@@ -19,10 +19,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
 import { IMAGES } from '../../src/constants/images';
-import { CommentItem, getSongsByIds } from '../../src/data/musicData';
+import { CommentItem } from '../../src/data/musicData';
+import { useSongsByIds } from '../../src/hooks/useSongsByIds';
 import { useAuth } from '../../src/context/AuthContext';
 import { ReplyTarget, useFeed } from '../../src/context/FeedContext';
 import { toImageSource } from '../../src/utils/imageSource';
+import { ReportSheet } from '../../src/components/ModerationUi';
 
 const OPEN_DURATION_MS = 280;
 const CLOSE_DURATION_MS = 220;
@@ -53,6 +55,8 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
   const { posts, getComments, getCommentCount, addComment, toggleCommentLike, refreshComments } = useFeed();
   const [commentText, setCommentText] = useState('');
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  // Bình luận đang báo cáo (giai đoạn 5)
+  const [reportComment, setReportComment] = useState<CommentItem | null>(null);
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const shouldScrollToEnd = useRef(false);
@@ -88,7 +92,7 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
   };
 
   const post = posts.find((item) => item.id === postId) ?? posts[0];
-  const song = post ? getSongsByIds([post.songId])[0] : undefined;
+  const song = useSongsByIds(post?.songId ? [post.songId] : [])[0];
 
   // Mở bảng thì tải lại bình luận mới nhất từ máy chủ
   useEffect(() => {
@@ -159,7 +163,7 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
     return (
       <View
         key={comment.id}
-        style={isReply ? styles.replyRow : styles.commentRow}
+        style={[isReply ? styles.replyRow : styles.commentRow, comment.isArtist && styles.artistRow]}
         onLayout={
           isHighlighted
             ? (e) => {
@@ -179,6 +183,7 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
         <View style={styles.commentBody}>
           <Text style={styles.commentText}>
             <Text style={styles.userName}>{comment.userName} </Text>
+            {comment.isArtist && <Text style={styles.artistChip}> ✓ Artist </Text>}{comment.isArtist ? ' ' : ''}
             {!!comment.replyToName && (
               <Text style={styles.mentionText}>@{comment.replyToName} </Text>
             )}
@@ -190,6 +195,15 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
             <TouchableOpacity onPress={() => handleReply(rootCommentId, comment)}>
               <Text style={styles.replyButtonText}>Reply</Text>
             </TouchableOpacity>
+            {/* Báo cáo bình luận của người khác (giai đoạn 5) */}
+            {!!comment.userId && comment.userId !== currentUser?.id && currentUser?.role !== 'admin' && (
+              <TouchableOpacity
+                onPress={() => (currentUser ? setReportComment(comment) : onRequireLogin?.())}
+                accessibilityLabel={`Report comment by ${comment.userName}`}
+              >
+                <Text style={styles.reportButtonText}>Report</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
         <TouchableOpacity style={styles.likeIconBtn} onPress={() => handleLikeComment(comment.id)}>
@@ -325,6 +339,10 @@ export const FeedCommentsScreen: React.FC<FeedCommentsScreenProps> = ({
               </TouchableOpacity>
             </View>
           </View>
+          <ReportSheet
+            target={reportComment ? { type: 'comment', id: reportComment.id, preview: reportComment.text } : null}
+            onClose={() => setReportComment(null)}
+          />
         </SafeAreaView>
       </Animated.View>
       </KeyboardAvoidingView>
@@ -413,6 +431,18 @@ const styles = StyleSheet.create({
   userName: {
     fontWeight: '700',
   },
+  // Bình luận của chính nghệ sĩ dưới bài của họ
+  artistRow: {
+    backgroundColor: '#E6FAFB',
+    borderRadius: 12,
+    padding: 6,
+  },
+  artistChip: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#0EA5B5',
+    backgroundColor: '#CCF4F7',
+  },
   mentionText: {
     color: '#0284C7',
     fontWeight: '500',
@@ -426,6 +456,11 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: 11,
     color: '#9CA3AF',
+  },
+  reportButtonText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '600',
   },
   replyButtonText: {
     fontSize: 11,
