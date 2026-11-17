@@ -11,7 +11,7 @@ import {
   sendErrorKind,
 } from '../assistant';
 
-const q = (freeUsed: number, credits = 0) => ({ freeLimit: 20, freeUsed, freeLeft: Math.max(0, 20 - freeUsed), credits, price: 3, packSize: 20 });
+const q = (freeUsed: number, credits = 0) => ({ freeLimit: 20, freeUsed, freeLeft: Math.max(0, 20 - freeUsed), credits, price: 75000, currency: 'VND', packSize: 20, balance: 0 });
 
 describe('UT41 – dòng đếm tin và hết lượt', () => {
   it.each([
@@ -30,8 +30,8 @@ describe('UT41 – dòng đếm tin và hết lượt', () => {
   });
 
   it('UTCID08: nút mua', () => {
-    expect(buyLabel(q(20))).toBe('Buy 20 more messages · $3');
-    expect(buyLabel(null)).toBe('Buy 20 more messages · $3');
+    expect(buyLabel(q(20))).toBe('Buy 20 more messages · 75.000đ');
+    expect(buyLabel(null)).toBe('Buy 20 more messages · 75.000đ');
   });
 });
 

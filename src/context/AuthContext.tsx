@@ -38,9 +38,11 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean | string>;
   signUp: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  subscribe: (plan: SubscriptionPlan) => void;
+  // Mua / đổi gói: trừ số dư ví (VNĐ). ok = false kèm lý do (VD INSUFFICIENT_BALANCE – ví không đủ tiền)
+  subscribe: (plan: SubscriptionPlan) => Promise<{ ok: boolean; message?: string; code?: string }>;
   updateProfile: (updates: ProfileUpdates) => Promise<boolean>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
+  forgotPassword: (email: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   toggleLikeSong: (songId: string) => void;
   toggleFollowArtist: (artistId: string) => void;
   // Trả về null nếu tạo được, ngược lại là thông báo lỗi để hiển thị
@@ -80,6 +82,7 @@ const mapDbUser = (dbUser: any): User => ({
   planExpiresAt: dbUser.planExpiresAt || null,
   role: dbUser.role || 'listener',
   artistId: dbUser.artistId || null,
+  balance: dbUser.balance || 0,
   likedSongIds: dbUser.likedSongIds || [],
   followedArtistIds: dbUser.followedArtistIds || [],
   likedAlbumIds: dbUser.likedAlbumIds || [],
@@ -231,10 +234,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUserId(null);
   };
 
-  // Gói VIP có hạn 1 tháng kể từ khi thanh toán (còn hạn thì cộng dồn). Cập nhật giao diện ngay,
-  // sau đó lấy ngày hết hạn chính xác do máy chủ tính; máy chủ từ chối thì hoàn tác.
-  const subscribe = (plan: SubscriptionPlan) => {
-    if (!currentUserId) return;
+  // Gói VIP có hạn 1 tháng kể từ khi thanh toán (còn hạn thì cộng dồn) và trừ số dư ví (VNĐ).
+  // Cập nhật giao diện ngay, sau đó lấy ngày hết hạn + số dư chính xác do máy chủ tính; máy chủ từ chối
+  // (VD ví không đủ tiền) thì hoàn tác và trả lý do để màn mua gói hiện.
+  const subscribe = async (plan: SubscriptionPlan): Promise<{ ok: boolean; message?: string; code?: string }> => {
+    if (!currentUserId) return { ok: false, message: 'Please log in first.' };
     const userId = currentUserId;
     const previous = { planId: currentUser?.planId ?? null, planExpiresAt: currentUser?.planExpiresAt ?? null };
     const isFree = plan.id === FREE_PLAN_ID;
@@ -244,19 +248,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? null
         : nextExpiryDate(previous.planId === plan.id ? previous.planExpiresAt : null).toISOString(),
     }));
-    api.auth
-      .subscribe(userId, plan.id)
-      .then((res: any) => {
-        if (res?.data && userId === currentUserIdRef.current) {
-          updateCurrentUser(() => ({ planId: res.data.planId ?? null, planExpiresAt: res.data.planExpiresAt ?? null }));
-        }
-      })
-      .catch((err) => {
-        if (isApiError(err)) {
-          console.log('Máy chủ từ chối, hoàn tác:', err.message);
-          updateCurrentUser(() => previous);
-        }
-      });
+    try {
+      const res: any = await api.auth.subscribe(userId, plan.id);
+      if (res?.data && userId === currentUserIdRef.current) {
+        updateCurrentUser(() => ({
+          planId: res.data.planId ?? null,
+          planExpiresAt: res.data.planExpiresAt ?? null,
+          balance: res.data.balance ?? 0,
+        }));
+      }
+      return { ok: true };
+    } catch (err) {
+      if (isApiError(err)) {
+        console.log('Máy chủ từ chối, hoàn tác:', err.message);
+        updateCurrentUser(() => previous);
+        return { ok: false, message: err.message, code: err.code };
+      }
+      // Không kết nối được máy chủ: giữ thay đổi trên máy như chế độ offline
+      return { ok: true };
+    }
   };
 
   // Cập nhật thông tin cá nhân qua Backend API
@@ -303,6 +313,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (currentUser?.password !== currentPassword) return false;
       updateCurrentUser(() => ({ password: newPassword }));
       return true;
+    }
+  };
+
+  // Đặt lại mật khẩu khi quên (không cần đăng nhập trước)
+  const forgotPassword = async (
+    email: string,
+    newPassword: string
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await api.auth.forgotPassword({ email, newPassword });
+      if (response?.success) {
+        return { success: true, message: response.message || 'Đặt lại mật khẩu thành công!' };
+      }
+      return { success: false, message: 'Không thể đặt lại mật khẩu. Vui lòng thử lại.' };
+    } catch (err: any) {
+      if (isApiError(err)) {
+        return { success: false, message: err.message };
+      }
+      // Chế độ dự phòng offline nếu server chưa bật
+      const normalizedEmail = normalizeEmail(email);
+      const userIndex = users.findIndex((u) => u.email === normalizedEmail);
+      if (userIndex !== -1) {
+        setUsers((prev) => {
+          const next = [...prev];
+          next[userIndex] = { ...next[userIndex], password: newPassword };
+          return next;
+        });
+        return { success: true, message: 'Đặt lại mật khẩu thành công (offline)!' };
+      }
+      return { success: false, message: 'Không tìm thấy tài khoản với email này.' };
     }
   };
 
@@ -497,6 +537,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subscribe,
         updateProfile,
         changePassword,
+        forgotPassword,
         toggleLikeSong,
         toggleFollowArtist,
       }}

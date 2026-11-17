@@ -7,6 +7,7 @@ const Song = require('../../src/models/Song');
 const FeedPost = require('../../src/models/FeedPost');
 const Comment = require('../../src/models/Comment');
 const Payment = require('../../src/models/Payment');
+const User = require('../../src/models/User');
 const AssistantChat = require('../../src/models/AssistantChat');
 const AssistantMessage = require('../../src/models/AssistantMessage');
 
@@ -67,7 +68,7 @@ describe('Hỏi đáp', () => {
     expect(d.message.text).not.toMatch(/https?:|spam\.example/);
     expect(d.message.suggestions).toEqual(['Viết lời mở đầu cho ý tưởng 2', 'Nên ra bài vào tháng nào?']);
     expect(d.userMessage).toMatchObject({ role: 'user', failed: false });
-    expect(d.quota).toMatchObject({ freeUsed: 1, freeLeft: 19, credits: 0, price: 3, packSize: 20 });
+    expect(d.quota).toMatchObject({ freeUsed: 1, freeLeft: 19, credits: 0, price: 75000, currency: 'VND', packSize: 20 });
     expect(r2.status).toBe(201);
     expect(p2).toMatch(/<history>[\s\S]*<m from="Artist">[^<]*3 ý tưởng bài hát[\s\S]*<m from="Assistant">[\s\S]*<\/history>/);
     expect(p2).not.toMatch(/Fan Name/);
@@ -187,30 +188,51 @@ describe('Chọn model', () => {
 });
 
 describe('Lượt tin nhắn', () => {
-  test('IT173: hết 20 tin miễn phí → 402 QUOTA_EXCEEDED (tin được giữ để gửi lại); mua 20 tin $3 → gửi lại dùng tin đã mua; lịch sử thanh toán ghi gói và số tin đã dùng', async () => {
+  test('IT173: hết 20 tin miễn phí → 402 QUOTA_EXCEEDED (tin được giữ để gửi lại); ví 100.000đ mua 20 tin 75.000đ → còn 25.000đ, gửi lại dùng tin đã mua; lịch sử ghi đúng số tiền và số tin đã dùng', async () => {
     const token = await mer();
     await daDung(20);
+    await User.updateOne({ id: 'u_mer' }, { balance: 100000 });
     const het = await gui(token, { text: 'Viết thêm 3 caption nữa' });
     const mua = await api().post(`/api/studio/assistant/purchase?tz=${TZ}`).set(auth(token));
+    const soDu = (await User.findOne({ id: 'u_mer' }).lean()).balance;
     const lai = await guiLai(token, het.body.chat.id, het.body.userMessage.id);
     const ls = (await api().get('/api/payments').set(auth(token))).body;
-    ghiKetQua('IT173', `Hết lượt: ${het.status} ${het.body.code}, freeLeft ${het.body.quota.freeLeft}, tin giữ lại failed = ${het.body.userMessage.failed}; mua: ${mua.status}, credits ${mua.body.data.quota.credits}; gửi lại: ${lai.status}, paid = ${lai.body.data.message.paid}, credits còn ${lai.body.data.quota.credits}; lịch sử: ${ls.data.map((p) => `${p.description} $${p.amount} (${p.creditsUsed}/${p.credits})`)}`);
+    ghiKetQua('IT173', `Hết lượt: ${het.status} ${het.body.code}, freeLeft ${het.body.quota.freeLeft}, tin giữ lại failed = ${het.body.userMessage.failed}; mua: ${mua.status}, credits ${mua.body.data.quota.credits}; gửi lại: ${lai.status}, paid = ${lai.body.data.message.paid}, credits còn ${lai.body.data.quota.credits}; số dư còn ${soDu}đ; lịch sử: ${ls.data.map((p) => `${p.description} ${p.amount} ${p.currency} (${p.creditsUsed}/${p.credits}, ví còn ${p.balanceAfter})`)}; tổng chi ${ls.total}đ`);
     expect([het.status, het.body.code]).toEqual([402, 'QUOTA_EXCEEDED']);
-    expect(het.body.quota).toMatchObject({ freeLeft: 0, credits: 0, price: 3, packSize: 20 });
+    expect(het.body.quota).toMatchObject({ freeLeft: 0, credits: 0, price: 75000, currency: 'VND', packSize: 20, balance: 100000 });
     expect(het.body.userMessage.failed).toBe(true);
     expect(fakeGeminiCalls()).toHaveLength(1); // chỉ lần gửi lại sau khi mua
     expect([mua.status, mua.body.data.quota.credits]).toEqual([201, 20]);
     expect(lai.status).toBe(201);
     expect(lai.body.data.message).toMatchObject({ counted: true, paid: true });
     expect(lai.body.data.quota).toMatchObject({ freeLeft: 0, credits: 19 });
-    expect(ls.data[0]).toMatchObject({ type: 'ai_messages', amount: 3, description: 'AI Assistant – 20 extra messages', credits: 20, creditsUsed: 1, used: false });
+    expect([mua.body.data.balance, soDu]).toEqual([25000, 25000]);
+    expect(ls.data[0]).toMatchObject({ type: 'ai_messages', amount: 75000, currency: 'VND', balanceAfter: 25000, description: 'AI Assistant – 20 extra messages', credits: 20, creditsUsed: 1, used: false });
+    expect([ls.balance, ls.total]).toEqual([25000, 75000]);
+  });
+
+  test('IT173b: ví không đủ 75.000đ → 400 INSUFFICIENT_BALANCE, không trừ tiền, không thêm tin; bấm mua 2 lần cùng lúc với ví 100.000đ → chỉ 1 lần thành công', async () => {
+    const token = await mer();
+    await User.updateOne({ id: 'u_mer' }, { balance: 50000 });
+    const thieu = await api().post(`/api/studio/assistant/purchase?tz=${TZ}`).set(auth(token));
+    const sau = (await User.findOne({ id: 'u_mer' }).lean()).balance;
+    await User.updateOne({ id: 'u_mer' }, { balance: 100000 });
+    const [a, b] = await Promise.all([1, 2].map(() => api().post(`/api/studio/assistant/purchase?tz=${TZ}`).set(auth(token))));
+    const cuoi = (await User.findOne({ id: 'u_mer' }).lean()).balance;
+    const goi = await Payment.countDocuments({ userId: 'u_mer', type: 'ai_messages' });
+    ghiKetQua('IT173b', `Ví 50.000đ: ${thieu.status} ${thieu.body.code} "${thieu.body.message}", ví còn ${sau}đ; mua 2 lần cùng lúc với 100.000đ: ${[a.status, b.status].sort()}, ví còn ${cuoi}đ, số gói ${goi}`);
+    expect([thieu.status, thieu.body.code, thieu.body.price, thieu.body.balance]).toEqual([400, 'INSUFFICIENT_BALANCE', 75000, 50000]);
+    expect(thieu.body.message).toMatch(/50\.000đ.*75\.000đ/);
+    expect(sau).toBe(50000);
+    expect([a.status, b.status].sort()).toEqual([201, 400]);
+    expect([cuoi, goi]).toEqual([25000, 1]);
   });
 
   test('IT174: lượt AI Fan Insight $3 cũ chưa dùng được đổi thành 20 tin; lượt đã dùng giữ nguyên', async () => {
     const token = await mer();
     await Payment.create([
-      { id: 'pay_old_unused', userId: 'u_mer', type: 'ai_insight', amount: 3, description: 'AI Fan Insight – 1 extra insight' },
-      { id: 'pay_old_used', userId: 'u_mer', type: 'ai_insight', amount: 3, description: 'AI Fan Insight – 1 extra insight', usedAt: new Date(), insightId: 'ins_x' },
+      { id: 'pay_old_unused', userId: 'u_mer', type: 'ai_insight', amount: 3, currency: 'USD', description: 'AI Fan Insight – 1 extra insight' },
+      { id: 'pay_old_used', userId: 'u_mer', type: 'ai_insight', amount: 3, currency: 'USD', description: 'AI Fan Insight – 1 extra insight', usedAt: new Date(), insightId: 'ins_x' },
     ]);
     const q = (await danhSach(token)).quota;
     const ls = (await api().get('/api/payments').set(auth(token))).body.data;
@@ -220,7 +242,7 @@ describe('Lượt tin nhắn', () => {
     const used = ls.find((p) => p.id === 'pay_old_used');
     expect(unused).toMatchObject({ credits: 20, creditsUsed: 0, used: false });
     expect(unused.description).toMatch(/converted to 20 AI Assistant messages/);
-    expect(used).toMatchObject({ credits: 0, used: true });
+    expect(used).toMatchObject({ credits: 0, used: true, currency: 'USD' });
   });
 });
 

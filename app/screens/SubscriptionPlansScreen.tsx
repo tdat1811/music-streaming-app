@@ -18,6 +18,7 @@ import { IMAGES } from '../../src/constants/images';
 import { SUBSCRIPTION_PLANS, SubscriptionPlan } from '../../src/data/musicData';
 import { FREE_PLAN_ID, useAuth } from '../../src/context/AuthContext';
 import { daysLeft, formatDate, nextExpiryDate } from '../../src/utils/plan';
+import { formatMoney } from '../../src/utils/insights';
 
 // Chỉ cho chọn các gói VIP. Người dùng không mua gói nào thì mặc định là thành viên thường.
 const VIP_PLANS = SUBSCRIPTION_PLANS.filter((plan) => plan.id !== FREE_PLAN_ID);
@@ -27,18 +28,21 @@ const CARD_GAP = 16;
 const CARD_INTERVAL = CARD_WIDTH + CARD_GAP;
 const PAYMENT_DURATION_MS = 1500;
 
-type PaymentStep = 'confirm' | 'processing' | 'success';
+type PaymentStep = 'confirm' | 'processing' | 'success' | 'error';
 
 interface SubscriptionPlansScreenProps {
   onBackHome?: () => void;
   onSubscribe?: () => void;
   onRequireLogin?: () => void;
+  // Mở ví để nạp tiền (khi số dư không đủ mua gói)
+  onOpenWallet?: () => void;
 }
 
 export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = ({
   onBackHome,
   onSubscribe,
   onRequireLogin,
+  onOpenWallet,
 }) => {
   const { currentUser, activePlan, isVip, planExpiresAt, subscribe } = useAuth();
   // Gói VIP đã hết hạn (vẫn còn planId nhưng quá ngày hết hạn)
@@ -46,6 +50,8 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [paymentPlan, setPaymentPlan] = useState<SubscriptionPlan | null>(null);
   const [paymentStep, setPaymentStep] = useState<PaymentStep>('confirm');
+  const [paymentError, setPaymentError] = useState<{ message: string; lowBalance: boolean } | null>(null);
+  const balance = currentUser?.balance ?? 0;
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const paymentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -79,13 +85,19 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
     if (paymentStep !== 'processing') setPaymentPlan(null);
   };
 
-  // Mô phỏng thanh toán: không thu thông tin thẻ, không gọi dịch vụ nào
+  // Thanh toán bằng số dư ví (VNĐ, nạp qua MoMo giả lập) – không thu thông tin thẻ
   const confirmPayment = () => {
     if (!paymentPlan) return;
+    setPaymentError(null);
     setPaymentStep('processing');
-    paymentTimer.current = setTimeout(() => {
-      subscribe(paymentPlan);
-      setPaymentStep('success');
+    paymentTimer.current = setTimeout(async () => {
+      const result = await subscribe(paymentPlan);
+      if (result.ok) {
+        setPaymentStep('success');
+      } else {
+        setPaymentError({ message: result.message || 'Payment failed. Please try again.', lowBalance: result.code === 'INSUFFICIENT_BALANCE' });
+        setPaymentStep('error');
+      }
     }, PAYMENT_DURATION_MS);
   };
 
@@ -235,7 +247,8 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
                   Valid until{' '}
                   {formatDate(nextExpiryDate(isVip && activePlan?.id === paymentPlan?.id ? planExpiresAt : null))}
                 </Text>
-                <Text style={styles.modalNote}>This is a demo. You will not be charged.</Text>
+                <Text style={styles.modalAccount}>Wallet balance: {formatMoney(balance)}</Text>
+                <Text style={styles.modalNote}>Paid from your wallet balance. Demo wallet – no real money is charged.</Text>
                 <TouchableOpacity style={styles.subscribeButton} onPress={confirmPayment}>
                   <Text style={styles.subscribeButtonText}>Confirm payment</Text>
                 </TouchableOpacity>
@@ -249,6 +262,29 @@ export const SubscriptionPlansScreen: React.FC<SubscriptionPlansScreenProps> = (
               <>
                 <ActivityIndicator size="large" color="#7B2CBF" />
                 <Text style={styles.modalProcessing}>Processing payment...</Text>
+              </>
+            )}
+
+            {paymentStep === 'error' && (
+              <>
+                <Ionicons name="wallet-outline" size={52} color="#E11D48" />
+                <Text style={styles.modalTitle}>{paymentError?.lowBalance ? 'Not enough balance' : 'Payment failed'}</Text>
+                <Text style={styles.modalNote}>{paymentError?.message}</Text>
+                {paymentError?.lowBalance && !!onOpenWallet && (
+                  <TouchableOpacity
+                    style={styles.subscribeButton}
+                    onPress={() => {
+                      setPaymentPlan(null);
+                      onOpenWallet();
+                    }}
+                    accessibilityLabel="Top up wallet"
+                  >
+                    <Text style={styles.subscribeButtonText}>Top up wallet</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.modalCancel} onPress={() => setPaymentPlan(null)}>
+                  <Text style={styles.modalCancelText}>Close</Text>
+                </TouchableOpacity>
               </>
             )}
 

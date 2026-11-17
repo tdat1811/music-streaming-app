@@ -48,6 +48,8 @@ const taiBai = (token, { title = 'Bài mới', file = MP3, filename = 'song.mp3'
 
 describe('Gói VIP có ngày hết hạn', () => {
   test('IT39: thành viên thường đăng ký premium → planExpiresAt = 1 tháng sau', async () => {
+    // Gói VIP trả bằng số dư ví (59.000đ) – nạp sẵn tiền cho tài khoản
+    await User.updateOne({ id: 'u_ashley' }, { balance: 59000 });
     const token = await dangNhap('ashley@example.com');
     const truoc = Date.now();
     const res = await api().post('/api/auth/subscribe').set(auth(token)).send({ planId: 'premium' });
@@ -62,6 +64,8 @@ describe('Gói VIP có ngày hết hạn', () => {
   });
 
   test('IT40: VIP còn hạn gia hạn → cộng dồn từ ngày hết hạn cũ', async () => {
+    // Gói VIP trả bằng số dư ví (59.000đ) – nạp sẵn tiền cho tài khoản
+    await User.updateOne({ id: 'u_jason' }, { balance: 59000 });
     const cu = (await User.findOne({ id: 'u_jason' })).planExpiresAt;
     const token = await dangNhap('jason@example.com');
     const res = await api().post('/api/auth/subscribe').set(auth(token)).send({ planId: 'premium' });

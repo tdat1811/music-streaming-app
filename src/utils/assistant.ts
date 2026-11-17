@@ -1,13 +1,16 @@
 // AI Assistant (giai đoạn 6b) – hiển thị ở app: dòng đếm tin, lời chào, gợi ý nhanh, thời gian cuộc trò chuyện, loại lỗi
-import { formatUsd } from './insights';
+import { formatMoney } from './insights';
 
 export interface AssistantQuota {
   freeLimit: number;
   freeUsed: number;
   freeLeft: number;
   credits: number;
+  // Giá gói 20 tin (VNĐ), trừ vào số dư ví
   price: number;
+  currency?: string;
   packSize: number;
+  balance?: number;
 }
 
 export interface AssistantModel {
@@ -38,7 +41,7 @@ export const counterText = (q: AssistantQuota | null | undefined, notCounted = f
   return notCounted ? `${text} · not counted` : text;
 };
 
-export const buyLabel = (q: AssistantQuota | null | undefined) => `Buy ${q?.packSize ?? 20} more messages · ${formatUsd(q?.price ?? 3)}`;
+export const buyLabel = (q: AssistantQuota | null | undefined) => `Buy ${q?.packSize ?? 20} more messages · ${formatMoney(q?.price ?? 75000, q?.currency)}`;
 
 // Lời chào ở cuộc trò chuyện mới (C2)
 export const greetingText = (artistName: string | null | undefined, commentCount: number) => {

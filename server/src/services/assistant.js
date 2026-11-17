@@ -5,6 +5,7 @@ const AssistantChat = require('../models/AssistantChat');
 const AssistantMessage = require('../models/AssistantMessage');
 const Insight = require('../models/Insight');
 const Payment = require('../models/Payment');
+const User = require('../models/User');
 const { makeId } = require('../utils/ids');
 const { startOfDay } = require('../utils/stats');
 const { anonymize, decideRun } = require('../utils/insightText');
@@ -20,7 +21,7 @@ const {
   validateReply,
   InvalidReplyError,
 } = require('../utils/assistantText');
-const { ASSISTANT_LIMITS, MESSAGE_PACK_PRICE_USD, AUTO_MODEL } = require('../config/assistant');
+const { ASSISTANT_LIMITS, MESSAGE_PACK_PRICE_VND, AUTO_MODEL } = require('../config/assistant');
 const { generateJson, geminiAvailable, GeminiError, modelNames, busyModels, isBusyReason } = require('./gemini');
 const insights = require('./insights');
 
@@ -79,14 +80,21 @@ const creditsLeft = async (userId) => {
 
 const quotaFor = async (userId, tz) => {
   await convertLegacyCredits(userId);
-  const [freeUsed, credits] = await Promise.all([freeUsedToday(userId, tz), creditsLeft(userId)]);
+  const [freeUsed, credits, user] = await Promise.all([
+    freeUsedToday(userId, tz),
+    creditsLeft(userId),
+    User.findOne({ id: userId }).select('balance').lean(),
+  ]);
   return {
     freeLimit: ASSISTANT_LIMITS.freePerDay,
     freeUsed,
     freeLeft: Math.max(0, ASSISTANT_LIMITS.freePerDay - freeUsed),
     credits,
-    price: MESSAGE_PACK_PRICE_USD,
+    price: MESSAGE_PACK_PRICE_VND,
+    currency: 'VND',
     packSize: ASSISTANT_LIMITS.packSize,
+    // Số dư ví (VNĐ) – mua thêm tin sẽ trừ vào đây
+    balance: user?.balance || 0,
   };
 };
 
@@ -98,19 +106,36 @@ const consumeCredit = async (userId) =>
     { sort: { createdAt: 1 }, new: true }
   ));
 
-// Mua 20 tin (thanh toán giả lập như mua gói VIP)
+const vnd = (n) => `${Number(n || 0).toLocaleString('vi-VN')}đ`;
+
+// Mua 20 tin: trừ 75.000đ trong ví (một lệnh, không bị trừ 2 lần khi bấm nhanh), rồi ghi lịch sử
 const purchaseMessages = async (artist, userId, tz) => {
+  const price = MESSAGE_PACK_PRICE_VND;
+  const user = await User.findOneAndUpdate({ id: userId, balance: { $gte: price } }, { $inc: { balance: -price } }, { new: true });
+  if (!user) {
+    const current = (await User.findOne({ id: userId }).select('balance').lean())?.balance || 0;
+    throw new AssistantError(400, 'INSUFFICIENT_BALANCE', `Số dư ví không đủ! Bạn hiện có ${vnd(current)}, cần ${vnd(price)} để mua ${ASSISTANT_LIMITS.packSize} tin nhắn. Vui lòng nạp thêm tiền qua MoMo.`, {
+      balance: current,
+      price,
+    });
+  }
   const payment = await Payment.create({
     id: makeId('pay'),
     userId,
     type: 'ai_messages',
-    amount: MESSAGE_PACK_PRICE_USD,
+    amount: price,
+    currency: 'VND',
+    balanceAfter: user.balance,
     description: `AI Assistant – ${ASSISTANT_LIMITS.packSize} extra messages`,
     artistId: artist.id,
     credits: ASSISTANT_LIMITS.packSize,
     creditsUsed: 0,
   });
-  return { payment: { id: payment.id, amount: payment.amount, credits: payment.credits, createdAt: payment.createdAt }, quota: await quotaFor(userId, tz) };
+  return {
+    payment: { id: payment.id, amount: payment.amount, currency: payment.currency, credits: payment.credits, createdAt: payment.createdAt },
+    balance: user.balance,
+    quota: await quotaFor(userId, tz),
+  };
 };
 
 // ---------------- Hiển thị ----------------
@@ -277,7 +302,7 @@ const answer = async (artist, userId, chat, userMsg, tz) => {
   const quota = await quotaFor(userId, tz);
   const charge = decideRun({ freeUsed: quota.freeUsed, credits: quota.credits, freePerDay: quota.freeLimit });
   if (charge === 'quota') {
-    throw new AssistantError(402, 'QUOTA_EXCEEDED', `You've used today's ${quota.freeLimit} free messages. Buy ${quota.packSize} more messages for $${quota.price}.`, { quota });
+    throw new AssistantError(402, 'QUOTA_EXCEEDED', `You've used today's ${quota.freeLimit} free messages. Buy ${quota.packSize} more messages for ${vnd(quota.price)}.`, { quota });
   }
 
   const models = chat.model === AUTO_MODEL ? modelNames() : [chat.model];

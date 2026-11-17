@@ -181,7 +181,9 @@ describe('Xem lại, quyền, lịch sử thanh toán', () => {
     expect([khongCo.status, nguoiNghe.status, chuaCoTrang.status, khach.status]).toEqual([404, 403, 403, 401]);
   });
 
-  test('IT159: mua / gia hạn gói VIP ghi lịch sử thanh toán $9.99; mỗi người chỉ thấy giao dịch của mình', async () => {
+  test('IT159: mua / gia hạn gói VIP trừ 59.000đ trong ví và ghi đúng số tiền vào lịch sử; mỗi người chỉ thấy giao dịch của mình', async () => {
+    // Gói VIP trả bằng số dư ví (59.000đ) – nạp sẵn tiền cho tài khoản
+    await User.updateOne({ id: 'u_ashley' }, { balance: 2 * 59000 });
     const ashley = await dangNhap('ashley@example.com');
     await api().post('/api/auth/subscribe').set(auth(ashley)).send({ planId: 'premium' });
     await api().post('/api/auth/subscribe').set(auth(ashley)).send({ planId: 'premium' });
@@ -189,14 +191,29 @@ describe('Xem lại, quyền, lịch sử thanh toán', () => {
     const ls = (await api().get('/api/payments').set(auth(ashley))).body;
     const cuaJason = (await api().get('/api/payments').set(auth(await dangNhap('jason@example.com')))).body;
     const khach = await api().get('/api/payments');
-    ghiKetQua('IT159', `Ashley: ${ls.data.map((p) => `${p.description} $${p.amount}`).join(' | ')}; tổng $${ls.total}; Jason thấy ${cuaJason.data.length} giao dịch; khách: ${khach.status}`);
-    expect(ls.data.map((p) => [p.type, p.amount, p.description])).toEqual([
-      ['vip', 9.99, 'VIP Premium – renew 1 month'],
-      ['vip', 9.99, 'VIP Premium – 1 month'],
+    ghiKetQua('IT159', `Ashley: ${ls.data.map((p) => `${p.description} ${p.amount} ${p.currency} (ví còn ${p.balanceAfter})`).join(' | ')}; tổng chi ${ls.total}đ; số dư ${ls.balance}đ; Jason thấy ${cuaJason.data.length} giao dịch; khách: ${khach.status}`);
+    expect(ls.data.map((p) => [p.type, p.amount, p.currency, p.balanceAfter, p.description])).toEqual([
+      ['vip', 59000, 'VND', 0, 'VIP Premium – renew 1 month'],
+      ['vip', 59000, 'VND', 59000, 'VIP Premium – 1 month'],
     ]);
-    expect(ls.total).toBe(19.98);
+    expect([ls.total, ls.balance]).toEqual([118000, 0]);
     expect(cuaJason.data).toHaveLength(0);
     expect(khach.status).toBe(401);
+  });
+
+  test('IT159b: nạp / rút MoMo ghi vào lịch sử ví (che số điện thoại), không tính vào tổng chi; số dư đúng', async () => {
+    const token = await dangNhap('ashley@example.com');
+    const nap = await api().post('/api/auth/deposit-momo').set(auth(token)).send({ amount: 100000, momoPhone: '0901234567' });
+    const rut = await api().post('/api/auth/withdraw-momo').set(auth(token)).send({ amount: 30000, momoPhone: '0901234567' });
+    const ls = (await api().get('/api/payments').set(auth(token))).body;
+    ghiKetQua('IT159b', `Nạp: ${nap.status}; rút: ${rut.status}; lịch sử: ${ls.data.map((p) => `${p.type} ${p.direction > 0 ? '+' : '-'}${p.amount} "${p.description}" (ví còn ${p.balanceAfter})`).join(' | ')}; tổng chi ${ls.total}; số dư ${ls.balance}`);
+    expect([nap.status, rut.status]).toEqual([200, 200]);
+    expect(ls.data.map((p) => [p.type, p.direction, p.amount, p.balanceAfter, p.description])).toEqual([
+      ['withdraw', -1, 30000, 70000, 'Withdraw to MoMo (•••567)'],
+      ['deposit', 1, 100000, 100000, 'Top up via MoMo (•••567)'],
+    ]);
+    expect(JSON.stringify(ls)).not.toMatch(/0901234567/);
+    expect([ls.total, ls.balance]).toEqual([0, 70000]);
   });
 
   test('IT160: trang chính Studio có số bình luận dùng cho AI; gửi 2 tin cùng lúc → một tin bị 409', async () => {

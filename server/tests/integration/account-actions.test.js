@@ -8,15 +8,28 @@ beforeEach(lamMoiDuLieu);
 afterAll(dongDb);
 
 describe('Gói hội viên và tương tác của tài khoản', () => {
-  test('IT11: đăng ký gói premium → 200, CSDL lưu planId = premium', async () => {
+  test('IT11: đăng ký gói premium (ví có 100.000đ) → 200, CSDL lưu planId = premium, trừ 59.000đ', async () => {
+    // Gói VIP trả bằng số dư ví (59.000đ) – nạp sẵn tiền cho tài khoản
+    await User.updateOne({ id: 'u_ashley' }, { balance: 100000 });
     const token = await dangNhap('ashley@example.com');
     const res = await api().post('/api/auth/subscribe').set(auth(token)).send({ planId: 'premium' });
     const ashley = await User.findOne({ id: 'u_ashley' });
-    ghiKetQua('IT11', `${res.status}; data.planId = ${res.body.data?.planId}; CSDL planId = ${ashley.planId}`);
+    ghiKetQua('IT11', `${res.status}; data.planId = ${res.body.data?.planId}; CSDL planId = ${ashley.planId}; số dư còn ${ashley.balance}đ`);
 
     expect(res.status).toBe(200);
     expect(res.body.data.planId).toBe('premium');
     expect(ashley.planId).toBe('premium');
+    expect(ashley.balance).toBe(41000);
+  });
+
+  test('IT11b: ví không đủ tiền → 400 INSUFFICIENT_BALANCE, planId không đổi', async () => {
+    const token = await dangNhap('ashley@example.com');
+    const res = await api().post('/api/auth/subscribe').set(auth(token)).send({ planId: 'premium' });
+    const ashley = await User.findOne({ id: 'u_ashley' });
+    ghiKetQua('IT11b', `${res.status} ${res.body.code}; CSDL planId = ${ashley.planId}; số dư ${ashley.balance}đ`);
+
+    expect([res.status, res.body.code]).toEqual([400, 'INSUFFICIENT_BALANCE']);
+    expect(ashley.planId).toBeNull();
   });
 
   test('IT12: đăng ký gói "family" (không tồn tại) → 400, planId không đổi', async () => {

@@ -17,6 +17,8 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ROLES, default: 'listener' },
     // Trang nghệ sĩ mà tài khoản này sở hữu (chỉ có khi role = 'artist')
     artistId: { type: String, default: null },
+    // Số dư ví (VNĐ) – nạp / rút qua MoMo giả lập, dùng để mua gói VIP
+    balance: { type: Number, default: 0 },
     likedSongIds: [{ type: String }],
     followedArtistIds: [{ type: String }],
     likedAlbumIds: [{ type: String }],

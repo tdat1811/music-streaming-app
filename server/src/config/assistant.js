@@ -12,10 +12,10 @@ const ASSISTANT_LIMITS = {
   titleMaxChars: 40,
 };
 
-// Giá mua thêm 20 tin (thanh toán giả lập giống gói VIP)
-const MESSAGE_PACK_PRICE_USD = 3;
+// Giá mua thêm 20 tin (VNĐ) – trừ vào số dư ví, giống gói VIP
+const MESSAGE_PACK_PRICE_VND = 75000;
 
 // Lựa chọn model của một cuộc trò chuyện: 'auto' hoặc tên model cụ thể (model chính / model dự phòng)
 const AUTO_MODEL = 'auto';
 
-module.exports = { ASSISTANT_LIMITS, MESSAGE_PACK_PRICE_USD, AUTO_MODEL };
+module.exports = { ASSISTANT_LIMITS, MESSAGE_PACK_PRICE_VND, AUTO_MODEL };

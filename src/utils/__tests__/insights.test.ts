@@ -1,5 +1,5 @@
 // Kiểm thử đơn vị: AI Fan Insight ở app – giai đoạn 6 (sheet UT39). Giai đoạn 6b: lượt chuyển sang AI Assistant (UT41).
-import { fallbackText, footerText, formatUsd, paymentBadge, paymentLabel } from '../insights';
+import { fallbackText, footerText, formatMoney, formatUsd, paymentBadge, paymentLabel } from '../insights';
 
 describe('UT39 – giá', () => {
   it.each([
@@ -9,6 +9,18 @@ describe('UT39 – giá', () => {
     ['UTCID04', 0, '$0'],
   ])('%s: formatUsd(%d) → %s', (_ma, vao, ra) => {
     expect(formatUsd(vao)).toBe(ra);
+  });
+});
+
+describe('UT39 – tiền VNĐ của ví (cách A: mọi khoản mua trừ vào ví)', () => {
+  it.each([
+    ['UTCID05', 59000, 'VND', '59.000đ'],
+    ['UTCID06', 75000, undefined, '75.000đ'],
+    ['UTCID07', 1250000, 'VND', '1.250.000đ'],
+    ['UTCID08', 0, 'VND', '0đ'],
+    ['UTCID09', 3, 'USD', '$3'],
+  ])('%s: formatMoney(%d, %s) → %s', (_ma, so, tien, ra) => {
+    expect(formatMoney(so, tien as string | undefined)).toBe(ra);
   });
 });
 
@@ -28,6 +40,8 @@ describe('UT39 – chữ hiển thị', () => {
     expect(paymentLabel('vip').title).toBe('VIP Premium');
     expect(paymentLabel('ai_insight').title).toBe('AI Fan Insight');
     expect(paymentLabel('ai_messages').title).toBe('AI Assistant');
+    expect(paymentLabel('deposit').title).toBe('Top up via MoMo');
+    expect(paymentLabel('withdraw').title).toBe('Withdraw to MoMo');
     expect(paymentLabel('xyz').title).toBe('Payment');
   });
 

@@ -337,7 +337,7 @@ try {
     return `Danh sách có ${chats.length} cuộc trò chuyện (tên tự đặt theo câu đầu, "Today · n messages"); đổi tên thành "Phân tích fan của tôi tháng 11"; New chat mở lời chào mới; cả 2 model bận → "AI is busy", không trừ tin, bấm Show basic fan summary → thẻ "Basic summary · no AI"`;
   });
 
-  await chay('IT179', 'Hết 20 tin (C7) → khoá ô nhập → mua 20 tin $3 → câu hỏi đang chờ được trả lời; Payment history có "AI Assistant – 20 extra messages"', async (anh) => {
+  await chay('IT179', 'Hết 20 tin (C7) → mua 20 tin 75.000đ: ví không đủ → "Top up wallet" → nạp 100.000đ qua MoMo (giả lập) → mua → ví còn 25.000đ; Wallet & payments ghi −75.000đ / +100.000đ', async (anh) => {
     const q0 = (await apiCall('GET', `/api/studio/assistant/chats?tz=${TZ}`, merToken)).body.data.quota;
     let chatId = null;
     for (let i = 0; i < q0.freeLeft - 1; i++) {
@@ -351,40 +351,69 @@ try {
     await choDen('Đây là 2 lựa chọn caption', 30000);
     await choDen("You've used today's 20 free messages");
     await choDen('Daily limit reached');
+    await choDen('Buy 20 more messages · 75.000đ');
     await cuonCuoi();
     anh.push(await chup('IT179_1_het_tin.png'));
-    await tap('[aria-label="Buy 20 more messages · $3"]');
+    await tap('[aria-label="Buy 20 more messages · 75.000đ"]');
     await choDen('Buy more messages');
+    await choDen('Not enough balance');
+    anh.push(await chup('IT179_2_vi_khong_du.png'));
+    await tap('[aria-label="Top up wallet"]');
+    await choDen('Wallet balance');
+    await choDen('Top up via MoMo');
+    await tap('[aria-label="Top up via MoMo"]');
+    await tap('[aria-label="Top up 100.000đ"]');
+    await typeInto('input[aria-label="MoMo phone number"]', '0901234567');
+    anh.push(await chup('IT179_3_nap_momo.png'));
+    await tap('[aria-label="Top up 100.000đ"]', { last: true });
+    await choDen('Topped up 100.000đ. New balance: 100.000đ.', 15000);
+    anh.push(await chup('IT179_4_da_nap.png'));
+    await tap('[aria-label="Back"]');
+    await choDen("You've used today's 20 free messages");
+    await tap('[aria-label="Buy 20 more messages · 75.000đ"]');
     await choDen('Never expire');
-    anh.push(await chup('IT179_2_xac_nhan_mua.png'));
-    await tap('[aria-label="Confirm payment · $3"]');
-    await choDen('Payment successful – $3. 20 messages added.', 20000);
+    await choDen('100.000đ');
+    anh.push(await chup('IT179_5_xac_nhan_mua.png'));
+    await tap('[aria-label="Confirm payment · 75.000đ"]');
+    await choDen('Payment successful – 75.000đ. 20 messages added. Wallet balance: 25.000đ.', 20000);
     await choDen('0 free messages left today · 20 extra messages');
-    anh.push(await chup('IT179_3_da_mua.png'));
+    anh.push(await chup('IT179_6_da_mua.png'));
     await nhapTin('Gợi ý ý tưởng bài mới nhé');
     await choDen('19 extra messages', 30000);
     await tap('[aria-label="Back"]');
     await tap('[aria-label="Back"]');
-    await choDen('Personal information');
+    await choDen('Wallet & payments · 25.000đ');
     await tap('[aria-label="Payment history"]');
     await choDen('AI Assistant – 20 extra messages');
     await choDen('1/20 used');
-    anh.push(await chup('IT179_4_lich_su_thanh_toan.png'));
-    return 'Dùng hết 20 tin → thẻ "You\'ve used today\'s 20 free messages", ô nhập khoá ("Daily limit reached"); Buy 20 more messages · $3 → Confirm → "Payment successful – $3. 20 messages added."; hỏi tiếp dùng tin đã mua (còn 19); Payment history có "AI Assistant – 20 extra messages $3 · 1/20 used"';
+    await choDen('−75.000đ');
+    await choDen('+100.000đ');
+    await choDen('Top up via MoMo (•••567)');
+    anh.push(await chup('IT179_7_vi_va_lich_su.png'));
+    const bal = (await apiCall('GET', '/api/payments', merToken)).body;
+    if (bal.balance !== 25000 || bal.total !== 75000) throw new Error(`Sai số dư / tổng chi: ${bal.balance} / ${bal.total}`);
+    return 'Hết 20 tin → "Buy 20 more messages · 75.000đ"; ví 0đ → bảng mua báo "Not enough balance" + "Top up wallet" → màn Wallet & payments → nạp 100.000đ qua MoMo (số điện thoại chỉ hiện •••567) → quay lại mua → "Payment successful – 75.000đ … Wallet balance: 25.000đ"; hỏi tiếp dùng tin đã mua (còn 19); Profile hiện "Wallet & payments · 25.000đ"; lịch sử có "AI Assistant – 20 extra messages −75.000đ · 1/20 used" và "+100.000đ"';
   });
 
-  await chay('IT180', 'Mua gói VIP → Payment history của người nghe có VIP $9.99; người khác không thấy', async (anh) => {
-    await apiCall('POST', '/api/auth/subscribe', ashleyToken, { planId: 'premium' });
+  await chay('IT180', 'Mua gói VIP trừ 59.000đ trong ví: ví 0đ → bị từ chối (INSUFFICIENT_BALANCE); nạp 100.000đ rồi mua → còn 41.000đ; lịch sử ghi −59.000đ; người khác không thấy', async (anh) => {
+    const thieu = await apiCall('POST', '/api/auth/subscribe', ashleyToken, { planId: 'premium' });
+    if (thieu.status !== 400 || thieu.body.code !== 'INSUFFICIENT_BALANCE') throw new Error(`Ví 0đ vẫn mua được VIP: ${thieu.status} ${thieu.body.code}`);
+    await apiCall('POST', '/api/auth/deposit-momo', ashleyToken, { amount: 100000, momoPhone: '0909999888' });
+    const mua = await apiCall('POST', '/api/auth/subscribe', ashleyToken, { planId: 'premium' });
+    if (mua.status !== 200) throw new Error(`Mua VIP lỗi: ${mua.status}`);
     await dangNhap('ashley@example.com', 'Ashley');
     await tap('[aria-label="Profile"]');
-    await choDen('Personal information');
+    await choDen('Wallet & payments · 41.000đ');
     await tap('[aria-label="Payment history"]');
     await choDen('VIP Premium – 1 month');
-    await choDen('$9.99');
+    await choDen('−59.000đ');
+    await choDen('+100.000đ');
+    await choDen('41.000đ');
+    await choDen('Total spent');
     anh.push(await chup('IT180_1_lich_su_vip.png'));
     const cuaJason = (await apiCall('GET', '/api/payments', jasonToken)).body.data;
     if (cuaJason.length) throw new Error('Jason thấy giao dịch của người khác');
-    return 'Ashley mua VIP → Payment history có "VIP Premium – 1 month $9.99" và dòng "Demo payments – no real money is charged"; Jason không thấy giao dịch nào';
+    return `Ví 0đ mua VIP → 400 INSUFFICIENT_BALANCE ("${thieu.body.message}"); nạp 100.000đ rồi mua → Profile "Wallet & payments · 41.000đ"; lịch sử có "VIP Premium – 1 month −59.000đ", "Top up via MoMo +100.000đ", tổng chi 59.000đ; Jason không thấy giao dịch nào`;
   });
 } catch (err) {
   console.error('Lỗi chạy kiểm thử:', err);

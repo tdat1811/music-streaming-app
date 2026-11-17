@@ -33,6 +33,7 @@ export type ScreenId =
   | 'AlbumsList'
   | 'ArtistsList'
   | 'SeeAll'
+  | 'AIChat'
   | 'ArtistRequest'
   | 'ArtistRequestStatus'
   | 'ArtistStudio'
@@ -81,6 +82,7 @@ export const SCREEN_LIST: { id: ScreenId; title: string; category: string }[] = 
   { id: 'SignUp', title: '14. Sign Up', category: 'Account' },
   { id: 'Profile', title: '15. Profile', category: 'Account' },
   { id: 'Notifications', title: '16. Notifications', category: 'Account' },
+  { id: 'AIChat', title: '17. AI Music Assistant (Tâm trạng & Gợi ý)', category: 'AI' },
 ];
 
 export const ScreenSwitcher: React.FC<ScreenSwitcherProps> = ({

@@ -21,7 +21,8 @@ import { AppButton, NoticeBox } from '../../src/components/ArtistUi';
 import { BottomSheet } from '../../src/components/StudioUi';
 import { ComposePostSheet } from '../../src/components/ComposePostSheet';
 import { deviceTz } from '../../src/utils/stats';
-import { formatUsd } from '../../src/utils/insights';
+import { formatMoney } from '../../src/utils/insights';
+import { useAuth } from '../../src/context/AuthContext';
 import {
   AUTO_MODEL,
   AssistantModel,
@@ -73,11 +74,14 @@ interface AssistantScreenProps {
   onChatChange?: (chatId: string | null) => void;
   onBack?: () => void;
   onOpenReport?: (insightId: string) => void;
+  // Mở ví để nạp tiền (gói 20 tin trừ vào số dư ví)
+  onOpenWallet?: () => void;
 }
 
 // AI Assistant (giai đoạn 6b, C2–C11): chat hỏi đáp với Gemini + phân tích fan trong chat
-export const AssistantScreen: React.FC<AssistantScreenProps> = ({ chatId: initialChatId = null, onChatChange, onBack, onOpenReport }) => {
+export const AssistantScreen: React.FC<AssistantScreenProps> = ({ chatId: initialChatId = null, onChatChange, onBack, onOpenReport, onOpenWallet }) => {
   const { createPost } = useFeed();
+  const { reloadAccount } = useAuth();
   const [info, setInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -94,6 +98,7 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({ chatId: initia
   const [chatsOpen, setChatsOpen] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
   const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState<string | null>(null);
   const [menuChat, setMenuChat] = useState<any>(null);
   const [renameText, setRenameText] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -310,22 +315,36 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({ chatId: initia
 
   const confirmPurchase = async () => {
     setBuying(true);
+    setBuyError(null);
     try {
       const res = await api.studio.assistant.purchase(deviceTz());
       setInfo((i: any) => (i ? { ...i, quota: res.data.quota } : i));
       setBuyOpen(false);
-      setNotice({ tone: 'ok', text: `Payment successful – ${formatUsd(res.data.payment.amount)}. ${res.data.payment.credits} messages added.` });
+      reloadAccount();
+      setNotice({
+        tone: 'ok',
+        text: `Payment successful – ${formatMoney(res.data.payment.amount, res.data.payment.currency)}. ${res.data.payment.credits} messages added. Wallet balance: ${formatMoney(res.data.balance)}.`,
+      });
       const pendingId = sendError?.kind === 'quota' ? sendError.messageId : undefined;
       setSendError(null);
       setNotCounted(false);
       if (pendingId) await retry(pendingId);
     } catch (err) {
-      setBuyOpen(false);
-      setNotice({ tone: 'error', text: errText(err) });
+      // Ví không đủ tiền: giữ bảng mở, báo lý do và cho nạp thêm
+      if (isApiError(err) && err.code === 'INSUFFICIENT_BALANCE') {
+        setBuyError(err.message);
+        if (typeof err.body?.balance === 'number') setInfo((i: any) => (i ? { ...i, quota: { ...i.quota, balance: err.body.balance } } : i));
+      } else {
+        setBuyOpen(false);
+        setNotice({ tone: 'error', text: errText(err) });
+      }
     } finally {
       setBuying(false);
     }
   };
+  const balance = quota?.balance ?? 0;
+  const price = quota?.price ?? 75000;
+  const lowBalance = balance < price;
 
   const copyCaption = async (text: string) => {
     try {
@@ -510,7 +529,14 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({ chatId: initia
       <Text style={styles.quotaEmoji}>⏳</Text>
       <Text style={styles.quotaTitle}>You've used today's {quota?.freeLimit ?? 20} free messages</Text>
       <Text style={styles.quotaText}>Free messages reset at midnight. Need more now?</Text>
-      <AppButton label={buyLabel(quota)} onPress={() => setBuyOpen(true)} style={styles.buyBtn} />
+      <AppButton
+        label={buyLabel(quota)}
+        onPress={() => {
+          setBuyError(null);
+          setBuyOpen(true);
+        }}
+        style={styles.buyBtn}
+      />
       <Text style={styles.quotaNote}>Your chat history stays available.</Text>
     </View>
   );
@@ -734,17 +760,34 @@ export const AssistantScreen: React.FC<AssistantScreenProps> = ({ chatId: initia
         <View style={styles.kvCard}>
           {[
             ['Item', `${quota?.packSize ?? 20} AI Assistant messages`],
-            ['Price', formatUsd(quota?.price ?? 3)],
+            ['Price', formatMoney(price, quota?.currency)],
             ['Valid', 'Never expire'],
+            ['Wallet balance', formatMoney(balance)],
           ].map(([k, v], i) => (
-            <View key={k} style={[styles.kv, i === 2 && styles.last]}>
+            <View key={k} style={[styles.kv, i === 3 && styles.last]}>
               <Text style={styles.k}>{k}</Text>
               <Text style={styles.v}>{v}</Text>
             </View>
           ))}
         </View>
-        <Text style={styles.sheetSub}>Extra messages are used only after your free messages for the day. Demo payment – no real money is charged.</Text>
-        <AppButton label={`Confirm payment · ${formatUsd(quota?.price ?? 3)}`} onPress={confirmPurchase} loading={buying} style={styles.mt12} />
+        <Text style={styles.sheetSub}>Paid from your wallet balance. Extra messages are used only after your free messages for the day. Demo wallet – no real money is charged.</Text>
+        {(!!buyError || lowBalance) && (
+          <NoticeBox tone="warn" style={styles.mt8}>
+            {buyError || `Not enough balance. You need ${formatMoney(price)} – top up your wallet via MoMo first.`}
+          </NoticeBox>
+        )}
+        {lowBalance && !!onOpenWallet ? (
+          <AppButton
+            label="Top up wallet"
+            onPress={() => {
+              setBuyOpen(false);
+              onOpenWallet();
+            }}
+            style={styles.mt12}
+          />
+        ) : (
+          <AppButton label={`Confirm payment · ${formatMoney(price, quota?.currency)}`} onPress={confirmPurchase} loading={buying} style={styles.mt12} />
+        )}
         <AppButton label="Cancel" variant="ghost" onPress={() => setBuyOpen(false)} disabled={buying} />
       </BottomSheet>
 

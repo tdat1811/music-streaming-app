@@ -1,5 +1,5 @@
 {
-  "chayLuc": "2026-11-17T07:42:47.790Z",
+  "chayLuc": "2026-11-17T08:37:27.240Z",
   "results": [
     {
       "id": "IT162",
@@ -60,21 +60,24 @@
     },
     {
       "id": "IT179",
-      "moTa": "Hết 20 tin (C7) → khoá ô nhập → mua 20 tin $3 → câu hỏi đang chờ được trả lời; Payment history có \"AI Assistant – 20 extra messages\"",
+      "moTa": "Hết 20 tin (C7) → mua 20 tin 75.000đ: ví không đủ → \"Top up wallet\" → nạp 100.000đ qua MoMo (giả lập) → mua → ví còn 25.000đ; Wallet & payments ghi −75.000đ / +100.000đ",
       "status": "Pass",
-      "actual": "Dùng hết 20 tin → thẻ \"You've used today's 20 free messages\", ô nhập khoá (\"Daily limit reached\"); Buy 20 more messages · $3 → Confirm → \"Payment successful – $3. 20 messages added.\"; hỏi tiếp dùng tin đã mua (còn 19); Payment history có \"AI Assistant – 20 extra messages $3 · 1/20 used\"",
+      "actual": "Hết 20 tin → \"Buy 20 more messages · 75.000đ\"; ví 0đ → bảng mua báo \"Not enough balance\" + \"Top up wallet\" → màn Wallet & payments → nạp 100.000đ qua MoMo (số điện thoại chỉ hiện •••567) → quay lại mua → \"Payment successful – 75.000đ … Wallet balance: 25.000đ\"; hỏi tiếp dùng tin đã mua (còn 19); Profile hiện \"Wallet & payments · 25.000đ\"; lịch sử có \"AI Assistant – 20 extra messages −75.000đ · 1/20 used\" và \"+100.000đ\"",
       "screenshots": [
         "IT179_1_het_tin.png",
-        "IT179_2_xac_nhan_mua.png",
-        "IT179_3_da_mua.png",
-        "IT179_4_lich_su_thanh_toan.png"
+        "IT179_2_vi_khong_du.png",
+        "IT179_3_nap_momo.png",
+        "IT179_4_da_nap.png",
+        "IT179_5_xac_nhan_mua.png",
+        "IT179_6_da_mua.png",
+        "IT179_7_vi_va_lich_su.png"
       ]
     },
     {
       "id": "IT180",
-      "moTa": "Mua gói VIP → Payment history của người nghe có VIP $9.99; người khác không thấy",
+      "moTa": "Mua gói VIP trừ 59.000đ trong ví: ví 0đ → bị từ chối (INSUFFICIENT_BALANCE); nạp 100.000đ rồi mua → còn 41.000đ; lịch sử ghi −59.000đ; người khác không thấy",
       "status": "Pass",
-      "actual": "Ashley mua VIP → Payment history có \"VIP Premium – 1 month $9.99\" và dòng \"Demo payments – no real money is charged\"; Jason không thấy giao dịch nào",
+      "actual": "Ví 0đ mua VIP → 400 INSUFFICIENT_BALANCE (\"Số dư ví không đủ! Bạn hiện có 0đ, cần 59.000đ để thanh toán. Vui lòng nạp thêm tiền qua MoMo.\"); nạp 100.000đ rồi mua → Profile \"Wallet & payments · 41.000đ\"; lịch sử có \"VIP Premium – 1 month −59.000đ\", \"Top up via MoMo +100.000đ\", tổng chi 59.000đ; Jason không thấy giao dịch nào",
       "screenshots": [
         "IT180_1_lich_su_vip.png"
       ]

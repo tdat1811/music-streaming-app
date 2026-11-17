@@ -19,6 +19,7 @@ import { AuthInput } from '../../src/components/AuthInput';
 import { useAuth, EMAIL_PATTERN, MIN_PASSWORD_LENGTH } from '../../src/context/AuthContext';
 import { isValidPhone } from '../../src/utils/validation';
 import { daysLeft, formatDate } from '../../src/utils/plan';
+import { formatMoney } from '../../src/utils/insights';
 import { ProfileRoleCard } from '../../src/components/ProfileRoleCard';
 import { Badge } from '../../src/components/ArtistUi';
 
@@ -210,10 +211,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Lịch sử thanh toán: gói VIP + lượt AI Fan Insight (giai đoạn 6) */}
+            {/* Ví (VNĐ, nạp MoMo giả lập) + lịch sử thanh toán: gói VIP, gói tin nhắn AI */}
             <TouchableOpacity style={styles.paymentRow} onPress={onOpenPayments} activeOpacity={0.7} accessibilityLabel="Payment history">
               <Ionicons name="receipt-outline" size={18} color={COLORS.textPrimary} />
-              <Text style={styles.paymentText}>Payment history</Text>
+              <Text style={styles.paymentText}>Wallet & payments · {formatMoney(currentUser?.balance ?? 0)}</Text>
               <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
             </TouchableOpacity>
 

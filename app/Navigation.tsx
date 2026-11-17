@@ -50,9 +50,10 @@ import { AdminUserDetailScreen } from './screens/AdminUserDetailScreen';
 import { AdminArtistDetailScreen } from './screens/AdminArtistDetailScreen';
 import { AdminReportDetailScreen } from './screens/AdminReportDetailScreen';
 import { ArtistRequestForm } from '../src/utils/artistRequest';
+import { AIChatScreen } from './screens/AIChatScreen';
 import { useAppRefresh } from '../src/context/RefreshContext';
 import { AppNotification } from '../src/context/NotificationContext';
-import {MiniPlayer} from "../src/components/MiniPlayer";
+import { MiniPlayer } from "../src/components/MiniPlayer";
 import { useAuth } from '../src/context/AuthContext';
 import { useAudioPlayer } from '../src/context/AudioPlayerContext';
 import { registerSongs } from '../src/data/songRegistry';
@@ -77,7 +78,7 @@ export const Navigation: React.FC = () => {
   const [highlightCommentIds, setHighlightCommentIds] = useState<string[]>([]);
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('Launch');
   const [history, setHistory] = useState<ScreenId[]>(['Launch']);
-   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   // Màn hình cần quay lại sau khi đăng nhập (ví dụ khách bấm mua gói ở màn chọn gói)
   const [afterAuth, setAfterAuth] = useState<ScreenId | null>(null);
   // Giữ ở đây để không mất tag đang chọn khi quay lại từ màn Play hoặc Playlist Details
@@ -471,6 +472,7 @@ export const Navigation: React.FC = () => {
           <SubscriptionPlansScreen
             onBackHome={leavePlans}
             onSubscribe={leavePlans}
+            onOpenWallet={() => navigateTo('PaymentHistory')}
             onRequireLogin={() => {
               setAfterAuth('SubscriptionPlans');
               navigateTo('Login');
@@ -481,6 +483,7 @@ export const Navigation: React.FC = () => {
       case 'Home':
         return (
           <HomeScreen
+            onNavigateToAIChat={() => navigateTo('AIChat')}
             onNavigateToSearch={() => navigateTo('SearchResults')}
             onNavigateToPlaylist={() => openPlaylist(null)}
             onNavigateToChartsList={() => navigateTo('ChartsList')}
@@ -498,6 +501,14 @@ export const Navigation: React.FC = () => {
             }
             onLogout={handleLogout}
             onTabPress={handleTabPress}
+          />
+        );
+
+      case 'AIChat':
+        return (
+          <AIChatScreen
+            onBack={goBack}
+            onNavigateToPlay={() => navigateTo('PlayAudio')}
           />
         );
 
@@ -576,6 +587,7 @@ export const Navigation: React.FC = () => {
             chatId={assistantChatId}
             onChatChange={setAssistantChatId}
             onBack={goBack}
+            onOpenWallet={() => navigateTo('PaymentHistory')}
             onOpenReport={(id) => {
               setReportInsightId(id);
               navigateTo('StudioInsight');
@@ -703,16 +715,16 @@ export const Navigation: React.FC = () => {
         );
 
       case 'SearchResults':
-  return (
-    <SearchResultsScreen
-      searchQuery={searchQuery}
-      onChangeQuery={setSearchQuery}
-      onNavigateToArtist={openArtist}
-      onNavigateToPlay={() => navigateTo('PlayAudio')}
-      onNavigateToAlbum={openAlbum}
-      onTabPress={handleTabPress}
-    />
-  );
+        return (
+          <SearchResultsScreen
+            searchQuery={searchQuery}
+            onChangeQuery={setSearchQuery}
+            onNavigateToArtist={openArtist}
+            onNavigateToPlay={() => navigateTo('PlayAudio')}
+            onNavigateToAlbum={openAlbum}
+            onTabPress={handleTabPress}
+          />
+        );
 
       case 'Feed':
         return (
@@ -849,7 +861,7 @@ export const Navigation: React.FC = () => {
     'AdminAccount', 'AdminReviewHistory', 'AdminEditInfo', 'AdminEditPassword',
     'AdminManage', 'AdminUserDetail', 'AdminArtistDetail', 'AdminReportDetail',
     'ArtistStudio', 'UploadSong', 'EditSong', 'StudioAlbums', 'EditAlbum', 'EditArtistPage', 'StudioStats', 'SongStats',
-    'StudioInsight', 'StudioAssistant', 'PaymentHistory',
+    'StudioInsight', 'StudioAssistant', 'PaymentHistory', 'AIChat',
   ];
   const hiddenMiniPLayer = SCREENS_WITHOUT_MINI_PLAYER.includes(visibleScreen);
   return (
@@ -857,40 +869,40 @@ export const Navigation: React.FC = () => {
       onRequireLogin={() => openLoginThenReturn(currentScreen)}
       onOpenPlans={openPlansThenReturn}
     >
-    <View style={styles.container}>
-      <React.Fragment key={refreshKey}>{renderScreen()}</React.Fragment>
+      <View style={styles.container}>
+        <React.Fragment key={refreshKey}>{renderScreen()}</React.Fragment>
 
-      {!hiddenMiniPLayer && (
-        <MiniPlayer onPress={() => navigateTo('PlayAudio')} />
-      )}
+        {!hiddenMiniPLayer && (
+          <MiniPlayer onPress={() => navigateTo('PlayAudio')} />
+        )}
 
-      {isCommentsOpen && (
-        <FeedCommentsScreen
-          postId={selectedPostId}
-          highlightCommentIds={highlightCommentIds}
-          onClose={() => {
-            setHighlightCommentIds([]);
-            closeComments();
+        {isCommentsOpen && (
+          <FeedCommentsScreen
+            postId={selectedPostId}
+            highlightCommentIds={highlightCommentIds}
+            onClose={() => {
+              setHighlightCommentIds([]);
+              closeComments();
+            }}
+            onRequireLogin={() => openLoginThenReturn('FeedComments')}
+          />
+        )}
+
+        {/* Floating Screen Switcher */}
+        <ScreenSwitcher
+          currentScreen={currentScreen}
+          onSelectScreen={(screenId) => {
+            if (screenId === 'PlaylistDetails') setSelectedPlaylist(null);
+            if (screenId === 'FeedComments') {
+              setSelectedPostId(null);
+              setHighlightCommentIds([]);
+            }
+            if (screenId === 'ArtistProfile') setArtistStack([]);
+            setHistory((prev) => [...prev, screenId]);
+            setCurrentScreen(screenId);
           }}
-          onRequireLogin={() => openLoginThenReturn('FeedComments')}
         />
-      )}
-
-      {/* Floating Screen Switcher */}
-      <ScreenSwitcher
-        currentScreen={currentScreen}
-        onSelectScreen={(screenId) => {
-          if (screenId === 'PlaylistDetails') setSelectedPlaylist(null);
-          if (screenId === 'FeedComments') {
-            setSelectedPostId(null);
-            setHighlightCommentIds([]);
-          }
-          if (screenId === 'ArtistProfile') setArtistStack([]);
-          setHistory((prev) => [...prev, screenId]);
-          setCurrentScreen(screenId);
-        }}
-      />
-    </View>
+      </View>
     </AccessProvider>
   );
 };

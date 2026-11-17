@@ -13,7 +13,7 @@ const {
   InvalidReplyError,
 } = require('../../src/utils/assistantText');
 const { anonymize } = require('../../src/utils/insightText');
-const { ASSISTANT_LIMITS, MESSAGE_PACK_PRICE_USD } = require('../../src/config/assistant');
+const { ASSISTANT_LIMITS, MESSAGE_PACK_PRICE_VND } = require('../../src/config/assistant');
 
 describe('UT40 – nhận diện "phân tích fan"', () => {
   it.each([
@@ -63,8 +63,8 @@ describe('UT40 – tin nhắn, tên cuộc trò chuyện, nhãn model', () => {
   ])('%s: nhãn model "%s" → "%s"', (_id, name, label) => {
     expect(modelLabel(name)).toBe(label);
   });
-  it('UTCID18: 20 tin miễn phí / ngày, mua 20 tin giá $3, lưu 30 ngày, 10 tin lịch sử, 100 bình luận ngữ cảnh', () => {
-    expect([ASSISTANT_LIMITS.freePerDay, ASSISTANT_LIMITS.packSize, MESSAGE_PACK_PRICE_USD]).toEqual([20, 20, 3]);
+  it('UTCID18: 20 tin miễn phí / ngày, mua 20 tin giá 75.000đ, lưu 30 ngày, 10 tin lịch sử, 100 bình luận ngữ cảnh', () => {
+    expect([ASSISTANT_LIMITS.freePerDay, ASSISTANT_LIMITS.packSize, MESSAGE_PACK_PRICE_VND]).toEqual([20, 20, 75000]);
     expect([ASSISTANT_LIMITS.keepDays, ASSISTANT_LIMITS.historyTurns, ASSISTANT_LIMITS.contextComments]).toEqual([30, 10, 100]);
   });
 });

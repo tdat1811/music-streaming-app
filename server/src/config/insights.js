@@ -8,10 +8,9 @@ const INSIGHT_LIMITS = {
   commentMaxChars: 500, // cắt bớt bình luận quá dài
 };
 
-// Mua thêm 1 lượt khi đã hết lượt miễn phí (thanh toán giả lập giống mua gói VIP)
+// Giá 1 lượt AI Fan Insight cũ (giai đoạn 6, USD) – không còn bán, chỉ để đọc các giao dịch cũ.
+// Giá hiện tại tính bằng VNĐ: gói VIP ở config/plans.js (PLAN_PRICES), gói 20 tin AI ở config/assistant.js.
 const EXTRA_INSIGHT_PRICE_USD = 3;
-// Giá gói VIP để ghi lịch sử thanh toán (khớp SUBSCRIPTION_PLANS ở app)
-const VIP_PRICE_USD = 9.99;
 
 // Model Gemini mặc định: bản Flash ổn định, có trong gói miễn phí, hỗ trợ JSON theo schema.
 // Đổi bằng biến môi trường GEMINI_MODEL mà không cần sửa code.
@@ -22,4 +21,4 @@ const DEFAULT_GEMINI_FALLBACK_MODEL = 'gemini-3.5-flash-lite';
 // Thời gian chờ tối đa cho mỗi model
 const GEMINI_TIMEOUT_MS = 30000;
 
-module.exports = { INSIGHT_LIMITS, EXTRA_INSIGHT_PRICE_USD, VIP_PRICE_USD, DEFAULT_GEMINI_MODEL, DEFAULT_GEMINI_FALLBACK_MODEL, GEMINI_TIMEOUT_MS };
+module.exports = { INSIGHT_LIMITS, EXTRA_INSIGHT_PRICE_USD, DEFAULT_GEMINI_MODEL, DEFAULT_GEMINI_FALLBACK_MODEL, GEMINI_TIMEOUT_MS };

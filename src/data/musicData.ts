@@ -110,6 +110,8 @@ export interface User {
   role?: UserRole;
   // Trang nghệ sĩ tài khoản sở hữu (role = 'artist')
   artistId?: string | null;
+  // Số dư ví (VNĐ) – nạp qua MoMo (giả lập), dùng mua gói VIP và gói tin nhắn AI
+  balance?: number;
   likedSongIds: string[];
   followedArtistIds: string[];
   // Riêng từng tài khoản (trước đây dùng chung cho mọi tài khoản)
@@ -1125,7 +1127,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     id: 'premium',
     name: 'Gói VIP (Premium)',
     badge: 'Đặc quyền VIP',
-    price: '$9.99 / tháng',
+    price: '59.000đ / tháng',
     perks: [
       'Nghe nhạc không giới hạn KHÔNG quảng cáo (Ad-free)',
       'Chất lượng âm thanh Lossless 320 kbps đỉnh cao',

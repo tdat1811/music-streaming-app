@@ -40,12 +40,19 @@ const nextExpiryDate = (currentExpiresAt, now = new Date()) => {
   return addMonths(base, PLAN_DURATION_MONTHS);
 };
 
+// Bảng giá từng gói cước (Đơn vị: VNĐ) – trừ vào số dư ví khi mua
+const PLAN_PRICES = {
+  free: 0,
+  premium: 59000, // 59.000 VNĐ / tháng
+};
+
 const VIP_REQUIRED_MESSAGE = 'Tính năng này chỉ dành cho thành viên VIP. Vui lòng đăng ký Gói VIP (Premium).';
 
 module.exports = {
   VALID_PLAN_IDS,
   VIP_PLAN_IDS,
   PLAN_DURATION_MONTHS,
+  PLAN_PRICES,
   addMonths,
   isVipUser,
   nextExpiryDate,

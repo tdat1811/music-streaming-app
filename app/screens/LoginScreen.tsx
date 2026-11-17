@@ -12,11 +12,12 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../src/constants/theme';
 import { IMAGES } from '../../src/constants/images';
 import { AuthInput } from '../../src/components/AuthInput';
 import { useAuth } from '../../src/context/AuthContext';
+import { Modal } from 'react-native';
 
 interface LoginScreenProps {
   onBack?: () => void;
@@ -32,11 +33,62 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   onNavigateToSignUp,
   notice,
 }) => {
-  const { login } = useAuth();
+  const { login, forgotPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(notice ?? '');
   const [loading, setLoading] = useState(false);
+
+  // States cho modal Quên mật khẩu
+  const [forgotModalVisible, setForgotModalVisible] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState('');
+
+  const handleResetPassword = async () => {
+    if (!forgotEmail.trim()) {
+      setForgotError('Please enter your email address.');
+      return;
+    }
+    if (!forgotNewPassword) {
+      setForgotError('Please enter your new password.');
+      return;
+    }
+    if (forgotNewPassword.length < 6) {
+      setForgotError('Password must be at least 6 characters.');
+      return;
+    }
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setForgotError('Confirm password does not match.');
+      return;
+    }
+
+    setForgotLoading(true);
+    setForgotError('');
+    setForgotSuccess('');
+
+    try {
+      const res = await forgotPassword(forgotEmail.trim(), forgotNewPassword);
+      if (res.success) {
+        setForgotSuccess(res.message);
+        setEmail(forgotEmail.trim());
+        setPassword(forgotNewPassword);
+        setTimeout(() => {
+          setForgotModalVisible(false);
+          setForgotSuccess('');
+        }, 1500);
+      } else {
+        setForgotError(res.message);
+      }
+    } catch {
+      setForgotError('Failed to reset password. Please check your network.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     if (email.trim() === '' || password === '') {
@@ -114,6 +166,23 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             error={error}
           />
 
+          {/* Nút Quên mật khẩu */}
+          <View style={styles.forgotRow}>
+            <TouchableOpacity
+              onPress={() => {
+                setForgotEmail(email);
+                setForgotNewPassword('');
+                setForgotConfirmPassword('');
+                setForgotError('');
+                setForgotSuccess('');
+                setForgotModalVisible(true);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.forgotText}>Forgot password?</Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity style={styles.primaryButton} onPress={handleLogin} activeOpacity={0.85} disabled={loading}>
             {loading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
@@ -130,6 +199,89 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Modal Quên mật khẩu */}
+      <Modal
+        visible={forgotModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setForgotModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalIconWrap}>
+                <Ionicons name="key-outline" size={24} color="#7C3AED" />
+              </View>
+              <Text style={styles.modalTitle}>Reset Password</Text>
+              <Text style={styles.modalSubtitle}>
+                Enter your registered email and a new password to reset your account.
+              </Text>
+            </View>
+
+            <AuthInput
+              icon="mail-outline"
+              placeholder="Registered email"
+              keyboardType="email-address"
+              value={forgotEmail}
+              onChangeText={(text) => {
+                setForgotEmail(text);
+                setForgotError('');
+              }}
+            />
+
+            <AuthInput
+              icon="lock-closed-outline"
+              placeholder="New password (min 6 chars)"
+              isPassword
+              value={forgotNewPassword}
+              onChangeText={(text) => {
+                setForgotNewPassword(text);
+                setForgotError('');
+              }}
+            />
+
+            <AuthInput
+              icon="shield-checkmark-outline"
+              placeholder="Confirm new password"
+              isPassword
+              value={forgotConfirmPassword}
+              onChangeText={(text) => {
+                setForgotConfirmPassword(text);
+                setForgotError('');
+              }}
+            />
+
+            {forgotError ? <Text style={styles.modalErrorText}>{forgotError}</Text> : null}
+            {forgotSuccess ? <Text style={styles.modalSuccessText}>{forgotSuccess}</Text> : null}
+
+            <TouchableOpacity
+              style={styles.modalPrimaryBtn}
+              onPress={handleResetPassword}
+              disabled={forgotLoading}
+              activeOpacity={0.85}
+            >
+              {forgotLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.modalPrimaryBtnText}>Reset Password</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.modalCancelBtn}
+              onPress={() => setForgotModalVisible(false)}
+              disabled={forgotLoading}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.modalCancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -169,6 +321,16 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 28,
   },
+  forgotRow: {
+    alignItems: 'flex-end',
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  forgotText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#7C3AED',
+  },
   primaryButton: {
     backgroundColor: COLORS.black,
     height: 52,
@@ -195,5 +357,89 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  modalHeader: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  modalIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3E8FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 4,
+    paddingHorizontal: 10,
+  },
+  modalErrorText: {
+    color: '#EF4444',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  modalSuccessText: {
+    color: '#10B981',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  modalPrimaryBtn: {
+    backgroundColor: '#111216',
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  modalPrimaryBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  modalCancelBtn: {
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  modalCancelBtnText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

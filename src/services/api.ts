@@ -174,12 +174,22 @@ export const api = {
     login: (data: { email: string; password: string }) =>
       request('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
 
+    forgotPassword: (data: { email: string; newPassword: string }) =>
+      request<{ success: boolean; message: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
     // Chỉ xem được hồ sơ của chính mình nên cần token
     getProfile: (userId: string) =>
       authRequest(`/auth/profile/${userId}`),
 
     subscribe: (userId: string, planId: string) =>
       authRequest('/auth/subscribe', { method: 'POST', body: JSON.stringify({ userId, planId }) }),
+
+    // Ví (VNĐ): nạp tiền qua MoMo (giả lập) – tối thiểu 10.000đ
+    depositMoMo: (amount: number, momoPhone: string) =>
+      authRequest<any>('/auth/deposit-momo', { method: 'POST', body: JSON.stringify({ amount, momoPhone }) }),
 
     toggleLikeSong: (userId: string, songId: string) =>
       authRequest('/auth/like-song', { method: 'POST', body: JSON.stringify({ userId, songId }) }),
@@ -422,5 +432,36 @@ export const api = {
     markRead: (notificationId: string) =>
       authRequest(`/notifications/${notificationId}/read`, { method: 'POST' }),
     markAllRead: () => authRequest('/notifications/read-all', { method: 'POST' }),
+  },
+
+  // 10. AI Music Assistant (Gợi ý nhạc & Trò chuyện theo tâm trạng)
+  ai: {
+    getMoods: () =>
+      request<{
+        success: boolean;
+        data: Array<{
+          id: string;
+          label: string;
+          emoji: string;
+          description: string;
+          prompt: string;
+        }>;
+        welcomeMessage: string;
+      }>('/ai/moods'),
+
+    chat: (message: string, history: Array<{ role: 'user' | 'assistant'; content: string }> = []) =>
+      request<{
+        success: boolean;
+        data: {
+          reply: string;
+          mood: string;
+          moodLabel: string;
+          recommendedSongs: any[];
+          suggestedPrompts: string[];
+        };
+      }>('/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message, history }),
+      }),
   },
 };
